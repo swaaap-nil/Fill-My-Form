@@ -24,10 +24,17 @@ export default defineConfig({
      * No `unsafe-eval`, no remote script. The extension must run only code
      * that shipped in the bundle: model output is untrusted input and must
      * never become executable. See docs/privacy.md.
+     *
+     * Do NOT add `frame-ancestors 'none'` here. Chrome renders the side panel
+     * by embedding the extension page in a frame, so that directive silently
+     * blanks the panel — it opens and renders nothing, which reads as the
+     * button being broken. It also buys nothing: web pages already cannot
+     * frame extension pages unless the page is listed in
+     * `web_accessible_resources`, and none of ours are.
+     * Guarded by an e2e test.
      */
     content_security_policy: {
-      extension_pages:
-        "script-src 'self'; object-src 'self'; frame-ancestors 'none'",
+      extension_pages: "script-src 'self'; object-src 'self'",
     },
   },
   srcDir: "src",

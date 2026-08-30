@@ -81,11 +81,19 @@ What they assert:
 | Service worker boots | A build that produces output which does not load |
 | Manifest grants no site access | The privacy claim silently regressing |
 | CSP forbids eval and remote script | `unsafe-eval` creeping back in |
+| Side panel renders **when framed** | A CSP that blanks the panel Chrome actually shows |
 | Side panel / popup / options render | A broken entrypoint, and any console error |
 | Boots with no configuration | Env vars becoming required again |
 | Fixtures keep their shape | `messy.html` being "tidied up" into uselessness |
 
-The manifest test is the valuable one. `docs/privacy.md` warns that removing the
+The framing test earned its place immediately. An earlier version of this suite
+checked the side panel by navigating to `sidepanel.html` top-level, which passed
+while `frame-ancestors 'none'` in the CSP was blanking the real panel — Chrome
+renders it inside a frame. A test that exercises the wrong condition is worse
+than no test, because it is believed. The framing test reproduces what Chrome
+actually does.
+
+The manifest test is the other valuable one. `docs/privacy.md` warns that removing the
 `build:manifestGenerated` hook in `wxt.config.ts` silently restores all-sites
 access; this test turns that warning into a build failure. It has been verified
 to fail when the hook is removed — a guard nobody has watched fail is not a

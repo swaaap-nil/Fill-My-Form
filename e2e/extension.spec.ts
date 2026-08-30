@@ -38,6 +38,36 @@ test("the content security policy forbids eval and remote script", async ({
   expect(csp).toContain("script-src 'self'");
   expect(csp).not.toContain("unsafe-eval");
   expect(csp).not.toContain("unsafe-inline");
+
+  // Chrome renders the side panel by framing the extension page, so this
+  // directive silently blanks it. See the framing test below.
+  expect(csp).not.toContain("frame-ancestors");
+});
+
+/**
+ * The side panel is rendered by Chrome inside a frame, so framing is the
+ * condition that actually matters — and the top-level navigation test below
+ * passes even when framing is broken. That gap shipped a blank side panel
+ * once; this test is why it will not ship again.
+ */
+test("the side panel renders when framed, as Chrome renders it", async ({
+  page,
+  extensionId,
+}) => {
+  await page.goto(`chrome-extension://${extensionId}/options.html`);
+
+  const frame = page.frameLocator("iframe#panel");
+  await page.evaluate((url) => {
+    const iframe = document.createElement("iframe");
+    iframe.id = "panel";
+    iframe.src = url;
+    document.body.append(iframe);
+  }, `chrome-extension://${extensionId}/sidepanel.html`);
+
+  await expect(frame.locator("#root")).not.toBeEmpty();
+  await expect(frame.getByRole("contentinfo")).toContainText(
+    "stays on this device",
+  );
 });
 
 /**

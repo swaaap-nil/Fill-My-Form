@@ -60,7 +60,14 @@ python3 -c "import json;print(json.load(open('build/chrome-mv3/manifest.json')).
 ### Model output is never executed or rendered as HTML
 
 The CSP for extension pages is `script-src 'self'; object-src 'self'` — no
-`unsafe-eval`, no remote script. `noDangerouslySetInnerHtml` is an error in
+`unsafe-eval`, no remote script.
+
+It deliberately does **not** set `frame-ancestors 'none'`. Chrome renders the
+side panel by embedding the extension page in a frame, so that directive blanks
+the panel with no visible error. It also buys nothing here: web pages cannot
+frame extension pages unless the page is in `web_accessible_resources`, and none
+of ours are. An e2e test asserts both the absence of the directive and that the
+panel renders when framed. `noDangerouslySetInnerHtml` is an error in
 `biome.json`. The starter rendered model output through `marked` into
 `dangerouslySetInnerHTML`; that was removed, and model output is rendered as
 text.
