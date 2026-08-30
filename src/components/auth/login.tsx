@@ -15,7 +15,7 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
-import { supabase } from "~/lib/supabase";
+import { requireSupabase } from "~/lib/supabase";
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -27,7 +27,7 @@ type LoginData = z.infer<typeof loginSchema>;
 export const Login = () => {
   const { mutate, isPending } = useMutation({
     mutationFn: async (data: LoginData) => {
-      const { error } = await supabase.auth.signInWithPassword(data);
+      const { error } = await requireSupabase().auth.signInWithPassword(data);
       if (error) throw error;
     },
     onError: (error) => toast.error(error.message),

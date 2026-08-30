@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { Message, sendMessage } from "~/lib/messaging";
-import { supabase } from "~/lib/supabase";
+import { requireSupabase } from "~/lib/supabase";
 import { getAvatar, getName } from "~/lib/utils";
 
 const AnonymousUser = () => {
@@ -81,7 +81,7 @@ export const User = () => {
             <button
               type="button"
               className="w-full"
-              onClick={() => supabase.auth.signOut()}
+              onClick={() => requireSupabase().auth.signOut()}
             />
           }
           nativeButton={false}

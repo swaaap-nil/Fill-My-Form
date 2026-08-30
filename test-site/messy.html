@@ -1,0 +1,85 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Messy form — the realistic case</title>
+<style>
+  body { font: 16px/1.6 system-ui, sans-serif; max-width: 40rem; margin: 3rem auto; padding: 0 1rem; }
+  .row { display: flex; gap: 1rem; align-items: center; margin-top: 1rem; }
+  .row > div:first-child { width: 16rem; color: #333; }
+  input, select { flex: 1; padding: .5rem; font: inherit; }
+  .req::after { content: " *"; color: #c00; }
+  .note { font-size: .8rem; color: #777; }
+  button { margin-top: 1.5rem; padding: .6rem 1.2rem; font: inherit; }
+</style>
+
+<h1>Candidate registration</h1>
+<p>No <code>&lt;label&gt;</code> elements anywhere. Names are opaque. Meaning
+lives in adjacent text, placeholders and table-ish layout — this is what most
+real forms look like, and what field detection has to survive.</p>
+
+<form id="registration" method="post" action="/register">
+  <div class="row">
+    <div class="req">Full Name</div>
+    <input name="fld_1" type="text" required />
+  </div>
+
+  <div class="row">
+    <div class="req">Email ID</div>
+    <input name="fld_2" type="text" required />
+  </div>
+
+  <div class="row">
+    <div>Contact Number</div>
+    <input name="fld_3" type="text" />
+  </div>
+
+  <div class="row">
+    <div class="req">10th Passing Year</div>
+    <input name="fld_4" type="text" required />
+  </div>
+
+  <div class="row">
+    <div class="req">12th Passing Year</div>
+    <input name="fld_5" type="text" required />
+  </div>
+
+  <div class="row">
+    <div>Year of Graduation</div>
+    <input name="fld_6" type="text" />
+  </div>
+
+  <!-- Same visible word, different concepts. An exact-alias match on "Year"
+       alone is ambiguous here; this is what forces `Certainty.AMBIGUOUS`. -->
+  <div class="row">
+    <div>Year</div>
+    <input name="fld_7" type="text" />
+    <span class="note">(of joining current employer)</span>
+  </div>
+
+  <div class="row">
+    <div>&nbsp;</div>
+    <input name="fld_8" type="text" placeholder="Enter your PIN code" />
+  </div>
+
+  <div class="row">
+    <div>Qualification</div>
+    <select name="fld_9">
+      <option value="">--select--</option>
+      <option value="1">Graduate</option>
+      <option value="2">Post Graduate</option>
+      <option value="3">Doctorate</option>
+    </select>
+  </div>
+
+  <div class="row">
+    <div>दसवीं उत्तीर्ण वर्ष</div>
+    <input name="fld_10" type="text" />
+  </div>
+
+  <div class="row">
+    <div>Aadhaar Number</div>
+    <input name="fld_11" type="text" maxlength="12" />
+    <span class="note">restricted: must never be auto-filled</span>
+  </div>
+
+  <button type="submit">Register</button>
+</form>

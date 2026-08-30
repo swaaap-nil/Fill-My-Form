@@ -15,7 +15,7 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
-import { supabase } from "~/lib/supabase";
+import { requireSupabase } from "~/lib/supabase";
 
 const registerSchema = z.object({
   name: z.string().min(2),
@@ -28,7 +28,7 @@ type RegisterData = z.infer<typeof registerSchema>;
 export const Register = () => {
   const { mutate, isPending } = useMutation({
     mutationFn: async (data: RegisterData) => {
-      const { error } = await supabase.auth.signUp(data);
+      const { error } = await requireSupabase().auth.signUp(data);
       if (error) throw error;
     },
     onError: (error) => toast.error(error.message),

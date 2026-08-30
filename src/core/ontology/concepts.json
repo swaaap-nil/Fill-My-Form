@@ -1,0 +1,203 @@
+[
+  {
+    "key": "identity.first_name",
+    "label": "First name",
+    "sensitivity": "personal",
+    "expects": "text",
+    "aliases": {
+      "en": ["first name", "given name", "forename", "fname"],
+      "hi": ["पहला नाम", "नाम"]
+    }
+  },
+  {
+    "key": "identity.last_name",
+    "label": "Last name",
+    "sensitivity": "personal",
+    "expects": "text",
+    "aliases": {
+      "en": ["last name", "surname", "family name", "lname"],
+      "hi": ["उपनाम", "कुलनाम"]
+    }
+  },
+  {
+    "key": "identity.full_name",
+    "label": "Full name",
+    "sensitivity": "personal",
+    "expects": "text",
+    "aliases": {
+      "en": ["full name", "name", "your name", "candidate name"],
+      "hi": ["पूरा नाम", "अभ्यर्थी का नाम"]
+    }
+  },
+  {
+    "key": "identity.date_of_birth",
+    "label": "Date of birth",
+    "sensitivity": "sensitive",
+    "expects": "date",
+    "aliases": {
+      "en": ["date of birth", "dob", "birth date", "birthday"],
+      "hi": ["जन्म तिथि", "जन्मदिन"]
+    }
+  },
+  {
+    "key": "contact.email",
+    "label": "Email address",
+    "sensitivity": "personal",
+    "expects": "email",
+    "aliases": {
+      "en": ["email", "e-mail", "email address", "email id"],
+      "hi": ["ईमेल", "ईमेल पता"]
+    }
+  },
+  {
+    "key": "contact.phone",
+    "label": "Phone number",
+    "sensitivity": "personal",
+    "expects": "tel",
+    "aliases": {
+      "en": [
+        "phone",
+        "mobile",
+        "phone number",
+        "mobile number",
+        "contact number"
+      ],
+      "hi": ["फ़ोन", "मोबाइल नंबर", "संपर्क नंबर"]
+    }
+  },
+  {
+    "key": "contact.address.city",
+    "label": "City",
+    "sensitivity": "sensitive",
+    "expects": "text",
+    "aliases": {
+      "en": ["city", "town", "city/town"],
+      "hi": ["शहर", "नगर"]
+    }
+  },
+  {
+    "key": "contact.address.postal_code",
+    "label": "Postal code",
+    "sensitivity": "sensitive",
+    "expects": "text",
+    "aliases": {
+      "en": ["postal code", "zip", "zip code", "pin code", "pincode"],
+      "hi": ["पिन कोड", "डाक कोड"]
+    }
+  },
+  {
+    "key": "education.secondary.completion_year",
+    "label": "Class 10 completion year",
+    "sensitivity": "personal",
+    "expects": "number",
+    "aliases": {
+      "en": [
+        "10th passing year",
+        "class 10 year",
+        "ssc year",
+        "matriculation year",
+        "year of passing 10th"
+      ],
+      "hi": ["दसवीं उत्तीर्ण वर्ष", "१०वीं पास वर्ष"]
+    }
+  },
+  {
+    "key": "education.higher_secondary.completion_year",
+    "label": "Class 12 completion year",
+    "sensitivity": "personal",
+    "expects": "number",
+    "aliases": {
+      "en": [
+        "12th passing year",
+        "class 12 year",
+        "hsc year",
+        "intermediate year",
+        "year of passing 12th"
+      ],
+      "hi": ["बारहवीं उत्तीर्ण वर्ष", "१२वीं पास वर्ष"]
+    }
+  },
+  {
+    "key": "education.undergraduate.degree",
+    "label": "Undergraduate degree",
+    "sensitivity": "personal",
+    "expects": "text",
+    "aliases": {
+      "en": [
+        "degree",
+        "undergraduate degree",
+        "bachelor's degree",
+        "ug degree",
+        "qualification"
+      ],
+      "hi": ["स्नातक डिग्री", "योग्यता"]
+    }
+  },
+  {
+    "key": "education.undergraduate.institution",
+    "label": "Undergraduate institution",
+    "sensitivity": "personal",
+    "expects": "text",
+    "aliases": {
+      "en": [
+        "college",
+        "university",
+        "institution",
+        "college name",
+        "university name"
+      ],
+      "hi": ["महाविद्यालय", "विश्वविद्यालय", "संस्थान"]
+    }
+  },
+  {
+    "key": "education.undergraduate.completion_year",
+    "label": "Undergraduate completion year",
+    "sensitivity": "personal",
+    "expects": "number",
+    "aliases": {
+      "en": [
+        "graduation year",
+        "year of graduation",
+        "ug passing year",
+        "degree completion year"
+      ],
+      "hi": ["स्नातक वर्ष", "उत्तीर्ण वर्ष"]
+    }
+  },
+  {
+    "key": "employment.current.company",
+    "label": "Current employer",
+    "sensitivity": "personal",
+    "expects": "text",
+    "aliases": {
+      "en": [
+        "company",
+        "employer",
+        "current company",
+        "organisation",
+        "organization"
+      ],
+      "hi": ["कंपनी", "नियोक्ता", "संस्था"]
+    }
+  },
+  {
+    "key": "employment.current.title",
+    "label": "Current job title",
+    "sensitivity": "personal",
+    "expects": "text",
+    "aliases": {
+      "en": ["job title", "designation", "role", "position", "current title"],
+      "hi": ["पद", "पदनाम"]
+    }
+  },
+  {
+    "key": "documents.resume",
+    "label": "Resume",
+    "sensitivity": "sensitive",
+    "expects": "file",
+    "aliases": {
+      "en": ["resume", "cv", "curriculum vitae", "upload resume"],
+      "hi": ["बायोडाटा", "रिज्यूमे"]
+    }
+  }
+]

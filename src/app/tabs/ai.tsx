@@ -3,7 +3,6 @@ import { useMutation } from "@tanstack/react-query";
 import { streamText } from "ai";
 import { chromeai } from "chrome-ai";
 import { ArrowUp, X } from "lucide-react";
-import { marked } from "marked";
 import { type KeyboardEvent, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -105,16 +104,14 @@ const Chat = () => {
                   message.role === "user",
               })}
             >
-              {message.role === "assistant" ? (
-                <div
-                  // biome-ignore lint/security/noDangerouslySetInnerHtml: Using marked library to parse markdown content from AI responses
-                  dangerouslySetInnerHTML={{
-                    __html: marked.parse(message.content) as string,
-                  }}
-                />
-              ) : (
-                message.content
-              )}
+              {/*
+                Model output is untrusted input and is rendered as TEXT, never
+                as HTML. `whitespace-pre-wrap` preserves the line breaks that
+                markdown rendering used to provide. If rich rendering is ever
+                needed, sanitise first and add an ADR — do not reintroduce
+                `dangerouslySetInnerHTML` here. See docs/privacy.md.
+              */}
+              <span className="whitespace-pre-wrap">{message.content}</span>
             </article>
           ))}
           {isThinking && <span className="block py-5">Thinking...</span>}

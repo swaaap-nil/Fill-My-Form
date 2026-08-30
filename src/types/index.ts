@@ -9,7 +9,14 @@ export const NodeEnv = {
   PRODUCTION: "production",
 } as const;
 
+export const AppEnv = {
+  DEVELOPMENT: "development",
+  TEST: "test",
+  PRODUCTION: "production",
+} as const;
+
 export type Theme = (typeof Theme)[keyof typeof Theme];
 export type NodeEnv = (typeof NodeEnv)[keyof typeof NodeEnv];
+export type AppEnv = (typeof AppEnv)[keyof typeof AppEnv];
 
 export type { User } from "@supabase/supabase-js";

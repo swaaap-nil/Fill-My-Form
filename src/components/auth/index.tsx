@@ -13,7 +13,7 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { Separator as SeparatorUI } from "~/components/ui/separator";
-import { supabase } from "~/lib/supabase";
+import { requireSupabase } from "~/lib/supabase";
 import { Login } from "./login";
 import { Register } from "./register";
 
@@ -61,7 +61,7 @@ const Separator = () => {
 const Socials = () => {
   const { mutate } = useMutation({
     mutationFn: async (provider: Provider) => {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { error } = await requireSupabase().auth.signInWithOAuth({
         provider,
         options: {
           redirectTo: `${new URL(location.href).origin}/options.html`,

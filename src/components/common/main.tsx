@@ -1,6 +1,6 @@
 import { browser } from "wxt/browser";
 
-import Logo from "~/assets/logo.svg?react";
+import { Logo } from "~/components/common/logo";
 import { cn } from "~/lib/utils";
 
 interface MainProps {
@@ -25,7 +25,7 @@ export const Main = ({ className, filename }: MainProps) => {
         👋
       </p>
       <a
-        href="https://turbostarter.dev/docs/extension"
+        href="https://github.com/turbostarter/extro"
         target="_blank"
         rel="noreferrer"
         className="cursor-pointer text-sm text-primary underline hover:no-underline"

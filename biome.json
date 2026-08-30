@@ -6,7 +6,8 @@
     "useIgnoreFile": true
   },
   "files": {
-    "ignoreUnknown": false
+    "ignoreUnknown": false,
+    "includes": ["**", "!build", "!.wxt", "!test-site"]
   },
   "formatter": {
     "enabled": true,
@@ -15,7 +16,13 @@
     "lineWidth": 80,
     "attributePosition": "auto"
   },
-  "assist": { "actions": { "source": { "organizeImports": "on" } } },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
   "css": {
     "parser": {
       "tailwindDirectives": true
@@ -26,7 +33,11 @@
     "rules": {
       "preset": "recommended",
       "correctness": {
-        "noUnusedImports": "error"
+        "noUnusedImports": "error",
+        "noUnusedVariables": "error"
+      },
+      "security": {
+        "noDangerouslySetInnerHtml": "error"
       }
     }
   },
@@ -34,5 +45,71 @@
     "formatter": {
       "quoteStyle": "double"
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["src/core/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react": "src/core is the domain layer: it must stay free of UI so it can be unit-tested in plain Bun. Put React in src/components or src/app.",
+                  "react-dom": "src/core is the domain layer: no UI. See docs/architecture.md.",
+                  "#imports": "src/core must not touch browser-extension APIs directly. Inject a typed adapter from src/lib instead, so the domain stays testable and the capability is granted explicitly.",
+                  "@supabase/supabase-js": "src/core must not reach the cloud. Auth is a src/lib concern; personal memory never leaves the device. See docs/privacy.md.",
+                  "@openpanel/web": "src/core must not emit telemetry. Analytics is wired in src/lib and must never see personal values. See docs/privacy.md.",
+                  "ai": "Business logic depends on the LLMProvider port, not on a model SDK. Only src/core/llm/ai-sdk.ts may import this. See docs/adr/002-llm-port-over-vercel-ai-sdk.md.",
+                  "chrome-ai": "Business logic depends on the LLMProvider port, not on a model SDK. Wire the model in at composition time. See docs/adr/002-llm-port-over-vercel-ai-sdk.md."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/core/llm/ai-sdk.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react": "src/core is the domain layer: no UI.",
+                  "@supabase/supabase-js": "src/core must not reach the cloud.",
+                  "@openpanel/web": "src/core must not emit telemetry."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/core/memory/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react": "Personal memory is domain code, not UI.",
+                  "#imports": "Storage access is injected, not imported, so the local-only guarantee is visible at the wiring site.",
+                  "@supabase/supabase-js": "Personal memory is LOCAL-ONLY and must never be given a network client. See docs/privacy.md.",
+                  "@openpanel/web": "Personal memory must never be given a telemetry client. See docs/privacy.md.",
+                  "ai": "Personal memory must never be given a model client. Retrieval results are passed to the agent by the runtime, under policy.",
+                  "chrome-ai": "Personal memory must never be given a model client."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

@@ -1,26 +1,17 @@
 {
   "extensionDescription": {
     "description": "Description of the extension.",
-    "message": "Open source browser extension starter kit."
+    "message": "Privacy-first form assistant. Your personal information stays on your device."
   },
   "extensionName": {
     "description": "Name of the extension.",
-    "message": "Extro"
+    "message": "AI Form Agent"
   },
   "hello": {
     "message": "Hello from"
   },
-  "star": {
-    "message": "Star"
-  },
-  "follow": {
-    "message": "Follow"
-  },
   "learnMore": {
     "message": "Learn more"
-  },
-  "contentScriptUI": {
-    "message": "Content Script UI"
   },
   "light": {
     "message": "Light"
@@ -63,5 +54,8 @@
   },
   "dontHaveAccount": {
     "message": "Don't have an account?"
+  },
+  "privacyNote": {
+    "message": "Your personal information stays on this device."
   }
 }

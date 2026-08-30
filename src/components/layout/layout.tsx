@@ -49,6 +49,8 @@ const LayoutContent = ({
   const { set: setUser } = useStorage(StorageKey.USER);
 
   useEffect(() => {
+    if (!supabase) return;
+
     const { data } = supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user ?? null);
       queryClient.invalidateQueries({ queryKey: [Message.USER] });

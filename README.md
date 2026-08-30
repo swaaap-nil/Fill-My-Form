@@ -1,198 +1,240 @@
-<div align="center">
- 
- <br />
-  <br />
+# AI Form Agent
 
-<picture>
-    <source media="(prefers-color-scheme: dark)" width="700" srcset="https://github.com/user-attachments/assets/09cf4bfb-36a5-4eda-a892-4ba737d6a531" />
-    <source media="(prefers-color-scheme: light)" width="700" srcset="https://github.com/user-attachments/assets/7ccbabbf-5ddd-4cf0-9e44-cfbc5ba72e06" />
-    <img alt="Logo" width="700" src="https://github.com/user-attachments/assets/09cf4bfb-36a5-4eda-a892-4ba737d6a531" />
-</picture>
+A privacy-first browser extension that understands web forms and helps you fill
+them from a persistent personal memory.
 
-<br />
-<br />
-<br />
+**Your personal information stays on your device.** That is not a policy
+statement — it is enforced by lint rules that fail CI. See
+[docs/privacy.md](./docs/privacy.md).
 
-![](https://img.shields.io/badge/Bun-000000?style=flat-square&logo=bun&logoColor=white)
-![](https://img.shields.io/badge/React-61DAFB?style=flat-square&logo=react&logoColor=black)
-![](https://img.shields.io/badge/Typescript-3178C6?style=flat-square&logo=typescript&logoColor=white)
+> **Status: foundation.** The architecture, boundaries and quality gates are in
+> place. Form detection, memory, retrieval and the agent loop are not yet
+> implemented; each has a module with a documented contract and a README saying
+> what lands there next.
 
-![GitHub action badge](https://github.com/turbostarter/extro/actions/workflows/tests.yml/badge.svg)
-![GitHub action badge](https://github.com/turbostarter/extro/actions/workflows/publish.yml/badge.svg)
-
-![GitHub license](https://img.shields.io/github/license/turbostarter/extro)
-<a href="https://discord.gg/KjpK2uk3JP" target="_blank"><img src="https://discord.com/api/guilds/1280456871693779006/widget.png"/></a>
-
-> This boilerplate
-> has [Plasmo version](https://github.com/turbostarter/extro/tree/plasmo)
-
-</div>
-
-<p align="center">
-    <a href="#features"><strong>Features</strong></a> · 
-    <a href="#tech-stack"><strong>Tech stack</strong></a> · 
-    <a href="#contributing"><strong>Contributing</strong></a> ·
-    <a href="#getting-started"><strong>Getting started</strong></a> ·
-    <a href="#community"><strong>Community</strong></a> ·
-    <a href="#star-history"><strong>Star History</strong></a>
-  </p>
-
-
-  Everything you need to build a production ready browser extension, it's an **opinionated** stack based on learnings from building multiple browser extensions using the latest React framework. It's a starter kit with a focus on code reuse and best practices that will grow with your business.
-
-> [!NOTE]
-> This project is listed on [Awesome Open Source Boilerplates](https://github.com/EinGuterWaran/awesome-opensource-boilerplates) and [Awesome SaaS Boilerplates](https://github.com/smirnov-am/awesome-saas-boilerplates)
-
-
-> [!TIP]
-> Sharing storage and authentication session between all pages
->
-> https://github.com/user-attachments/assets/970eddf8-5faf-42cc-89ed-54b7c7548bc8
-
-
-## Features ✨ <a name="features"></a>
-
-- 🔒 Full type-safety with Typescript
-- 📄 All pages (background, popup, options etc.)
-- 📜 Content scripts (UI)
-- 🔐 Authentication (OAuth)
-- 💾 Storage
-- 💬 Messaging
-- 🔥 Hot reloading
-- 🚀 One-click publishing
-- 🌍 Internationalization
-- 📊 Analytics
-- ✨ Linting and formatting
-- 🧪 Unit tests
-- 🔄 CI/CD pipelines
-- ⚙️ Environment variables
-- 🎨 shadcn/ui compatible
-- 🔤 Custom fonts
-- 🤖 Native AI integration (experimental)
-- ✨ [ts-reset](https://github.com/mattpocock/ts-reset) for enhanced DX
-- 💳 Billing (coming soon)
-
-## Tech stack 🛠️ <a name="tech-stack"></a>
-
-| Tech                                           | Description                                                                   |
-| ---------------------------------------------- | ----------------------------------------------------------------------------- |
-| [TypeScript](https://www.typescriptlang.org/)  | Static type-checking programming language                                     |
-| [React](https://reactjs.org/)                  | Library for building user interfaces                                          |
-| [WXT](https://wxt.dev/)                        | Next-gen Web Extension Framework                                              |
-| [Supabase](https://supabase.com/)              | Open source Firebase alternative                                              |
-| [shadcn/ui](https://ui.shadcn.com/)            | Extendable component library                                                  |
-| [Tailwind](https://tailwindcss.com/)           | Utility-first CSS framework                                                   |
-| [OpenPanel](https://openpanel.dev/)            | Open source analytics                                                         |
-| [React Hook Form](https://react-hook-form.com) | Forms with easy-to-use validation                                             |
-| [Vite](https://vitejs.dev/)                    | Next generation frontend tool                                                 |
-| [Bun](https://bun.sh/)                         | Package manager and build tool                                                |
-| [Husky](https://github.com/typicode/husky)     | Git hooks                                                                     |
-| [Biome](https://biomejs.dev/)                  | Linting and formatting                                                        |
-
-## Contributing 🤝 <a name="contributing"></a>
-
-Please read [CONTRIBUTING.md](./CONTRIBUTING.md).
-
-## Getting started 🚀 <a name="getting-started"></a>
-
-### Prerequisites
-
-- [Bun](https://bun.sh/)
-
-### Installation
-
-1. Clone the repository
-
-```bash
-git clone git@github.com:turbostarter/extro.git
-```
-
-2. Install dependencies
+## Quick start
 
 ```bash
 bun install
-```
-
-3. Copy `.env.example` to `.env` and update the variables
-
-```bash
 cp .env.example .env
+bun dev
 ```
 
-### Development
+`.env` can stay empty — every integration is optional and the extension is
+useful with none of them configured. `bun dev` opens Chrome with the extension
+loaded; open the side panel to see it.
 
-#### Chrome
+Requires [Bun](https://bun.sh/) and Node 24+.
 
-1. Run development server
+## Commands
 
-```bash
-bun dev:chrome
+| Command | What it does |
+|---|---|
+| `bun dev` | Chrome, with hot reload (`bun dev:firefox` for Firefox) |
+| `bun dev:site` | Serves the local form fixtures at <http://localhost:4173> |
+| `bun lint` | Format, lint, import order **and the `src/core` import boundaries** |
+| `bun lint:fix` | The same, applying fixes |
+| `bun typecheck` | `tsc --noEmit` |
+| `bun test` | Unit tests (`bun test:watch` to iterate) |
+| `bun check` | Everything above — the full local gate |
+| `bun run build` | Production build + zips for Chrome and Firefox |
+
+## Repository structure
+
+```
+src/
+  core/          Domain layer. No React, no browser APIs, no cloud, no LLM SDK.
+    form/          FormIR — what a form and its fields are
+    ontology/      Canonical concepts and their aliases, as data
+    memory/        Personal memory types and the MemoryStore contract
+    agent/         Phases, statuses, events, the transition table
+    tools/         Tool contracts, registry, validated execution path
+    llm/           The LLMProvider port, a mock, and the AI SDK adapter
+    policy/        What the runtime is willing to do automatically
+    verification/  Comparing intent against reality
+    errors.ts      Error taxonomy
+    logging.ts     Structured logging with a closed field allowlist
+    tests/         Unit tests — plain Bun, no DOM, no network
+
+  app/           WXT entrypoints: background, content, popup, sidepanel, ...
+  components/    React UI
+  lib/           Browser and cloud adapters — storage, messaging, site access
+  types/         Shared enums
+
+test-site/       Local form fixtures. Tests never touch a third-party site.
+scripts/         Fixture server, bundled-secret scanner
+docs/            Architecture, agent, memory, privacy, testing, ADRs
 ```
 
-2. Open Chrome and go to `chrome://extensions`
-3. Check `Developer mode`
-4. Click `Load unpacked`
-5. Select the `build/chrome-mv3` directory at root
+Every directory under `src/core` has a `README.md` describing its contract and
+what belongs in it. Start with [`src/core/README.md`](./src/core/README.md).
 
-#### Firefox
+## Architecture
 
-1. Run development server
-
-```bash
-bun dev:firefox
+```
+                Extension UI  (src/app, src/components)
+                      │
+                      ▼
+                Adapters      (src/lib — DOM, storage, auth, site access)
+                      │
+                      ▼
+   ┌──────────────────┴──────────────────┐
+   │            src/core                 │
+   │  form · ontology · memory · agent   │
+   │  tools · policy · verification · llm│
+   └─────────────────────────────────────┘
 ```
 
-2. Open Firefox and go to `about:debugging#/runtime/this-firefox`
-3. Click `Load Temporary Add-on...`
-4. Select the `build/firefox-mv2/manifest.json` file at root
+Dependencies point inward. `src/core` knows nothing about React, the extension
+APIs, Supabase, OpenPanel or any model SDK — enforced by `noRestrictedImports`
+overrides in `biome.json`, so a violation fails `bun lint` and CI. The payoff is
+that the entire domain layer runs under plain `bun test` with no DOM, no
+extension host and no network.
 
-> [!NOTE]  
-> In Firefox you're adding a plugin in _temporary_ mode - that means it'll disappear after you close the browser.
+Four ideas carry most of the weight:
 
-### Publishing
+**The model is untrusted input.** It proposes actions; the runtime decides
+whether they are allowed and executes them. Model output is parsed before use,
+never executed, and never rendered as HTML.
 
-#### Manual
+**Progressive disclosure.** The agent does not receive every tool, all of
+memory, or the whole page. It gets the minimum context for its current phase and
+requests more only when it needs it.
 
-1. Run `bun run build` to build the extension for both Chrome and Firefox or `bun build:chrome` or `bun build:firefox` to build only for one of the browsers.
-2. Go to the `build` directory and upload the `.zip` files to the Chrome Web Store and Firefox Add-ons.
+**Deterministic first.** Exact alias matching runs before heuristics, which run
+before retrieval, which runs before any model. `bun test` already proves that
+"10th Passing Year" resolves to `education.secondary.completion_year` with no
+LLM involved.
 
-#### CI/CD
+**Never guess.** Every answer is `known`, `unknown`, `ambiguous` or
+`requires_confirmation`. There is no fifth value meaning "invented something
+plausible".
 
-1. Obtain all the [required API keys](https://wxt.dev/guide/essentials/publishing.html#github-action) for your submission (check the [official token guide](https://github.com/PlasmoHQ/bms/blob/main/tokens.md) to learn more about the tokens required to submit)
-2. Set your API keys as [Github secrets](https://docs.github.com/en/actions/security-guides/encrypted-secrets) under appropriate names
-3. Run `CI / Publish` workflow
+More in [docs/architecture.md](./docs/architecture.md) and
+[docs/agent.md](./docs/agent.md).
 
-### Pages
+## Privacy model
 
-Extro ships with the following extension pages preconfigured:
+| Local-only, always | Cloud-eligible |
+|---|---|
+| Personal memory | Authentication |
+| Personal files, photos, signatures | Subscription and billing |
+| Form values | Anonymous usage metadata |
+| Page content | Non-sensitive diagnostics |
+| Agent context containing personal data | Shared, non-personal website mappings |
 
-- `background` - [background service worker](https://wxt.dev/guide/essentials/entrypoints.html#background)
-- `content` - [content scripts](https://wxt.dev/guide/essentials/content-scripts.html) that run in the context of web pages
-- `devtools` - [devtools](https://wxt.dev/guide/essentials/entrypoints.html#devtools) page with custom panels
-- `newtab` - [new tab](https://wxt.dev/guide/essentials/entrypoints.html#newtab) page
-- `options` - [options](https://wxt.dev/guide/essentials/entrypoints.html#options) page
-- `popup` - [popup](https://wxt.dev/guide/essentials/entrypoints.html#popup) window
-- `sidepanel` - [side panel](https://wxt.dev/guide/essentials/entrypoints.html#side-panel)
-- `tabs` - [unlisted](https://wxt.dev/guide/essentials/entrypoints.html#unlisted-pages) pages (custom pages delivered with the extension)
+The extension requests **no site access at install time**. It ships with
+`activeTab` plus an empty host-permission list; access to a site is granted by
+the user, one origin at a time, and the content script is registered for that
+origin only (`src/lib/site-access.ts`).
 
-## Community 💬 <a name="community"></a>
+Full detail, including how each rule is enforced, in
+[docs/privacy.md](./docs/privacy.md).
 
-To chat with other community members, you can join the [Discord](https://discord.gg/KjpK2uk3JP) server.
-You can ask questions on that server, and you can also help others.
+## Environment variables
 
-Also, suggest new features or share any challenges you've faced while developing Chrome extensions!
+Everything in `.env` is compiled into the extension and is **public**. Server
+secrets (`OPENAI_API_KEY`, `STRIPE_SECRET_KEY`, `SUPABASE_SERVICE_ROLE_KEY`)
+belong to a backend, never here. CI runs `scripts/check-bundle-secrets.ts`
+against the build output as a backstop.
 
-## Star History 🌟 <a name="star-history"></a>
+| Variable | Required | Purpose |
+|---|---|---|
+| `VITE_APP_ENV` | no | `development` \| `test` \| `production` |
+| `VITE_SUPABASE_URL` | no | Auth. Omit to run fully local and anonymous. |
+| `VITE_SUPABASE_ANON_KEY` | no | Auth. |
+| `VITE_OPEN_PANEL_KEY` | no | Anonymous analytics. Omit and none are sent. |
 
-<a href="https://star-history.dera.page/#turbostarter/extro&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://star-history.dera.page/svg?repos=turbostarter/extro&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://star-history.dera.page/svg?repos=turbostarter/extro&type=Date" />
-   <img alt="Star History Chart" src="https://star-history.dera.page/svg?repos=turbostarter/extro&type=Date" />
- </picture>
-</a>
+Validated by `env.config.ts` at startup; a malformed value fails loudly rather
+than defaulting silently.
 
+## How to add a tool
 
----
+Tools are the only way the agent touches the world. Register one and the agent
+loop does not change:
 
-Made with ❤️ by [Bartosz Zagrodzki](https://zagrodzki.me)
+```ts
+registry.register({
+  name: "inspect_field_context",
+  domain: CapabilityDomain.BROWSER,
+  description: "Return labels and nearby text for one field.",
+  input: z.object({ fieldId: z.string() }),
+  output: z.object({ label: z.string().optional(), nearbyText: z.array(z.string()) }),
+  risk: ActionRisk.LOW,
+  execute: async ({ fieldId }, ctx) => adapter.describeField(fieldId, ctx.signal),
+});
+```
+
+Arguments are parsed against `input` before execution and results against
+`output` afterwards. The tool reaches a prompt only when its domain is in the
+current phase's grant. Details in
+[`src/core/tools/README.md`](./src/core/tools/README.md).
+
+## How to add an LLM provider
+
+Implement `LLMProvider` and wire it at composition time:
+
+```ts
+export class MyProvider implements LLMProvider {
+  readonly id = "my-provider";
+  async generate<T>(request: LLMRequest<T>): Promise<LLMResponse<T>> { /* ... */ }
+}
+```
+
+Nothing in the agent changes. For anything OpenAI-compatible you probably do not
+need a new provider — pass a different `LanguageModel` to `AiSdkProvider`.
+Details in [`src/core/llm/README.md`](./src/core/llm/README.md) and
+[ADR 002](./docs/adr/002-llm-port-over-vercel-ai-sdk.md).
+
+## How to add an ontology concept
+
+Append to `src/core/ontology/concepts.json`:
+
+```json
+{
+  "key": "identity.nationality",
+  "label": "Nationality",
+  "sensitivity": "sensitive",
+  "expects": "text",
+  "aliases": { "en": ["nationality", "citizenship"], "hi": ["राष्ट्रीयता"] }
+}
+```
+
+No code changes. The file is schema-validated at import, so a malformed entry
+fails in tests rather than degrading at runtime. `sensitivity` drives policy —
+choose it carefully. Details in
+[`src/core/ontology/README.md`](./src/core/ontology/README.md).
+
+## Testing
+
+`bun test` runs the domain layer in plain Bun. `test-site/` holds local
+fixtures — a clean form, a messy one with no labels and ambiguous names, and a
+dynamic one that injects fields after load — so automated tests never depend on
+a third-party website. See [docs/testing.md](./docs/testing.md).
+
+## CI
+
+`.github/workflows/tests.yml` runs on every pull request: lint (including the
+import boundaries), typecheck, unit tests, build, and a scan of the build output
+for secret-shaped strings. Any failure blocks the merge.
+
+`bun check` runs the same gates locally. A pre-commit hook runs the fast subset
+(lint-fix and typecheck); tests are left to CI so committing stays quick.
+
+## Documentation
+
+- [architecture.md](./docs/architecture.md) — layers, boundaries, why
+- [agent.md](./docs/agent.md) — the state machine and progressive disclosure
+- [memory.md](./docs/memory.md) — provenance, retrieval, why the model cannot write
+- [privacy.md](./docs/privacy.md) — the data boundary and how it is enforced
+- [testing.md](./docs/testing.md) — what to test where
+- [contributing.md](./docs/contributing.md) — conventions
+- [adr/](./docs/adr/) — decisions and their consequences
+
+## Credits
+
+Built on [Extro](https://github.com/turbostarter/extro) by Bartosz Zagrodzki
+(MIT). WXT, React, Tailwind, Biome and the extension plumbing come from there;
+`src/core`, the privacy boundary and the agent architecture are ours. See
+[`docs/adr/001-single-package-over-monorepo.md`](./docs/adr/001-single-package-over-monorepo.md)
+for what was kept and what was changed.

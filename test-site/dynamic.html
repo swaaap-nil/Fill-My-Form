@@ -1,0 +1,70 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Dynamic form — fields that appear later</title>
+<style>
+  body { font: 16px/1.6 system-ui, sans-serif; max-width: 40rem; margin: 3rem auto; padding: 0 1rem; }
+  label { display: block; margin-top: 1rem; font-weight: 600; }
+  input, select { width: 100%; padding: .5rem; font: inherit; }
+  button { margin-top: 1.5rem; padding: .6rem 1.2rem; font: inherit; }
+  .step { border-left: 3px solid #ddd; padding-left: 1rem; margin-top: 2rem; }
+  .error { color: #c00; font-size: .875rem; }
+  [hidden] { display: none; }
+</style>
+
+<h1>Multi-step form</h1>
+<p>Fields are injected after load and revealed between steps. Observation must
+be re-run rather than cached, and verification must notice the form changing
+underneath an action.</p>
+
+<form id="multi" method="post" action="/apply">
+  <div class="step" id="step-1">
+    <h2>Step 1</h2>
+    <label for="email">Email address</label>
+    <input id="email" name="email" type="email" required />
+    <div id="email-error" class="error" hidden>Enter a valid email address</div>
+    <button type="button" id="to-step-2">Continue</button>
+  </div>
+
+  <div class="step" id="step-2" hidden>
+    <h2>Step 2</h2>
+    <!-- Injected at runtime, not present in the served HTML. -->
+  </div>
+</form>
+
+<script>
+  // A field that only exists after load.
+  setTimeout(() => {
+    const label = document.createElement("label");
+    label.setAttribute("for", "referral");
+    label.textContent = "How did you hear about us?";
+    const input = document.createElement("input");
+    input.id = "referral";
+    input.name = "referral";
+    input.type = "text";
+    document.querySelector("#step-1").prepend(label, input);
+  }, 600);
+
+  document.querySelector("#to-step-2").addEventListener("click", () => {
+    const email = document.querySelector("#email");
+    const error = document.querySelector("#email-error");
+
+    if (!email.checkValidity()) {
+      error.hidden = false;
+      return;
+    }
+    error.hidden = true;
+
+    const step2 = document.querySelector("#step-2");
+    step2.hidden = false;
+    step2.insertAdjacentHTML(
+      "beforeend",
+      `<label for="college">College / university</label>
+       <input id="college" name="college" type="text" required />
+       <label for="grad-year">Year of graduation</label>
+       <input id="grad-year" name="grad_year" type="number" min="1950" max="2030" required />
+       <label for="ctc">Current CTC</label>
+       <input id="ctc" name="ctc" type="number" />`,
+    );
+    document.querySelector("#to-step-2").disabled = true;
+  });
+</script>

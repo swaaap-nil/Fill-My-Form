@@ -1,0 +1,65 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Simple form — well-formed</title>
+<style>
+  body { font: 16px/1.6 system-ui, sans-serif; max-width: 40rem; margin: 3rem auto; padding: 0 1rem; }
+  label { display: block; margin-top: 1rem; font-weight: 600; }
+  input, select, textarea { width: 100%; padding: .5rem; font: inherit; }
+  fieldset { margin-top: 1.5rem; }
+  .hint { font-weight: 400; color: #666; font-size: .875rem; }
+  button { margin-top: 1.5rem; padding: .6rem 1.2rem; font: inherit; }
+</style>
+
+<h1>Application form</h1>
+<p>Every control is labelled with a <code>for</code>/<code>id</code> pair. This
+is the easy case: field detection should reach 100% here with no model.</p>
+
+<form id="application" method="post" action="/submit">
+  <label for="first-name">First name</label>
+  <input id="first-name" name="first_name" type="text" required autocomplete="given-name" />
+
+  <label for="last-name">Last name</label>
+  <input id="last-name" name="last_name" type="text" required autocomplete="family-name" />
+
+  <label for="email">Email address</label>
+  <input id="email" name="email" type="email" required autocomplete="email" />
+
+  <label for="phone">Mobile number <span class="hint">10 digits, no spaces</span></label>
+  <input id="phone" name="phone" type="tel" pattern="[0-9]{10}" autocomplete="tel" />
+
+  <label for="dob">Date of birth</label>
+  <input id="dob" name="dob" type="date" required />
+
+  <label for="ssc-year">10th Passing Year</label>
+  <input id="ssc-year" name="ssc_year" type="number" min="1950" max="2030" required />
+
+  <label for="degree">Undergraduate degree</label>
+  <select id="degree" name="degree" required>
+    <option value="">Select a degree</option>
+    <option value="btech">B.Tech</option>
+    <option value="bsc">B.Sc</option>
+    <option value="bcom">B.Com</option>
+    <option value="ba">B.A</option>
+  </select>
+
+  <label for="college">College / university</label>
+  <input id="college" name="college" type="text" maxlength="120" />
+
+  <label for="cover">Cover note</label>
+  <textarea id="cover" name="cover" rows="4" maxlength="500"></textarea>
+
+  <fieldset>
+    <legend>Preferred contact method</legend>
+    <label><input type="radio" name="contact_pref" value="email" checked /> Email</label>
+    <label><input type="radio" name="contact_pref" value="phone" /> Phone</label>
+  </fieldset>
+
+  <label for="resume">Upload resume <span class="hint">PDF, max 2 MB</span></label>
+  <input id="resume" name="resume" type="file" accept=".pdf,application/pdf" />
+
+  <label><input type="checkbox" name="terms" required /> I accept the terms</label>
+
+  <input type="hidden" name="csrf" value="fixture" />
+
+  <button type="submit">Submit application</button>
+</form>

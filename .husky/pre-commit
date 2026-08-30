@@ -1,0 +1,4 @@
+# Fast gate only — format, lint and types. Tests run in CI and via `bun check`.
+# A pre-commit hook that takes ten seconds is a pre-commit hook people bypass.
+bun lint:fix
+bun typecheck

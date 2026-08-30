@@ -1,4 +1,4 @@
-name: CI / Tests
+name: CI
 
 on:
   pull_request:
@@ -16,10 +16,14 @@ concurrency:
 env:
   FORCE_COLOR: 3
   NODE_VERSION: 24.x
+  # The extension must build with no configuration: every integration is
+  # optional and every value is public. If this ever needs a real secret to
+  # pass, something has crossed the privacy boundary — see docs/privacy.md.
+  SKIP_ENV_VALIDATION: "false"
 
 jobs:
-  test:
-    name: 🧪 Test
+  quality:
+    name: 🧪 Quality
     runs-on: ubuntu-latest
     steps:
       - name: ✅ Checkout code
@@ -30,11 +34,19 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: 🛻 Lint
+      # `biome check` covers formatting, linting and import order, and it is
+      # what enforces the src/core import boundaries in biome.json.
+      - name: 🛻 Lint, format and boundaries
         run: bun lint
 
       - name: 💡 Typecheck
         run: bun typecheck
 
       - name: 🧪 Unit tests
-        run: bun test
+        run: bun test src
+
+      - name: 📦 Build
+        run: bun run build
+
+      - name: 🔍 Assert no secrets were bundled
+        run: bun run scripts/check-bundle-secrets.ts
