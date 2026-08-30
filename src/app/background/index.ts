@@ -1,3 +1,4 @@
+import { browser } from "wxt/browser";
 import { defineBackground } from "#imports";
 import { getStorage, StorageKey } from "@/lib/storage";
 import { createLogger } from "~/core/logging";
@@ -12,6 +13,17 @@ const logger = createLogger({ sessionId: crypto.randomUUID() });
  * on React. See docs/agent.md.
  */
 const main = () => {
+  // Clicking the toolbar icon opens the side panel. Requires no
+  // `action.default_popup` in the manifest, and Chrome only. Firefox has no
+  // sidePanel API, so this is feature-detected rather than assumed.
+  browser.sidePanel
+    ?.setPanelBehavior({ openPanelOnActionClick: true })
+    .catch((error: unknown) =>
+      logger.warn("could not set side panel behavior", {
+        errorCode: String(error),
+      }),
+    );
+
   // Runtime content-script registrations do not survive a browser restart,
   // but the user's permission grants do. Re-register for granted origins.
   restoreGrantedSites()

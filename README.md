@@ -21,8 +21,15 @@ bun dev
 ```
 
 `.env` can stay empty — every integration is optional and the extension is
-useful with none of them configured. `bun dev` opens Chrome with the extension
-loaded; open the side panel to see it.
+useful with none of them configured.
+
+`bun dev` opens Chrome with the extension loaded. Pin it to the toolbar once
+and click the icon: that opens the side panel. The dev profile lives in
+`.chrome-profile/` (gitignored) and is kept between runs, so the pin and any
+site access you grant survive a restart. Delete that directory to start clean.
+
+Chrome will not let an extension open its own side panel without a user
+gesture, so the first click is always yours.
 
 Requires [Bun](https://bun.sh/) and Node 24+.
 

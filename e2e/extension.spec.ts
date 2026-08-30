@@ -44,6 +44,18 @@ test("the content security policy forbids eval and remote script", async ({
   expect(csp).not.toContain("frame-ancestors");
 });
 
+test("the toolbar icon opens the side panel rather than a popup", async ({
+  page,
+  extensionId,
+}) => {
+  const manifest = await readManifest(page, extensionId);
+
+  // Chrome ignores `openPanelOnActionClick` when a popup is bound to the
+  // action, so the absence of `default_popup` is what makes the click work.
+  expect(manifest.action?.default_popup).toBeUndefined();
+  expect(manifest.side_panel?.default_path).toBe("sidepanel.html");
+});
+
 /**
  * The side panel is rendered by Chrome inside a frame, so framing is the
  * condition that actually matters — and the top-level navigation test below
@@ -78,7 +90,6 @@ test("the side panel renders when framed, as Chrome renders it", async ({
  */
 for (const [name, path] of Object.entries({
   "side panel": "sidepanel.html",
-  popup: "popup.html",
   options: "options.html",
 })) {
   test(`the ${name} renders without console errors`, async ({

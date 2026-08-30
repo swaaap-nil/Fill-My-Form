@@ -86,6 +86,8 @@ export const manifestSchema = z.looseObject({
   content_security_policy: z
     .looseObject({ extension_pages: z.string().optional() })
     .default({}),
+  action: z.looseObject({ default_popup: z.string().optional() }).optional(),
+  side_panel: z.looseObject({ default_path: z.string().optional() }).optional(),
 });
 
 export const readManifest = async (page: Page, extensionId: string) => {

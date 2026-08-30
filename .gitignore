@@ -31,3 +31,6 @@ yarn-error.log*
 # test artifacts
 test-results/
 playwright-report/
+
+# dev browser profile (webExt.keepProfileChanges)
+.chrome-profile/

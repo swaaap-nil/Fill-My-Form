@@ -1,11 +1,28 @@
+import { mkdirSync } from "node:fs";
+import { resolve } from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, type WxtViteConfig } from "wxt";
+
+/**
+ * Persistent dev profile. `chrome-launcher` writes its log here on startup and
+ * does not create the directory itself, so make it up front or `bun dev`
+ * fails with ENOENT before the browser ever opens.
+ */
+const DEV_PROFILE = resolve(".chrome-profile");
+mkdirSync(DEV_PROFILE, { recursive: true });
 
 export default defineConfig({
   manifest: {
     name: "__MSG_extensionName__",
     description: "__MSG_extensionDescription__",
     default_locale: "en",
+
+    /**
+     * No `default_popup`: with one set, Chrome opens the popup on click and
+     * `openPanelOnActionClick` is ignored. The side panel is this product's
+     * surface, so the icon opens that instead — see `src/app/background`.
+     */
+    action: { default_title: "__MSG_extensionName__" },
 
     /**
      * Site access is NOT granted at install time.
@@ -45,6 +62,20 @@ export default defineConfig({
   vite: () =>
     ({
       plugins: [tailwindcss()],
+      server: {
+        /**
+         * In dev, WXT serves every script from this Vite server and the
+         * extension pages fetch them from a `chrome-extension://` origin.
+         * Vite 8 blocks cross-origin requests by default, so without this the
+         * side panel loads no JavaScript and renders as a blank white panel
+         * with only a CORS error in its console.
+         *
+         * Scoped to extension origins rather than `true`: this server also
+         * serves source files, and a page you visit while developing should
+         * not be able to read them.
+         */
+        cors: { origin: /^chrome-extension:\/\// },
+      },
     }) as WxtViteConfig,
   hooks: {
     /**
@@ -65,5 +96,16 @@ export default defineConfig({
   },
   webExt: {
     chromiumArgs: ["--disable-features=DisableLoadExtensionCommandLineSwitch"],
+
+    /**
+     * A persistent dev profile, so pinning the extension to the toolbar (and
+     * any site access you grant) survives a restart of `bun dev`. Chrome has
+     * no way for an extension to pin itself; with a throwaway profile you
+     * would re-pin on every run.
+     *
+     * Gitignored. Delete `.chrome-profile/` to start clean.
+     */
+    chromiumProfile: DEV_PROFILE,
+    keepProfileChanges: true,
   },
 });

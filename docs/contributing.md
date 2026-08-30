@@ -10,6 +10,21 @@ A pre-commit hook runs the fast subset (lint-fix, typecheck). Tests and the buil
 run in CI. If the hook ever gets slow enough that people start using
 `--no-verify`, move the slow part to CI.
 
+## Dev-mode gotchas
+
+Two things about `bun dev` that cost real time when they bite:
+
+**The dev server serves every script over HTTP.** Extension pages fetch them
+from a `chrome-extension://` origin, and Vite 8 blocks cross-origin requests by
+default. Without `server.cors` in `wxt.config.ts` the side panel loads no
+JavaScript and renders as a blank white panel — the only clue is a CORS error
+in the panel's own console, which you have to open the panel to see. If a
+surface goes blank in dev but works in `bun run build`, suspect this first.
+
+**Dev mode rewrites the CSP.** WXT replaces `content_security_policy` with its
+own in dev, so a CSP problem can be invisible until you build for production.
+The e2e suite runs against the production build for that reason.
+
 ## Commits
 
 Conventional Commits, enforced by commitlint on `commit-msg`:
