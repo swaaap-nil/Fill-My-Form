@@ -1,0 +1,5 @@
+# `bun test` with no path would otherwise scan the whole repo and try to run the
+# Playwright specs in e2e/ under Bun's runner. Rooting it here means both
+# `bun test` and `bun run test` do the same, correct thing.
+[test]
+root = "src"
