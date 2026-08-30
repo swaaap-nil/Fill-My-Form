@@ -50,3 +50,33 @@ jobs:
 
       - name: 🔍 Assert no secrets were bundled
         run: bun run scripts/check-bundle-secrets.ts
+
+  e2e:
+    name: 🎭 End-to-end
+    runs-on: ubuntu-latest
+    # Separate from the main gate on purpose: it launches a real browser, so
+    # it is an order of magnitude slower than the unit tests. A quality
+    # failure should surface in seconds without waiting on this.
+    steps:
+      - name: ✅ Checkout code
+        uses: actions/checkout@v7
+
+      - name: 🔨 Setup
+        uses: ./.github/workflows/setup
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 🎭 Install Chromium
+        run: bunx playwright install --with-deps chromium
+
+      # Builds the extension, then loads it into a real browser.
+      - name: 🧪 End-to-end tests
+        run: bun run test:e2e
+
+      - name: 📸 Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: test-results/
+          retention-days: 7

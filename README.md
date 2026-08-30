@@ -36,7 +36,8 @@ Requires [Bun](https://bun.sh/) and Node 24+.
 | `bun lint:fix` | The same, applying fixes |
 | `bun typecheck` | `tsc --noEmit` |
 | `bun test` | Unit tests (`bun test:watch` to iterate) |
-| `bun check` | Everything above — the full local gate |
+| `bun test:e2e` | Builds the extension and smoke-tests it in real Chromium |
+| `bun check` | Lint, typecheck and unit tests — the full local gate |
 | `bun run build` | Production build + zips for Chrome and Firefox |
 
 ## Repository structure
@@ -207,16 +208,31 @@ choose it carefully. Details in
 
 ## Testing
 
-`bun test` runs the domain layer in plain Bun. `test-site/` holds local
-fixtures — a clean form, a messy one with no labels and ambiguous names, and a
-dynamic one that injects fields after load — so automated tests never depend on
-a third-party website. See [docs/testing.md](./docs/testing.md).
+`bun test` runs the domain layer in plain Bun — no DOM, no extension host, no
+network, so the suite finishes in well under a second.
+
+`bun test:e2e` builds the extension and loads it into real Chromium. Ten smoke
+tests, about twelve seconds, headless. They guard what unit tests structurally
+cannot: that the built artefact loads, that its pages render, and that the
+manifest still grants no site access. Screenshots and traces are captured on
+failure; there is no pixel comparison yet, and
+[docs/testing.md](./docs/testing.md) explains why.
+
+`test-site/` holds local fixtures — a clean form, a messy one with no labels and
+ambiguous names, and a dynamic one that injects fields after load — so automated
+tests never depend on a third-party website.
 
 ## CI
 
-`.github/workflows/tests.yml` runs on every pull request: lint (including the
-import boundaries), typecheck, unit tests, build, and a scan of the build output
-for secret-shaped strings. Any failure blocks the merge.
+`.github/workflows/tests.yml` runs two jobs on every pull request.
+
+**Quality** — lint (including the import boundaries), typecheck, unit tests,
+build, and a scan of the build output for secret-shaped strings.
+
+**End-to-end** — installs Chromium and runs the smoke tests. Kept separate so a
+lint failure surfaces in seconds rather than waiting on a browser.
+
+Any failure blocks the merge.
 
 `bun check` runs the same gates locally. A pre-commit hook runs the fast subset
 (lint-fix and typecheck); tests are left to CI so committing stays quick.
