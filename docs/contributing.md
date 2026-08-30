@@ -21,6 +21,14 @@ JavaScript and renders as a blank white panel — the only clue is a CORS error
 in the panel's own console, which you have to open the panel to see. If a
 surface goes blank in dev but works in `bun run build`, suspect this first.
 
+**The dev profile is shared and locked.** `.chrome-profile/` persists so you
+only pin the extension once, but Chrome allows one instance per profile. A
+second `bun dev`, or a dev browser left running, would otherwise fail with
+`CDP connection closed before response to Extensions.loadUnpacked`, which names
+nothing useful. `scripts/dev-preflight.ts` catches that: it clears a lock whose
+owner is gone, and explains the one that is still alive. `bun dev:fresh` uses a
+throwaway profile.
+
 **Dev mode rewrites the CSP.** WXT replaces `content_security_policy` with its
 own in dev, so a CSP problem can be invisible until you build for production.
 The e2e suite runs against the production build for that reason.

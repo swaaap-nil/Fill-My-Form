@@ -9,7 +9,11 @@ import { defineConfig, type WxtViteConfig } from "wxt";
  * fails with ENOENT before the browser ever opens.
  */
 const DEV_PROFILE = resolve(".chrome-profile");
-mkdirSync(DEV_PROFILE, { recursive: true });
+const USE_FRESH_PROFILE = process.env.WXT_DEV_FRESH_PROFILE === "1";
+
+if (!USE_FRESH_PROFILE) {
+  mkdirSync(DEV_PROFILE, { recursive: true });
+}
 
 export default defineConfig({
   manifest: {
@@ -76,6 +80,16 @@ export default defineConfig({
          */
         cors: { origin: /^chrome-extension:\/\// },
       },
+
+      /**
+       * Vite's dependency scanner globs every HTML file it can find, which
+       * here means the fixture site and previous build output. It then fails
+       * to resolve them, prints a wall of UNRESOLVED_ENTRY errors and skips
+       * pre-bundling entirely. Point it at the real entrypoints instead.
+       */
+      optimizeDeps: {
+        entries: ["src/app/**/*.html"],
+      },
     }) as WxtViteConfig,
   hooks: {
     /**
@@ -105,7 +119,8 @@ export default defineConfig({
      *
      * Gitignored. Delete `.chrome-profile/` to start clean.
      */
-    chromiumProfile: DEV_PROFILE,
-    keepProfileChanges: true,
+    ...(USE_FRESH_PROFILE
+      ? {}
+      : { chromiumProfile: DEV_PROFILE, keepProfileChanges: true }),
   },
 });

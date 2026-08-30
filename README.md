@@ -31,6 +31,10 @@ site access you grant survive a restart. Delete that directory to start clean.
 Chrome will not let an extension open its own side panel without a user
 gesture, so the first click is always yours.
 
+Only one browser can use a profile at a time. If a dev browser is already
+open, `bun dev` says so and tells you what to do rather than failing with a
+CDP error; `bun dev:fresh` skips the shared profile entirely.
+
 Requires [Bun](https://bun.sh/) and Node 24+.
 
 ## Commands
@@ -38,6 +42,7 @@ Requires [Bun](https://bun.sh/) and Node 24+.
 | Command | What it does |
 |---|---|
 | `bun dev` | Chrome, with hot reload (`bun dev:firefox` for Firefox) |
+| `bun dev:fresh` | The same, on a throwaway profile — for a second window or a clean slate |
 | `bun dev:site` | Serves the local form fixtures at <http://localhost:4173> |
 | `bun lint` | Format, lint, import order **and the `src/core` import boundaries** |
 | `bun lint:fix` | The same, applying fixes |
