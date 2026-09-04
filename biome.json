@@ -71,6 +71,24 @@
       }
     },
     {
+      "includes": ["src/app/**", "src/components/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "~/lib/supabase": "v1 is local-only; auth is dormant and returns with its own ADR. Nothing in src/app or src/components may reach the Supabase client.",
+                  "@/lib/supabase": "v1 is local-only; auth is dormant and returns with its own ADR. Nothing in src/app or src/components may reach the Supabase client."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": ["src/core/llm/ai-sdk.ts"],
       "linter": {
         "rules": {

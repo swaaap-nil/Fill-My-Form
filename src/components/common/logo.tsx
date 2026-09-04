@@ -1,3 +1,5 @@
+import { browser } from "wxt/browser";
+
 /**
  * Product mark, authored as a component rather than imported through
  * `vite-plugin-svgr`: that plugin emits JSX from a `.svg` module id, which
@@ -11,9 +13,9 @@ export const Logo = ({ className }: { readonly className?: string }) => (
     xmlns="http://www.w3.org/2000/svg"
     className={className}
     role="img"
-    aria-label="AI Form Agent"
+    aria-label={browser.i18n.getMessage("logoAlt")}
   >
-    <title>AI Form Agent</title>
+    <title>{browser.i18n.getMessage("logoAlt")}</title>
     <rect
       x="7"
       y="4"

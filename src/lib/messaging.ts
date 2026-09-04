@@ -1,14 +1,9 @@
 import { defineExtensionMessaging } from "@webext-core/messaging";
-import type { User } from "~/types";
 
-export const Message = {
-  USER: "user",
-} as const;
-
-export type Message = (typeof Message)[keyof typeof Message];
-
-interface Messages {
-  [Message.USER]: () => User | null;
-}
+/**
+ * Empty until Phase 1c defines the panel/background protocol. The only
+ * message here (`USER`) went with the auth UI it served.
+ */
+type Messages = Record<string, never>;
 
 export const { sendMessage, onMessage } = defineExtensionMessaging<Messages>();

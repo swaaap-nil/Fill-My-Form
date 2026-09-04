@@ -77,9 +77,7 @@ test("the side panel renders when framed, as Chrome renders it", async ({
   }, `chrome-extension://${extensionId}/sidepanel.html`);
 
   await expect(frame.locator("#root")).not.toBeEmpty();
-  await expect(frame.getByRole("contentinfo")).toContainText(
-    "stays on this device",
-  );
+  await expect(frame.getByTestId("panel-root")).toBeVisible();
 });
 
 /**
@@ -104,11 +102,11 @@ for (const [name, path] of Object.entries({
 
     await page.goto(`chrome-extension://${extensionId}/${path}`);
 
-    // Renders something, and specifically renders OUR copy rather than the
-    // starter's — this would have caught the un-rebranded build.
-    await expect(page.getByRole("contentinfo")).toContainText(
-      "stays on this device",
-    );
+    // Renders something, and specifically renders OUR layout rather than
+    // the starter's — this would have caught the un-rebranded build. Anchored
+    // to a data-testid on the panel root rather than copy, so it survives
+    // copy changes.
+    await expect(page.getByTestId("panel-root")).toBeVisible();
     expect(errors).toEqual([]);
   });
 }

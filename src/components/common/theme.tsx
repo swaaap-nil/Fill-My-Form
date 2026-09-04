@@ -31,7 +31,9 @@ export const ThemeSwitch = memo<ThemeSwitchProps>(({ className }) => {
           >
             <Sun className="size-5 scale-100 dark:scale-0" />
             <Moon className="absolute size-5 scale-0 dark:scale-100" />
-            <span className="sr-only">Toggle theme</span>
+            <span className="sr-only">
+              {browser.i18n.getMessage("toggleTheme")}
+            </span>
           </Button>
         }
       />

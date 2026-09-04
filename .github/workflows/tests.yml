@@ -43,13 +43,16 @@ jobs:
         run: bun typecheck
 
       - name: 🧪 Unit tests
-        run: bun test src
+        run: bun test src scripts
 
       - name: 📦 Build
         run: bun run build
 
       - name: 🔍 Assert no secrets were bundled
         run: bun run scripts/check-bundle-secrets.ts
+
+      - name: 🔍 Assert the release manifest is clean
+        run: bun run scripts/check-release-manifest.ts
 
   e2e:
     name: 🎭 End-to-end

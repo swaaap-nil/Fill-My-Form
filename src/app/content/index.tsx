@@ -1,4 +1,5 @@
 import ReactDOM from "react-dom/client";
+import { browser } from "wxt/browser";
 import { createShadowRootUi, defineContentScript } from "#imports";
 import { Logo } from "@/components/common/logo";
 
@@ -19,7 +20,7 @@ import "~/assets/styles/globals.css";
 const ContentScriptUI = () => (
   <div className="pointer-events-none fixed right-4 bottom-4 flex items-center gap-2 rounded-lg bg-background/90 px-3 py-2 text-foreground text-sm shadow-lg ring-1 ring-border">
     <Logo className="w-4 text-primary" />
-    <span>Form Agent is watching this page</span>
+    <span>{browser.i18n.getMessage("contentScriptActive")}</span>
   </div>
 );
 

@@ -1,8 +1,6 @@
 import { browser } from "wxt/browser";
 import { defineBackground } from "#imports";
-import { getStorage, StorageKey } from "@/lib/storage";
 import { createLogger } from "~/core/logging";
-import { Message, onMessage } from "~/lib/messaging";
 import { restoreGrantedSites } from "~/lib/site-access";
 
 const logger = createLogger({ sessionId: crypto.randomUUID() });
@@ -30,10 +28,5 @@ const main = () => {
     .then((count) => logger.info("restored granted sites", { count }))
     .catch(() => logger.warn("could not restore granted sites"));
 };
-
-onMessage(Message.USER, () => {
-  const storage = getStorage(StorageKey.USER);
-  return storage.getValue();
-});
 
 export default defineBackground(main);

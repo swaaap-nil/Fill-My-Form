@@ -23,15 +23,11 @@ export default defineEnv({
     // Cloud-eligible: authentication only. Never personal memory.
     VITE_SUPABASE_URL: z.string().url().optional(),
     VITE_SUPABASE_ANON_KEY: z.string().min(1).optional(),
-
-    // Cloud-eligible: anonymous product telemetry only. Never form values.
-    VITE_OPEN_PANEL_KEY: z.string().min(1).optional(),
   },
   env: {
     VITE_APP_ENV: import.meta.env.VITE_APP_ENV,
     VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
     VITE_SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY,
-    VITE_OPEN_PANEL_KEY: import.meta.env.VITE_OPEN_PANEL_KEY,
   },
   skip:
     (!!import.meta.env.SKIP_ENV_VALIDATION &&

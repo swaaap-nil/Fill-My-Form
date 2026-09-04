@@ -1,17 +1,24 @@
 {
-  "extensionDescription": {
-    "description": "Description of the extension.",
-    "message": "Privacy-first form assistant. Your personal information stays on your device."
-  },
   "extensionName": {
     "description": "Name of the extension.",
     "message": "AI Form Agent"
   },
-  "hello": {
-    "message": "Hello from"
+  "extensionDescription": {
+    "description": "Description of the extension.",
+    "message": "Privacy-first form assistant. Your personal information stays on your device."
   },
-  "learnMore": {
-    "message": "Learn more"
+  "privacyNote": {
+    "message": "Your personal information stays on this device."
+  },
+  "logoAlt": {
+    "message": "Form Agent logo"
+  },
+  "toggleTheme": {
+    "message": "Toggle theme"
+  },
+  "contentScriptActive": {
+    "description": "Badge shown on a page the user has granted access to.",
+    "message": "Active on this page, with your permission"
   },
   "light": {
     "message": "Light"
@@ -21,41 +28,5 @@
   },
   "system": {
     "message": "System"
-  },
-  "name": {
-    "message": "Name"
-  },
-  "email": {
-    "message": "Email"
-  },
-  "password": {
-    "message": "Password"
-  },
-  "login": {
-    "message": "Login"
-  },
-  "loginDescription": {
-    "message": "Enter your email below to login to your account"
-  },
-  "register": {
-    "message": "Register"
-  },
-  "registerDescription": {
-    "message": "Enter your details below to register for an account"
-  },
-  "logout": {
-    "message": "Logout"
-  },
-  "continueWith": {
-    "message": "Or continue with"
-  },
-  "alreadyHaveAccount": {
-    "message": "Already have an account?"
-  },
-  "dontHaveAccount": {
-    "message": "Don't have an account?"
-  },
-  "privacyNote": {
-    "message": "Your personal information stays on this device."
   }
 }

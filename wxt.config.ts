@@ -21,6 +21,9 @@ export default defineConfig({
     description: "__MSG_extensionDescription__",
     default_locale: "en",
 
+    // The floor for the `sidePanel` API, which the toolbar icon depends on.
+    minimum_chrome_version: "114",
+
     /**
      * No `default_popup`: with one set, Chrome opens the popup on click and
      * `openPanelOnActionClick` is ignored. The side panel is this product's
