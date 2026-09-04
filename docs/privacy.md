@@ -34,6 +34,22 @@ bun lint   # fails: "Personal memory is LOCAL-ONLY and must never be given a net
 The whole of `src/core` carries the same restriction; `memory/` carries a
 stricter version.
 
+### Nothing reads the inside of a file
+
+There is no OCR, no vision model and no document-understanding tool — not in the
+cloud, and not on-device either. A file-typed concept stores a reference to a
+file the user tagged once; the agent learns which file answers an upload field
+and never opens it. Values that appear on a document, like a passport number, are
+typed by the user once and stored as ordinary concepts.
+
+Making a file *fit* a form — cropping to 35×45mm, recompressing under 100 KB — is
+allowed and runs on canvas in the tab. It is pixel and byte work that never
+interprets meaning, and the original is not modified.
+
+The claim is therefore checkable by looking for the capability and not finding
+it, rather than by trusting that it only happens locally. See
+[ADR 005](./adr/005-no-document-content-reading.md).
+
 ### No site access at install time
 
 The manifest ships with `activeTab` and **no** `host_permissions`. Access to a
@@ -115,6 +131,37 @@ safe: identifiers, enumerations and measurements.
 
 `origin` is loggable; a full URL is not. A query string can carry a session
 token, an email address or a search term.
+
+## What crosses, in each direction
+
+**Down: configuration and hints.** Freshness durations
+([ADR 006](./adr/006-value-freshness-and-expiry.md)), feature flags, entitlement,
+and corroborated site knowledge ([ADR 007](./adr/007-shared-site-knowledge.md)).
+Non-personal, identical for every user, and cached so a device that never reaches
+the network keeps working on the copy bundled with the build.
+
+Everything received is untrusted input: schema-validated on receipt and bounded
+in code, so a bad or hostile document cannot set every freshness horizon to zero,
+nor a poisoned hint widen what may be filled without confirmation.
+
+**Up: observations about websites, never about people.** A device may report that
+*this form* rejected a 48 KB upload against a stated 49 KB limit. It may not
+report anything about the person who hit it. The distinction is not a promise but
+a type: contributions are built from a closed schema that cannot represent a
+value, a label, or a memory key's contents, and are screened against the user's
+own stored values before sending.
+
+Contributing is opt-in, batched, delayed, and **carries no account identifier**.
+The channel is deliberately separate from the authenticated billing channel in
+[monetization.md](./monetization.md); joined, the two would form an authenticated
+browsing history, which is the worst artefact this product could produce. They
+must not share a transport, a session, or correlatable timestamps.
+
+**Never, in either direction:** memory values, form values, file contents or
+names, page text, full URLs. And no aggregate that requires a per-user record to
+compute — "37% of users have a stale employer" is per-user telemetry wearing a
+percentage sign. If a number cannot be computed from site-keyed observations, it
+is not collected.
 
 ## Verification results
 
