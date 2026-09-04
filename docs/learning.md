@@ -59,6 +59,39 @@ every device fills that form deterministically, forever
 The payoff is that token cost falls as adoption rises. The first user of a form
 pays for discovery; nobody else does.
 
+## Unresolved fields are the compatibility engine
+
+The most valuable thing this product can learn is not why a fill failed. It is **which fields it
+has never seen before**.
+
+Every time the deterministic tiers abstain, that is a label the ontology does not cover. Recorded
+and counted, those abstentions sort themselves into a work queue: the most frequently hit
+unknown label is, by definition, the next alias or concept worth adding. Add it, and every
+device that meets that field again resolves it deterministically — no model call, no question to
+the user, permanently.
+
+That loop is what makes compatibility compound instead of plateau:
+
+```
+matcher abstains
+   ↓  record the non-personal signals locally    (Phase 1b, no consent needed)
+   ↓  after consent, contribute                  (Phase 8)
+service ranks unresolved labels by frequency
+   ↓  add the top N as aliases or concepts
+every device fills those fields deterministically, forever
+```
+
+The ordering matters. Collecting locally from the first day the matcher exists means that by the
+time anything can be transmitted there is already a corpus, the screening logic has been in use
+for months, and the schema has been exercised — rather than all three being new on the day the
+network path opens.
+
+What is recorded is the shape of the miss, never the user: a normalised label, the origin, the
+field kind, an autocomplete token, which tiers were tried. Built by narrowing into a closed
+schema, and screened against the user's own memory before it is even written to disk — a label
+like "Confirm email for ananya@example.com" is a label, and the client is the only party holding
+both halves.
+
 ## Multilingual coverage comes out of the same pipe
 
 Hand-curating aliases in `concepts.json` works for English and Hindi and does not

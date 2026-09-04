@@ -13,6 +13,7 @@ just an intention.
 | Documents | Anonymous usage metadata |
 | Form values | Non-sensitive diagnostics |
 | Page content | Shared, non-personal website mappings |
+| The local journal of unresolved fields, until consent | Those same observations, after consent |
 | Agent context containing personal data | Anonymous evaluation data |
 
 Anything on the left leaving the device requires an explicit, separately
@@ -156,6 +157,12 @@ The channel is deliberately separate from the authenticated billing channel in
 [monetization.md](./monetization.md); joined, the two would form an authenticated
 browsing history, which is the worst artefact this product could produce. They
 must not share a transport, a session, or correlatable timestamps.
+
+Opt-in means a single, un-nagging ask, off by default, with a view showing the
+**actual queued payload** rather than a description of it — and declining is a
+final answer, not a reason to ask again. Until that consent exists, observations
+are recorded to a local journal and go nowhere; the first release ships with the
+journal and without the channel.
 
 **Never, in either direction:** memory values, form values, file contents or
 names, page text, full URLs. And no aggregate that requires a per-user record to

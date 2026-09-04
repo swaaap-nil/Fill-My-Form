@@ -57,6 +57,11 @@ should lead with the per-origin grant and the confirmation review.
 - `CHANGELOG.md` is generated, not hand-written.
 - The data-handling disclosure — "does not collect or transmit user data" — is verifiably true:
   `analytics.ts` gone, `supabase.ts` unreachable by lint rule, no network call in a fill.
+  **Verify this with a test, not by reading the code**: run a full fill against the fixtures with
+  network recording on and assert zero requests leave the extension. Phase 1b's field journal is
+  local-only and does not change this answer, but it is exactly the thing a reviewer would ask
+  about — be ready to say it never leaves the device, and that the consent-gated channel does
+  not exist yet.
 - The privacy policy URL is live and describes what the product actually does.
 - Both listings public and approved.
 

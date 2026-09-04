@@ -75,6 +75,14 @@ and escalate — see the last section.
 - **No at-rest encryption.** IndexedDB stores plaintext; `docs/privacy.md` states that
   at-rest protection is the operating system's job. Do not add a passphrase flow.
 - **UI copy goes through `browser.i18n`** from Phase 0. The product targets forms worldwide.
+- **Analytics is collected locally in v1 and transmitted only after Phase 8.** From Phase 1b,
+  fields the matcher could not resolve are recorded to a local journal — nothing leaves the
+  device, no consent is needed, no backend exists. The consent prompt and the upload channel
+  arrive with the cloud layer. This keeps v1's store disclosure at "does not collect or
+  transmit user data" while the corpus and the screening logic are built and proven early.
+- **An admin panel must be connectable later, and the seam is the config document** — one
+  versioned, schema-validated, remotely-supplied file that already exists in ADR 006 form.
+  Do not invent a second channel, and do not let anything about an individual user flow up.
 
 ## Commands
 

@@ -54,6 +54,12 @@ Commit them first, as their own change, before touching anything else.
 | `src/components/common/main.tsx` | The "Hello from …" body and the Extro link. |
 | `src/lib/analytics.ts` | OpenPanel. Dead — nothing imports `track`. Deleting it is also what lets the store data disclosure say "does not collect or transmit user data". |
 
+**On analytics specifically:** the product *does* plan to collect anonymous data eventually —
+unresolved fields, to grow the deterministic rules — but that arrives in Phase 8, behind an
+explicit consent prompt, through ADR 007's narrowed schema. OpenPanel is the wrong mechanism
+for it (a general-purpose product-analytics client with an open event shape is precisely what
+`LogFields` exists to prevent). Delete it now; Phase 1b starts a local-only journal instead.
+
 **Blast radius you will hit, in this order:**
 
 - `src/types/index.ts` re-exports `User` from `@supabase/supabase-js`.

@@ -54,7 +54,7 @@ also a store-review asset and a genuine differentiator.
 | `freshness()` | **Yes, unit, table-driven** over all five `Volatility` classes, with injected `now`. Include ADR 006's stated consequence: an unknown volatility class falls back to the **most conservative** duration, not to `permanent`. | Pure, total, and the whole point of ADR 006. |
 | Migration | **Yes, unit.** An item written before this phase has no `expiresAt`; assert it is derived on next read rather than treated as permanent. | Silent data rot, and it only appears for existing users — never in a fresh install. |
 | Confirmation refresh | **Yes, unit.** Confirming sets the horizon from `now`, not from the previous `expiresAt`. | Off-by-one here means values slowly drift stale. |
-| Export / wipe | **Yes, e2e.** Export, wipe, re-import, assert the store matches. | It is the user's exit, and a wipe that leaves residue is a privacy failure. |
+| Export / wipe | **Yes, e2e.** Export, wipe, re-import, assert the store matches. **Wipe must also clear Phase 1b's field journal**, and the export must include it — assert both. | It is the user's exit, and a wipe that leaves residue is a privacy failure. The journal is the residue most likely to be forgotten, because it is not "memory". |
 | No background sweep | **Yes** — assert `alarms` is absent from the manifest. | ADR 006 forbids it and the shortcut is one line. Phase 0's manifest check already covers this; confirm it still fires. |
 
 ## Gate

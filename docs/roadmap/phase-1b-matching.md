@@ -163,6 +163,51 @@ confidence as a nearby-text guess, and policy is the consumer that cares.
 **Tests:** yes, unit, table-driven. **Why:** this table decides what fills without asking. It is
 a security-relevant mapping wearing the costume of a lookup.
 
+### 7. The local field journal
+
+Every field the matcher could **not** resolve gets recorded on the device. This is how the
+ontology grows against reality rather than against guesses: the top unmatched labels are the
+next aliases and concepts to add, ranked by how often people actually hit them.
+
+**Local only in v1.** Nothing is transmitted, no consent is required, and no backend exists.
+Phase 8 adds a consent prompt that unlocks *sending* what is already being collected — by which
+point there is a corpus and the screening logic below has been in use for months.
+
+Record, per unresolved field, using a **closed schema with no index signature** — the same
+discipline as `LogFields`, and the precursor to ADR 007's `SiteObservation`:
+
+```ts
+interface UnresolvedField {
+  readonly origin: string;        // registrable origin, never a full URL
+  readonly fieldKey: string;      // from 1a's FieldId scheme
+  readonly normalisedLabel: string;
+  readonly kind: FieldKind;
+  readonly autocomplete?: string;
+  readonly tiersTried: readonly MatchTier[];
+  readonly certainty: Certainty;  // unknown or ambiguous
+  readonly count: number;
+  readonly lastSeenAt: string;
+}
+```
+
+**Screen every entry against the user's own memory before writing it.** A label can carry
+interpolated personal data — "Confirm email for ananya@example.com" is a label. The client is
+the only party holding both halves, and it costs a string scan. Doing this at write time rather
+than at send time means the corpus is clean by construction, and the logic is proven long
+before anything leaves the device.
+
+Build it as a **narrowing, not a redaction**: construct an `UnresolvedField` from the signals
+you want, never strip fields off a richer object. Redaction fails open the day someone adds a
+field; narrowing fails closed.
+
+The journal must be viewable by the user and wiped by Phase 4's wipe.
+
+**Tests:** yes, unit. Assert the memory screen drops an entry containing a stored value; assert
+the schema cannot represent a raw value, a full URL, or a query string; assert repeat sightings
+increment `count` rather than duplicating. **Why:** this corpus is the thing that will one day
+be transmitted. Every guarantee it needs then is cheaper to build now, while the blast radius
+of getting it wrong is one device.
+
 ## Gate
 
 ```bash
@@ -175,6 +220,8 @@ bun run eval        # prints the table for all four fixtures
 - `fld_11` → the restricted concept, and `defaultPolicy` returns `REQUIRE_CONFIRMATION` for it.
 - `fld_8` → `contact.address.postal_code` via the placeholder tier.
 - The `csrf` field and the terms checkbox are not scored (never candidates).
+- The field journal records every unresolved field, survives a reload, and drops an entry
+  containing a value from memory.
 - **Publish the coverage numbers in the handback.** They are the baseline Phase 3 must beat,
   and the evidence for whether Phase 3 should happen at all.
 
@@ -184,6 +231,7 @@ bun run eval        # prints the table for all four fixtures
 - The tier → `ConfidenceLevel` table.
 - The final concept count and which concepts were added.
 - The ambiguity threshold, and how "no meaningful separation" was defined.
+- The `UnresolvedField` schema as built, and what the journal recorded across the fixtures.
 - Your recommendation on Phase 3: is the residual worth a model? Suggested bar is >15% of
   in-scope fields left `UNKNOWN` or `AMBIGUOUS`, but you have the numbers and the orchestrator
   does not — argue for or against.
