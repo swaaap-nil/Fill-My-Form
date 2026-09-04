@@ -84,19 +84,37 @@ what belongs in it. Start with [`src/core/README.md`](./src/core/README.md).
 
 ## Architecture
 
+```mermaid
+flowchart TB
+    subgraph device["Your device — local only"]
+        direction TB
+        entry["Extension entry points<br>content script · side panel · background worker"]
+        lib["src/lib — adapters<br>DOM · storage · messaging · site access"]
+        core["src/core — domain<br>form · ontology · memory · agent<br>tools · policy · verification · llm<br>no React, no browser APIs, no network"]
+        store["Local store<br>IndexedDB — memory, files, runs"]
+        entry --> lib --> core --> store
+    end
+
+    subgraph cloud["Cloud — non-personal only"]
+        direction LR
+        config["Config and hints<br>freshness durations, corroborated site facts"]
+        knowledge["Site knowledge<br>anonymous, k-corroborated observations"]
+        billing["Auth and billing<br>account id, no site data"]
+    end
+
+    device -. "fetches hints" .-> config
+    device -. "opt-in, no account id" .-> knowledge
+    device -. "checks entitlement" .-> billing
 ```
-                Extension UI  (src/app, src/components)
-                      │
-                      ▼
-                Adapters      (src/lib — DOM, storage, auth, site access)
-                      │
-                      ▼
-   ┌──────────────────┴──────────────────┐
-   │            src/core                 │
-   │  form · ontology · memory · agent   │
-   │  tools · policy · verification · llm│
-   └─────────────────────────────────────┘
-```
+
+Every arrow is device-initiated: the extension makes the calls, nothing reaches
+in. Config and hints come *down* and are non-personal — freshness durations and
+corroborated facts about public web pages, identical for every user. What goes
+*up* is the part to watch.
+
+The cloud row is unbuilt. When it lands, the two upward channels must never be
+joined — an origin plus an account identifier is a browsing history. See
+[ADR 007](./docs/adr/007-shared-site-knowledge.md).
 
 Dependencies point inward. `src/core` knows nothing about React, the extension
 APIs, Supabase, OpenPanel or any model SDK — enforced by `noRestrictedImports`
@@ -253,11 +271,14 @@ Any failure blocks the merge.
 
 - [architecture.md](./docs/architecture.md) — layers, boundaries, why
 - [agent.md](./docs/agent.md) — the state machine and progressive disclosure
-- [memory.md](./docs/memory.md) — provenance, retrieval, why the model cannot write
+- [memory.md](./docs/memory.md) — provenance, freshness, why the model cannot write
 - [privacy.md](./docs/privacy.md) — the data boundary and how it is enforced
+- [learning.md](./docs/learning.md) — diagnosing failures, multilingual coverage, what we track
+- [monetization.md](./docs/monetization.md) — the entitlement boundary, and what stays free
 - [testing.md](./docs/testing.md) — what to test where
 - [contributing.md](./docs/contributing.md) — conventions
 - [adr/](./docs/adr/) — decisions and their consequences
+- [roadmap/](./docs/roadmap/) — the phased path to release, one brief per phase
 
 ## Credits
 
