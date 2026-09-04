@@ -13,6 +13,7 @@ Append an object to `concepts.json`:
   "key": "identity.nationality",
   "label": "Nationality",
   "sensitivity": "sensitive",
+  "volatility": "stable",
   "expects": "text",
   "aliases": { "en": ["nationality", "citizenship"], "hi": ["राष्ट्रीयता"] }
 }
@@ -21,9 +22,18 @@ Append an object to `concepts.json`:
 `ontologySchema.parse` runs at import, so a malformed entry fails loudly at
 startup and in tests rather than degrading silently at runtime.
 
-`sensitivity` is declared once, here, and drives `~/core/policy`. Get it right:
-it is the difference between a field being filled automatically and one that
-requires explicit confirmation.
+Two properties of the concept are declared here, once, and drive behaviour
+elsewhere:
+
+`sensitivity` drives `~/core/policy`. Get it right: it is the difference between
+a field being filled automatically and one that requires explicit confirmation.
+
+`volatility` drives freshness — how long a stored value is trusted before the
+user is asked to confirm it. `permanent`, `stable`, `slow`, `volatile`, or
+`self_dated` for values that are themselves a date. The durations attached to
+each class are policy and live outside this file. A wrong choice is quiet: too
+long means a stale value is filled confidently, too short means the user is
+nagged. See [ADR 006](../../../docs/adr/006-value-freshness-and-expiry.md).
 
 Aliases are surface forms seen on real forms, in any language. They power the
 deterministic and keyword tiers that run *before* any model is consulted.

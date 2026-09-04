@@ -3,6 +3,7 @@
     "key": "identity.first_name",
     "label": "First name",
     "sensitivity": "personal",
+    "volatility": "stable",
     "expects": "text",
     "aliases": {
       "en": ["first name", "given name", "forename", "fname"],
@@ -13,6 +14,7 @@
     "key": "identity.last_name",
     "label": "Last name",
     "sensitivity": "personal",
+    "volatility": "stable",
     "expects": "text",
     "aliases": {
       "en": ["last name", "surname", "family name", "lname"],
@@ -23,6 +25,7 @@
     "key": "identity.full_name",
     "label": "Full name",
     "sensitivity": "personal",
+    "volatility": "stable",
     "expects": "text",
     "aliases": {
       "en": ["full name", "name", "your name", "candidate name"],
@@ -33,6 +36,7 @@
     "key": "identity.date_of_birth",
     "label": "Date of birth",
     "sensitivity": "sensitive",
+    "volatility": "permanent",
     "expects": "date",
     "aliases": {
       "en": ["date of birth", "dob", "birth date", "birthday"],
@@ -43,6 +47,7 @@
     "key": "contact.email",
     "label": "Email address",
     "sensitivity": "personal",
+    "volatility": "slow",
     "expects": "email",
     "aliases": {
       "en": ["email", "e-mail", "email address", "email id"],
@@ -53,6 +58,7 @@
     "key": "contact.phone",
     "label": "Phone number",
     "sensitivity": "personal",
+    "volatility": "slow",
     "expects": "tel",
     "aliases": {
       "en": [
@@ -69,6 +75,7 @@
     "key": "contact.address.city",
     "label": "City",
     "sensitivity": "sensitive",
+    "volatility": "slow",
     "expects": "text",
     "aliases": {
       "en": ["city", "town", "city/town"],
@@ -79,6 +86,7 @@
     "key": "contact.address.postal_code",
     "label": "Postal code",
     "sensitivity": "sensitive",
+    "volatility": "slow",
     "expects": "text",
     "aliases": {
       "en": ["postal code", "zip", "zip code", "pin code", "pincode"],
@@ -89,6 +97,7 @@
     "key": "education.secondary.completion_year",
     "label": "Class 10 completion year",
     "sensitivity": "personal",
+    "volatility": "permanent",
     "expects": "number",
     "aliases": {
       "en": [
@@ -105,6 +114,7 @@
     "key": "education.higher_secondary.completion_year",
     "label": "Class 12 completion year",
     "sensitivity": "personal",
+    "volatility": "permanent",
     "expects": "number",
     "aliases": {
       "en": [
@@ -121,6 +131,7 @@
     "key": "education.undergraduate.degree",
     "label": "Undergraduate degree",
     "sensitivity": "personal",
+    "volatility": "permanent",
     "expects": "text",
     "aliases": {
       "en": [
@@ -137,6 +148,7 @@
     "key": "education.undergraduate.institution",
     "label": "Undergraduate institution",
     "sensitivity": "personal",
+    "volatility": "permanent",
     "expects": "text",
     "aliases": {
       "en": [
@@ -153,6 +165,7 @@
     "key": "education.undergraduate.completion_year",
     "label": "Undergraduate completion year",
     "sensitivity": "personal",
+    "volatility": "permanent",
     "expects": "number",
     "aliases": {
       "en": [
@@ -168,6 +181,7 @@
     "key": "employment.current.company",
     "label": "Current employer",
     "sensitivity": "personal",
+    "volatility": "volatile",
     "expects": "text",
     "aliases": {
       "en": [
@@ -184,6 +198,7 @@
     "key": "employment.current.title",
     "label": "Current job title",
     "sensitivity": "personal",
+    "volatility": "volatile",
     "expects": "text",
     "aliases": {
       "en": ["job title", "designation", "role", "position", "current title"],
@@ -194,6 +209,7 @@
     "key": "documents.resume",
     "label": "Resume",
     "sensitivity": "sensitive",
+    "volatility": "volatile",
     "expects": "file",
     "aliases": {
       "en": ["resume", "cv", "curriculum vitae", "upload resume"],
