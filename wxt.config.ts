@@ -17,7 +17,7 @@ if (!USE_FRESH_PROFILE) {
 }
 
 export default defineConfig({
-  manifest: {
+  manifest: (env) => ({
     name: "__MSG_extensionName__",
     description: "__MSG_extensionDescription__",
     default_locale: "en",
@@ -31,6 +31,32 @@ export default defineConfig({
      * surface, so the icon opens that instead — see `src/app/background`.
      */
     action: { default_title: "__MSG_extensionName__" },
+
+    /**
+     * Firefox requires (MV3) or strongly recommends (MV2) a stable add-on
+     * id independent of the store-assigned numeric one, so a future update
+     * is recognised as the same add-on rather than a new listing.
+     * Chrome-only builds omit the key entirely rather than relying on
+     * Chrome to ignore it — a Firefox-specific key has no reason to be in
+     * a Chrome manifest at all. The email-shaped value is Mozilla's own
+     * documented convention — it does not need to be a real, receiving
+     * address, and is public (visible in the manifest and the AMO
+     * listing), same as any other extension id.
+     *
+     * `data_collection_permissions.required: ["none"]` is mandatory for
+     * new extensions from November 3, 2025 — not a warning to suppress.
+     * "none" is also the honest answer here: the extension makes no
+     * network requests of its own and there is no analytics client wired
+     * up. See docs/privacy.md.
+     */
+    ...(env.browser === "firefox" && {
+      browser_specific_settings: {
+        gecko: {
+          id: "ff@swapnilsuman.me",
+          data_collection_permissions: { required: ["none"] },
+        },
+      },
+    }),
 
     /**
      * Site access is NOT granted at install time.
@@ -61,7 +87,7 @@ export default defineConfig({
     content_security_policy: {
       extension_pages: "script-src 'self'; object-src 'self'",
     },
-  },
+  }),
   srcDir: "src",
   entrypointsDir: "app",
   /**
