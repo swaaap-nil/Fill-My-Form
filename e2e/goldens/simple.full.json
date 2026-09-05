@@ -1,0 +1,234 @@
+[
+  {
+    "id": "0",
+    "method": "post",
+    "submitLabel": "Submit application",
+    "fields": [
+      {
+        "id": "0/fbbf2ac1/0",
+        "kind": "text",
+        "label": "First name",
+        "required": true,
+        "hasValue": false,
+        "name": "first_name",
+        "autocomplete": "given-name",
+        "constraints": [
+          {
+            "kind": "required"
+          }
+        ],
+        "disabled": false,
+        "readOnly": false
+      },
+      {
+        "id": "0/68f1d8f9/0",
+        "kind": "text",
+        "label": "Last name",
+        "required": true,
+        "hasValue": false,
+        "name": "last_name",
+        "autocomplete": "family-name",
+        "constraints": [
+          {
+            "kind": "required"
+          }
+        ],
+        "disabled": false,
+        "readOnly": false
+      },
+      {
+        "id": "0/8a8753c7/0",
+        "kind": "email",
+        "label": "Email address",
+        "required": true,
+        "hasValue": false,
+        "name": "email",
+        "autocomplete": "email",
+        "constraints": [
+          {
+            "kind": "required"
+          }
+        ],
+        "disabled": false,
+        "readOnly": false
+      },
+      {
+        "id": "0/773611af/0",
+        "kind": "tel",
+        "label": "Mobile number 10 digits, no spaces",
+        "required": false,
+        "hasValue": false,
+        "name": "phone",
+        "autocomplete": "tel",
+        "constraints": [
+          {
+            "kind": "pattern",
+            "value": "[0-9]{10}"
+          }
+        ],
+        "disabled": false,
+        "readOnly": false
+      },
+      {
+        "id": "0/e968c1c2/0",
+        "kind": "date",
+        "label": "Date of birth",
+        "required": true,
+        "hasValue": false,
+        "name": "dob",
+        "constraints": [
+          {
+            "kind": "required"
+          }
+        ],
+        "disabled": false,
+        "readOnly": false
+      },
+      {
+        "id": "0/d9b08a94/0",
+        "kind": "number",
+        "label": "10th Passing Year",
+        "required": true,
+        "hasValue": false,
+        "name": "ssc_year",
+        "constraints": [
+          {
+            "kind": "required"
+          },
+          {
+            "kind": "min",
+            "value": 1950
+          },
+          {
+            "kind": "max",
+            "value": 2030
+          }
+        ],
+        "disabled": false,
+        "readOnly": false
+      },
+      {
+        "id": "0/98d3be69/0",
+        "kind": "select",
+        "label": "Undergraduate degree",
+        "required": true,
+        "hasValue": false,
+        "name": "degree",
+        "options": [
+          {
+            "value": "",
+            "label": "Select a degree"
+          },
+          {
+            "value": "btech",
+            "label": "B.Tech"
+          },
+          {
+            "value": "bsc",
+            "label": "B.Sc"
+          },
+          {
+            "value": "bcom",
+            "label": "B.Com"
+          },
+          {
+            "value": "ba",
+            "label": "B.A"
+          }
+        ],
+        "constraints": [
+          {
+            "kind": "required"
+          }
+        ],
+        "disabled": false,
+        "readOnly": false
+      },
+      {
+        "id": "0/8df57242/0",
+        "kind": "text",
+        "label": "College / university",
+        "required": false,
+        "hasValue": false,
+        "name": "college",
+        "constraints": [
+          {
+            "kind": "maxLength",
+            "value": 120
+          }
+        ],
+        "disabled": false,
+        "readOnly": false
+      },
+      {
+        "id": "0/bacd0480/0",
+        "kind": "textarea",
+        "label": "Cover note",
+        "required": false,
+        "hasValue": false,
+        "name": "cover",
+        "nearbyText": ["Preferred contact method Email Phone"],
+        "constraints": [
+          {
+            "kind": "maxLength",
+            "value": 500
+          }
+        ],
+        "disabled": false,
+        "readOnly": false
+      },
+      {
+        "id": "0/1d68bc11/0",
+        "kind": "radio",
+        "label": "Preferred contact method",
+        "required": false,
+        "hasValue": true,
+        "name": "contact_pref",
+        "options": [
+          {
+            "value": "email",
+            "label": "Email"
+          },
+          {
+            "value": "phone",
+            "label": "Phone"
+          }
+        ],
+        "constraints": [],
+        "disabled": false,
+        "readOnly": false
+      },
+      {
+        "id": "0/ff39a36a/0",
+        "kind": "file",
+        "label": "Upload resume PDF, max 2 MB",
+        "required": false,
+        "hasValue": false,
+        "name": "resume",
+        "constraints": [
+          {
+            "kind": "accept",
+            "value": [".pdf", "application/pdf"]
+          }
+        ],
+        "disabled": false,
+        "readOnly": false
+      },
+      {
+        "id": "0/ee7a3c2c/0",
+        "kind": "checkbox",
+        "label": "I accept the terms",
+        "required": true,
+        "hasValue": false,
+        "name": "terms",
+        "constraints": [
+          {
+            "kind": "required"
+          }
+        ],
+        "disabled": false,
+        "readOnly": false
+      }
+    ]
+  }
+]

@@ -1,0 +1,92 @@
+{
+  "origin": "http://localhost:4173",
+  "path": "/messy.html",
+  "title": "Messy form — the realistic case",
+  "forms": [
+    {
+      "id": "0",
+      "method": "post",
+      "submitLabel": "Register",
+      "fields": [
+        {
+          "id": "0/a09306a1/0",
+          "kind": "text",
+          "label": "Full Name",
+          "required": true,
+          "hasValue": false
+        },
+        {
+          "id": "0/9d9301e8/0",
+          "kind": "text",
+          "label": "Email ID",
+          "required": true,
+          "hasValue": false
+        },
+        {
+          "id": "0/9e93037b/0",
+          "kind": "text",
+          "label": "Contact Number",
+          "required": false,
+          "hasValue": false
+        },
+        {
+          "id": "0/a3930b5a/0",
+          "kind": "text",
+          "label": "10th Passing Year",
+          "required": true,
+          "hasValue": false
+        },
+        {
+          "id": "0/a4930ced/0",
+          "kind": "text",
+          "label": "12th Passing Year",
+          "required": true,
+          "hasValue": false
+        },
+        {
+          "id": "0/a1930834/0",
+          "kind": "text",
+          "label": "Year of Graduation",
+          "required": false,
+          "hasValue": false
+        },
+        {
+          "id": "0/a29309c7/0",
+          "kind": "text",
+          "label": "Year",
+          "required": false,
+          "hasValue": false
+        },
+        {
+          "id": "0/9792f876/0",
+          "kind": "text",
+          "label": "Enter your PIN code",
+          "required": false,
+          "hasValue": false
+        },
+        {
+          "id": "0/9892fa09/0",
+          "kind": "select",
+          "label": "Qualification",
+          "required": false,
+          "hasValue": false
+        },
+        {
+          "id": "0/58735643/0",
+          "kind": "text",
+          "label": "दसवीं उत्तीर्ण वर्ष",
+          "required": false,
+          "hasValue": false
+        },
+        {
+          "id": "0/577354b0/0",
+          "kind": "text",
+          "label": "Aadhaar Number",
+          "required": false,
+          "hasValue": false
+        }
+      ]
+    }
+  ],
+  "observedAt": "<observedAt>"
+}

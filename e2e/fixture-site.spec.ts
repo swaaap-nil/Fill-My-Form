@@ -66,3 +66,41 @@ test("dynamic.html injects fields after load and between steps", async ({
   await expect(page.getByLabel("College / university")).toBeVisible();
   await expect(page.getByLabel("Year of graduation")).toBeVisible();
 });
+
+test("controlled.html keeps its four hard-to-fill controls", async ({
+  page,
+}) => {
+  await page.goto("/controlled.html");
+
+  // 1. React-controlled: a plain value write must be visibly undone by the
+  // page's own input handler, or this fixture has stopped proving anything.
+  const reactInput = page.locator("#react-name");
+  await reactInput.evaluate((el: HTMLInputElement) => {
+    el.value = "bypassed";
+  });
+  await expect(reactInput).toHaveValue("");
+
+  // 2. Masked phone: typing digits produces a reformatted value, not the
+  // raw keystrokes.
+  await page.locator("#masked-phone").pressSequentially("5551234567");
+  await expect(page.locator("#masked-phone")).toHaveValue("(555) 123-4567");
+
+  // 3. Custom combobox: a `<div>`, not a native control, and setting
+  // `.value` on it does nothing — only a click on an option works.
+  await expect(page.locator("#combo-input")).toHaveAttribute(
+    "role",
+    "combobox",
+  );
+  await page.locator("#combo-input").click();
+  await page.getByRole("option", { name: "India" }).click();
+  await expect(page.locator("#combo-input")).toHaveText("India");
+
+  // 4. Strict-format date: an invalid format is silently reverted.
+  const dateInput = page.locator("#strict-date");
+  await dateInput.fill("15/06/1990");
+  await dateInput.blur();
+  await expect(dateInput).toHaveValue("15/06/1990");
+  await dateInput.fill("not-a-date");
+  await dateInput.blur();
+  await expect(dateInput).toHaveValue("15/06/1990");
+});

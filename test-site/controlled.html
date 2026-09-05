@@ -1,0 +1,156 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Controlled form — the hard-fill case</title>
+<style>
+  body { font: 16px/1.6 system-ui, sans-serif; max-width: 40rem; margin: 3rem auto; padding: 0 1rem; }
+  label { display: block; margin-top: 1rem; font-weight: 600; }
+  input, button { width: 100%; padding: .5rem; font: inherit; box-sizing: border-box; }
+  .hint { font-weight: 400; color: #666; font-size: .875rem; }
+  .combobox { position: relative; }
+  #combo-input { border: 1px solid #ccc; border-radius: 4px; padding: .5rem;
+    min-height: 1.5em; cursor: pointer; }
+  .listbox { list-style: none; margin: 0; padding: .25rem 0; border: 1px solid #ccc;
+    border-radius: 4px; position: absolute; inset-inline: 0; top: 100%; background: #fff;
+    z-index: 1; }
+  .listbox[hidden] { display: none; }
+  .listbox li { padding: .5rem; cursor: pointer; }
+  .listbox li:hover, .listbox li[aria-selected="true"] { background: #eef; }
+  button { margin-top: 1.5rem; padding: .6rem 1.2rem; font: inherit; }
+</style>
+
+<h1>Everything a naive writer gets wrong</h1>
+<p>
+  Four controls, each defeating a plain <code>element.value = "..."</code>
+  write. Extraction must still see each one correctly — filling them is
+  Phase 2's job.
+</p>
+
+<form id="hard-fill" method="post" action="/apply">
+  <label for="react-name">Full name <span class="hint">React-controlled — resets on a plain value write</span></label>
+  <input id="react-name" name="react_name" type="text" required autocomplete="name" />
+
+  <label for="masked-phone">Mobile number <span class="hint">reformats as you type</span></label>
+  <input id="masked-phone" name="masked_phone" type="tel" autocomplete="tel" placeholder="(555) 555-5555" />
+
+  <label for="combo-input">Country</label>
+  <div class="combobox">
+    <div
+      id="combo-input"
+      role="combobox"
+      tabindex="0"
+      aria-expanded="false"
+      aria-haspopup="listbox"
+      aria-controls="combo-listbox"
+    ></div>
+    <ul id="combo-listbox" class="listbox" role="listbox" hidden>
+      <li role="option" data-value="in">India</li>
+      <li role="option" data-value="us">United States</li>
+      <li role="option" data-value="gb">United Kingdom</li>
+    </ul>
+  </div>
+
+  <label for="strict-date">Date of birth <span class="hint">DD/MM/YYYY only — anything else is rejected</span></label>
+  <input id="strict-date" name="strict_dob" type="text" placeholder="DD/MM/YYYY" />
+
+  <button type="submit">Submit</button>
+</form>
+
+<script>
+  // 1. React-controlled input: an input handler resets `.value` on every
+  // event unless the write went through the native setter, exactly like a
+  // React-managed <input> whose state didn't change.
+  (() => {
+    const el = document.getElementById("react-name");
+    const native = Object.getOwnPropertyDescriptor(
+      window.HTMLInputElement.prototype,
+      "value",
+    );
+
+    // Shadows the instance's own `value` accessor, exactly like a
+    // React-managed input does internally to track keystrokes: reads
+    // always reflect the real value, but a plain assignment lands on this
+    // setter and is silently dropped. Only a write through the *native*
+    // setter — which a plain `el.value = x` never reaches, because this
+    // shadow sits in front of it on the instance — actually changes what
+    // is on screen.
+    Object.defineProperty(el, "value", {
+      configurable: true,
+      get() {
+        return native.get.call(el);
+      },
+      set() {
+        // Dropped. A real keystroke never calls this: the browser's own
+        // typing updates the underlying value directly, which the getter
+        // above still reports correctly.
+      },
+    });
+  })();
+
+  // 2. Masked phone: reformats to (XXX) XXX-XXXX on every input, so a plain
+  // value write is not what ends up stored.
+  (() => {
+    const el = document.getElementById("masked-phone");
+    el.addEventListener("input", () => {
+      const digits = el.value.replace(/\D/g, "").slice(0, 10);
+      const area = digits.slice(0, 3);
+      const mid = digits.slice(3, 6);
+      const last = digits.slice(6, 10);
+      let formatted = area;
+      if (digits.length > 3) formatted = `(${area}) ${mid}`;
+      if (digits.length > 6) formatted = `(${area}) ${mid}-${last}`;
+      el.value = formatted;
+    });
+  })();
+
+  // 3. Custom combobox: read-only text input backed by a listbox. Ignores
+  // `.value` entirely; only a click on an option (or keyboard activation)
+  // changes the selection.
+  (() => {
+    const input = document.getElementById("combo-input");
+    const listbox = document.getElementById("combo-listbox");
+
+    const open = () => {
+      listbox.hidden = false;
+      input.setAttribute("aria-expanded", "true");
+    };
+    const close = () => {
+      listbox.hidden = true;
+      input.setAttribute("aria-expanded", "false");
+    };
+
+    input.addEventListener("click", () =>
+      listbox.hidden ? open() : close(),
+    );
+
+    listbox.addEventListener("click", (event) => {
+      const option = event.target.closest("li[role=option]");
+      if (!option) return;
+      input.textContent = option.textContent;
+      listbox
+        .querySelectorAll("li")
+        .forEach((li) => li.removeAttribute("aria-selected"));
+      option.setAttribute("aria-selected", "true");
+      close();
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest(".combobox")) close();
+    });
+  })();
+
+  // 4. Strict-format date: silently keeps its previous value unless the
+  // input matches DD/MM/YYYY.
+  (() => {
+    const el = document.getElementById("strict-date");
+    let lastValid = "";
+    const pattern = /^\d{2}\/\d{2}\/\d{4}$/;
+
+    el.addEventListener("change", () => {
+      if (pattern.test(el.value)) {
+        lastValid = el.value;
+      } else {
+        el.value = lastValid;
+      }
+    });
+  })();
+</script>

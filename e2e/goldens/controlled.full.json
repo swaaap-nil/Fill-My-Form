@@ -1,0 +1,75 @@
+[
+  {
+    "id": "0",
+    "method": "post",
+    "submitLabel": "Submit",
+    "fields": [
+      {
+        "id": "0/08295d52/0",
+        "kind": "text",
+        "label": "Full name React-controlled — resets on a plain value write",
+        "required": true,
+        "hasValue": false,
+        "name": "react_name",
+        "autocomplete": "name",
+        "constraints": [
+          {
+            "kind": "required"
+          }
+        ],
+        "disabled": false,
+        "readOnly": false
+      },
+      {
+        "id": "0/9c6c7b37/0",
+        "kind": "tel",
+        "label": "Mobile number reformats as you type",
+        "required": false,
+        "hasValue": false,
+        "name": "masked_phone",
+        "placeholder": "(555) 555-5555",
+        "autocomplete": "tel",
+        "constraints": [],
+        "disabled": false,
+        "readOnly": false
+      },
+      {
+        "id": "0/497ccbc8/0",
+        "kind": "unknown",
+        "label": "Country",
+        "required": false,
+        "hasValue": false,
+        "nearbyText": ["India United States United Kingdom"],
+        "options": [
+          {
+            "value": "in",
+            "label": "India"
+          },
+          {
+            "value": "us",
+            "label": "United States"
+          },
+          {
+            "value": "gb",
+            "label": "United Kingdom"
+          }
+        ],
+        "constraints": [],
+        "disabled": false,
+        "readOnly": false
+      },
+      {
+        "id": "0/c9c14626/0",
+        "kind": "text",
+        "label": "Date of birth DD/MM/YYYY only — anything else is rejected",
+        "required": false,
+        "hasValue": false,
+        "name": "strict_dob",
+        "placeholder": "DD/MM/YYYY",
+        "constraints": [],
+        "disabled": false,
+        "readOnly": false
+      }
+    ]
+  }
+]

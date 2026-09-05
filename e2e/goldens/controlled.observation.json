@@ -1,0 +1,43 @@
+{
+  "origin": "http://localhost:4173",
+  "path": "/controlled.html",
+  "title": "Controlled form — the hard-fill case",
+  "forms": [
+    {
+      "id": "0",
+      "method": "post",
+      "submitLabel": "Submit",
+      "fields": [
+        {
+          "id": "0/08295d52/0",
+          "kind": "text",
+          "label": "Full name React-controlled — resets on a plain value write",
+          "required": true,
+          "hasValue": false
+        },
+        {
+          "id": "0/9c6c7b37/0",
+          "kind": "tel",
+          "label": "Mobile number reformats as you type",
+          "required": false,
+          "hasValue": false
+        },
+        {
+          "id": "0/497ccbc8/0",
+          "kind": "unknown",
+          "label": "Country",
+          "required": false,
+          "hasValue": false
+        },
+        {
+          "id": "0/c9c14626/0",
+          "kind": "text",
+          "label": "Date of birth DD/MM/YYYY only — anything else is rejected",
+          "required": false,
+          "hasValue": false
+        }
+      ]
+    }
+  ],
+  "observedAt": "<observedAt>"
+}

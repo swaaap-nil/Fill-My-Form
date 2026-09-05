@@ -1,0 +1,21 @@
+{
+  "origin": "http://localhost:4173",
+  "path": "/dynamic.html",
+  "title": "Dynamic form — fields that appear later",
+  "forms": [
+    {
+      "id": "0",
+      "method": "post",
+      "fields": [
+        {
+          "id": "0/8a8753c7/0",
+          "kind": "email",
+          "label": "Email address",
+          "required": true,
+          "hasValue": false
+        }
+      ]
+    }
+  ],
+  "observedAt": "<observedAt>"
+}

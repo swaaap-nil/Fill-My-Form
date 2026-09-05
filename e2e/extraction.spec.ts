@@ -1,0 +1,216 @@
+import { existsSync } from "node:fs";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
+import type { Page } from "@playwright/test";
+import type { Form, PageObservation } from "../src/core/form/types";
+import { expect, test } from "./fixtures";
+
+/**
+ * Goldens for the DOM → `FormIR` extractor.
+ *
+ * The extractor is built standalone (`bun run build:extractor`) and injected
+ * with `page.addScriptTag()` — no extension, no manifest, no permissions.
+ * This keeps the highest-value test in phase 1a independent of site-access
+ * wiring, which does not exist until Phase 1c.
+ *
+ * `bun run goldens:update` regenerates the committed files under
+ * `e2e/goldens/` so a change in extraction behaviour arrives as a reviewable
+ * diff, never a silent one.
+ */
+
+const EXTRACTOR_PATH = resolve(process.cwd(), "build/extractor/extractor.js");
+const GOLDENS_DIR = resolve(process.cwd(), "e2e/goldens");
+const UPDATE = process.env.UPDATE_GOLDENS === "1";
+
+/** Stands in for the real timestamp so goldens do not churn on every run. */
+const FIXED_OBSERVED_AT = "<observedAt>";
+
+declare global {
+  interface Window {
+    __formAgentExtract?: (doc?: Document) => PageObservation;
+    __formAgentExtractFull?: (doc?: Document) => Form[];
+  }
+}
+
+const injectExtractor = async (page: Page) => {
+  if (!existsSync(EXTRACTOR_PATH)) {
+    throw new Error(
+      `No extractor bundle at ${EXTRACTOR_PATH}. Run \`bun run build:extractor\` ` +
+        "(or `bun test:e2e`, which does this for you).",
+    );
+  }
+  await page.addScriptTag({ path: EXTRACTOR_PATH });
+};
+
+const observe = (page: Page) =>
+  page.evaluate(() => {
+    const extract = window.__formAgentExtract;
+    if (!extract) throw new Error("extractor did not attach to window");
+    return extract();
+  });
+
+const observeFull = (page: Page) =>
+  page.evaluate(() => {
+    const extractFull = window.__formAgentExtractFull;
+    if (!extractFull) throw new Error("extractor did not attach to window");
+    return extractFull();
+  });
+
+const normaliseObservation = (obs: PageObservation): PageObservation => ({
+  ...obs,
+  observedAt: FIXED_OBSERVED_AT,
+});
+
+/** Compares against, or (with `UPDATE_GOLDENS=1`) writes, a committed golden. */
+const assertMatchesGolden = async (name: string, actual: unknown) => {
+  const path = resolve(GOLDENS_DIR, `${name}.json`);
+
+  if (UPDATE) {
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, `${JSON.stringify(actual, null, 2)}\n`);
+    return;
+  }
+
+  if (!existsSync(path)) {
+    throw new Error(
+      `No golden at ${path}. Run \`bun run goldens:update\` to generate it, ` +
+        "then review the diff before committing.",
+    );
+  }
+  const golden = JSON.parse(await readFile(path, "utf8"));
+  expect(actual).toEqual(golden);
+};
+
+for (const fixture of ["simple", "messy", "controlled"] as const) {
+  test(`${fixture}.html extracts to the committed golden`, async ({ page }) => {
+    await page.goto(`/${fixture}.html`);
+    await injectExtractor(page);
+
+    const observation = normaliseObservation(await observe(page));
+    await assertMatchesGolden(`${fixture}.observation`, observation);
+
+    const full = await observeFull(page);
+    await assertMatchesGolden(`${fixture}.full`, full);
+  });
+}
+
+test("dynamic.html extracts to the committed golden before any injection fires", async ({
+  page,
+}) => {
+  // Freezes the fixture's own timers so the pre-injection snapshot this
+  // golden pins cannot flake under a slow CI runner.
+  await page.addInitScript(() => {
+    window.setTimeout = (() => 0) as unknown as typeof window.setTimeout;
+  });
+
+  await page.goto("/dynamic.html");
+  await injectExtractor(page);
+
+  const observation = normaliseObservation(await observe(page));
+  await assertMatchesGolden("dynamic.observation", observation);
+
+  const full = await observeFull(page);
+  await assertMatchesGolden("dynamic.full", full);
+});
+
+test("sentinel: a filled value never appears in the observation, only hasValue does", async ({
+  page,
+}) => {
+  await page.goto("/simple.html");
+  await page.getByLabel("Email address").fill("sentinel-abc-123@example.com");
+  await injectExtractor(page);
+
+  const observation = await observe(page);
+
+  expect(JSON.stringify(observation)).not.toContain("sentinel-abc-123");
+
+  const emailField = observation.forms[0]?.fields.find(
+    (f) => f.label === "Email address",
+  );
+  expect(emailField?.hasValue).toBe(true);
+});
+
+test("field ids on dynamic.html survive the step-1 to step-2 transition", async ({
+  page,
+}) => {
+  await page.goto("/dynamic.html");
+  await injectExtractor(page);
+
+  const before = await observe(page);
+  const idsBefore = before.forms[0]?.fields.map((f) => f.id) ?? [];
+  expect(idsBefore.length).toBeGreaterThan(0);
+
+  await page.getByLabel("Email address").fill("someone@example.com");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByLabel("College / university")).toBeVisible();
+
+  const after = await observe(page);
+  const idsAfter = after.forms[0]?.fields.map((f) => f.id) ?? [];
+
+  for (const id of idsBefore) {
+    expect(idsAfter).toContain(id);
+  }
+});
+
+test("the 600ms injected referral field appears only in a re-observation", async ({
+  page,
+}) => {
+  await page.goto("/dynamic.html");
+  await injectExtractor(page);
+
+  const first = await observe(page);
+  const labelsBefore = first.forms[0]?.fields.map((f) => f.label) ?? [];
+  expect(labelsBefore).not.toContain("How did you hear about us?");
+
+  await page.waitForTimeout(700);
+
+  const second = await observe(page);
+  const labelsAfter = second.forms[0]?.fields.map((f) => f.label) ?? [];
+  expect(labelsAfter).toContain("How did you hear about us?");
+});
+
+test("controlled.html's four hard controls extract with the right FieldKind", async ({
+  page,
+}) => {
+  await page.goto("/controlled.html");
+  await injectExtractor(page);
+
+  const full = await observeFull(page);
+  const fields = full[0]?.fields ?? [];
+  const byName = (name: string) => fields.find((f) => f.name === name);
+
+  expect(byName("react_name")?.kind).toBe("text");
+  expect(byName("masked_phone")?.kind).toBe("tel");
+  expect(byName("strict_dob")?.kind).toBe("text");
+
+  // The combobox is a `<div>`, has no `name`, and is identified by label.
+  const combobox = fields.find((f) => f.label === "Country");
+  expect(combobox?.kind).toBe("unknown");
+  expect(combobox?.options?.map((o) => o.label)).toEqual([
+    "India",
+    "United States",
+    "United Kingdom",
+  ]);
+});
+
+test("extracting a 500-field page stays within budget", async ({ page }) => {
+  const inputs = Array.from(
+    { length: 500 },
+    (_, i) =>
+      `<label for="f${i}">Field ${i}</label><input id="f${i}" name="f${i}" />`,
+  ).join("\n");
+  await page.setContent(`<form>${inputs}</form>`);
+  await injectExtractor(page);
+
+  const durationMs = await page.evaluate(() => {
+    const extract = window.__formAgentExtract;
+    if (!extract) throw new Error("extractor did not attach to window");
+    const start = performance.now();
+    extract();
+    return performance.now() - start;
+  });
+
+  // Generous headroom over local measurements (see the phase 1a handback
+  // for the recorded number) so ordinary CI jitter does not make this flaky.
+  expect(durationMs).toBeLessThan(250);
+});
