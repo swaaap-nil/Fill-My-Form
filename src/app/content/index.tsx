@@ -2,8 +2,40 @@ import ReactDOM from "react-dom/client";
 import { browser } from "wxt/browser";
 import { createShadowRootUi, defineContentScript } from "#imports";
 import { Logo } from "@/components/common/logo";
+import type { FieldElements } from "~/lib/form/extract";
+import { extractFullWithElements } from "~/lib/form/extract";
+import { writeFieldValue } from "~/lib/form/fill";
+import { assertValidFillInstruction, onMessage } from "~/lib/messaging";
 
 import "~/assets/styles/globals.css";
+
+/**
+ * Populated by the most recent `extractFullForm` message, consumed by
+ * `fillField`. `FieldId`s are recomputed on every extraction rather than
+ * stored as DOM attributes (see `~/core/form/field-id`), so a fill must
+ * target the same extraction pass that produced the id it was given —
+ * hence caching it here rather than re-extracting inside `fillField`.
+ */
+let lastElementsById: ReadonlyMap<string, FieldElements> = new Map();
+
+const registerFillHandlers = () => {
+  onMessage("extractFullForm", () => {
+    const { forms, elements } = extractFullWithElements(document);
+    lastElementsById = elements;
+    return { forms };
+  });
+
+  onMessage("fillField", ({ data }) => {
+    // Throws — fills nothing — without a `decisionId`. See
+    // ~/core/messaging/fill-instruction for why this must stay here.
+    const { fieldId, value } = assertValidFillInstruction(data);
+
+    const target = lastElementsById.get(fieldId);
+    if (!target) return { ok: false };
+
+    return { ok: writeFieldValue(target, value) };
+  });
+};
 
 /**
  * `registration: "runtime"` keeps this script OUT of the manifest.
@@ -30,6 +62,8 @@ export default defineContentScript({
   cssInjectionMode: "ui",
 
   async main(ctx) {
+    registerFillHandlers();
+
     const ui = await createShadowRootUi(ctx, {
       name: "form-agent-ui",
       position: "overlay",

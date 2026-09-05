@@ -26,33 +26,40 @@ contracts, most of which have no implementation.
 | `src/core/llm/` | **Works.** `LLMProvider` port, `MockLLMProvider`, `AiSdkProvider`. |
 | `src/core/policy/default.ts` | **Works.** Default-deny; submission denied unconditionally. |
 | `src/core/logging.ts`, `errors.ts` | **Works.** `LogFields` is a closed allowlist with no index signature. |
-| `src/lib/site-access.ts` | Written, **zero UI call sites**, no unit tests, imports `wxt/browser` at module scope. |
-| `src/core/memory/` | Types + a 20-line `MemoryStore` interface. **No implementation.** |
+| `src/lib/site-access.ts` | **Works (Phase 1c).** DI'd (`createSiteAccess(browser)`), unit-tested against a fake, reachable from the side panel's "Grant access" button. Covers spike 2's open-tab injection gap via a direct `executeScript`. |
+| `src/core/memory/` | **Works (Phase 1c), in-memory only.** `in-memory.ts` implements the real interface (profile-qualified keys, `schemaVersion`), `write-service.ts` is the only write path, `tools.ts` exposes two read-only tools. Lives in the background worker. No IndexedDB backend yet. |
+| `src/core/fill/`, `src/core/messaging/` | **Works (Phase 1c).** `planFill`/`confirmDecision` (straight-line, no agent loop yet) and the `decisionId`-gated fill-instruction schema. |
 | `src/core/agent/types.ts` | Types, `PHASE_TRANSITIONS`, `canTransition`. **No reducer, no loop.** |
 | `src/core/verification/types.ts` | Types only. **No `Verifier`.** |
-| `src/app/sidepanel`, `options` | Render `<Layout />` and nothing else. The product UI starts in 1c. |
-| `src/app/content/index.tsx` | Renders a badge. No DOM scanning, no fill, no messaging. |
-| `src/components/ui/` | shadcn-style primitives (button, card, input, form, …). Compose from these. |
+| `src/app/sidepanel`, `options` | **Sidepanel works (Phase 1c):** onboarding form (ontology-driven) and the fill panel (grant/scan/confirm), stacked behind two toggle buttons — no tab primitive exists yet. `options` still renders `<Layout />` only. |
+| `src/app/content/index.tsx` | **Works (Phase 1c).** `extractFullForm` and `fillField` message handlers, on top of the existing badge UI. Fill technique: native-setter + event, for text-like inputs/textarea/select only — radio/checkbox groups and ARIA widgets are not filled yet (Phase 2). |
+| `src/components/ui/` | shadcn-style primitives (button, card, input, form, …). Compose from these. No select/radio/checkbox/tabs primitive yet — onboarding and the fill panel work around this (see the phase 1c handback). |
 | `scripts/check-release-manifest.ts` | **Works,** wired into CI, with its own tests. Phase 0 built it. |
 
 52 unit tests (`bun test`, plain Bun, no DOM) and 10 Playwright e2e smoke tests pass today.
 
-## Three defects to know about before you start
+## Three Phase 0 defects — resolved in Phase 1c
 
-These were verified this session. Do not "discover" them again.
+Verified in Phase 0, fixed in Phase 1c. Recorded so nobody "discovers" them again, and so
+the fix is understood rather than just present.
 
-1. **`requestSiteAccess` has no callers.** Only `restoreGrantedSites` runs, from
-   `src/app/background/index.ts`. The per-origin grant flow — the runtime half of the
-   privacy design — is unreachable from the UI.
-2. **No `restricted` concept exists** (12 `personal`, 4 `sensitive`, 0 `restricted`, 0
-   `public`). So `defaultPolicy`'s RESTRICTED branch is dead code, `messy.html`'s Aadhaar
-   field passes for the wrong reason, and — since nothing is `public` — **no field can
-   auto-fill at all today**. Every fill needs confirmation.
-3. **`registerContentScripts` does not affect the already-open tab.** After a grant the
-   user sees nothing until reload. The fix, specified in
-   [`docs/spikes-phase-0.md`](../spikes-phase-0.md) and due in Phase 1c: after
-   `registerContentScripts` succeeds, also `scripting.executeScript` into the active tab.
-   Registration covers future navigations; the direct injection covers the tab open now.
+1. ~~`requestSiteAccess` has no callers.~~ **Fixed.** The side panel's "Grant access to
+   this site" button calls it. One wrinkle worth knowing: `chrome.permissions.request()`
+   only succeeds inside the synchronous call stack of a user gesture, so this call had to
+   live in the side panel itself, not be proxied through a `sendMessage` to the
+   background — a background handler invoked via messaging does not inherit the gesture,
+   and the call rejects with "This function must be called during a user gesture".
+   `runFill`/`confirmFill` stay background messages (they need no gesture); only the
+   `permissions.request()` path moved.
+2. **No `restricted` concept exists** — fixed in Phase 1b (`documents.national_id` and
+   others). Before that, `defaultPolicy`'s RESTRICTED branch was dead code and
+   `messy.html`'s Aadhaar field passed for the wrong reason. Since nothing is `public`,
+   **no field auto-fills today** — every fill still needs confirmation, which is correct
+   behaviour, not a residual bug.
+3. ~~`registerContentScripts` does not affect the already-open tab.~~ **Fixed.**
+   `requestSiteAccess` now also calls `scripting.executeScript` into the active tab
+   immediately after a successful grant. Registration covers future navigations; the
+   direct injection covers the tab open right now.
 
 Phase 0 is complete. Its spike answers — including confirmation that
 `permissions.request()` works from the side panel — are in

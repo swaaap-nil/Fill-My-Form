@@ -476,10 +476,14 @@ const isWidgetSkipped = (el: HTMLElement): boolean =>
   el.hasAttribute("disabled") ||
   isInvisible(el);
 
+/** What a `FieldId` was derived from — a single element, or a whole group. */
+export type FieldElements = Element | readonly Element[];
+
 const extractForm = (
   doc: Document,
   form: HTMLFormElement,
   formIndex: number,
+  elementsById?: Map<string, FieldElements>,
 ): Form => {
   const allElements = Array.from(
     form.querySelectorAll<Element>(
@@ -510,6 +514,10 @@ const extractForm = (
       const id = ids[i];
       if (id === undefined) {
         throw new Error("unreachable: field-id and group arrays diverged");
+      }
+
+      if (elementsById) {
+        elementsById.set(id, g.kind === "group" ? g.els : g.el);
       }
 
       if (g.kind === "group") {
@@ -603,6 +611,34 @@ export const extractFull = (doc: Document = document): Form[] =>
   Array.from(doc.querySelectorAll("form")).map((form, i) =>
     extractForm(doc, form, i),
   );
+
+export interface ExtractionWithElements {
+  readonly forms: readonly Form[];
+  /**
+   * `FieldId` -> the DOM it was derived from. For a fill step to locate a
+   * field, it must be looking at the *same* extraction pass that produced
+   * the id — ids are recomputed each call, not stored as DOM attributes —
+   * so callers that extract once and fill later (`src/app/content`) must
+   * keep this map from that same call, not re-extract in between.
+   */
+  readonly elements: ReadonlyMap<string, FieldElements>;
+}
+
+/**
+ * Same extraction as {@link extractFull}, plus the element each `FieldId`
+ * came from. Only the content script needs this — goldens and the agent's
+ * own observations never touch a live element, per `FormIR`'s "shape, not
+ * a DOM handle" rule.
+ */
+export const extractFullWithElements = (
+  doc: Document = document,
+): ExtractionWithElements => {
+  const elements = new Map<string, FieldElements>();
+  const forms = Array.from(doc.querySelectorAll("form")).map((form, i) =>
+    extractForm(doc, form, i, elements),
+  );
+  return { forms, elements };
+};
 
 const toSummary = (form: Form): FormSummary => ({
   id: form.id,

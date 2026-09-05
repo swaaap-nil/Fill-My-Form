@@ -83,13 +83,38 @@ solved.
 
 ## Implementation order
 
-1. **In-memory** — tests.
+1. **In-memory** (`~/core/memory/in-memory.ts`) — tests, and phase 1c's first
+   real fill. Lives in the background service worker, not the side panel:
+   the panel dies when it closes, and a value someone just typed in
+   onboarding — or a run in progress — must survive that.
 2. **IndexedDB** — production. Handles the size and structure a personal
    knowledge base needs; `chrome.storage` does not.
 
 A remote-backed store is deliberately not planned. If one is ever needed it
 becomes an explicit, separately-consented feature with its own ADR, not an
 adapter quietly swapped in behind the interface.
+
+## Every key is qualified by profile
+
+`identity.first_name` assumes one person, but the Indian government-form use
+case routinely means filling on behalf of a spouse, a child or a parent. Every
+`MemoryStore` method therefore takes a `ProfileId` (phase 1c): `get`, `update`
+and `delete` take it as a parameter, `MemoryItem` carries it, and `MemoryQuery`
+filters by it. `DEFAULT_PROFILE_ID` ("self") is the only profile v1's UI ever
+creates — nothing yet lets a user add a second one — but the dimension exists
+in the store and every call site from day one. Retrofitting it later would
+mean migrating every stored key and every caller at once; threading it through
+now, while there is exactly one implementation and zero stored data, is a type
+signature, not a migration.
+
+## `schemaVersion`
+
+Every `MemoryItem` carries `schemaVersion` (currently always
+`CURRENT_MEMORY_SCHEMA_VERSION = 1`). A backend reads it on load and runs
+whatever migration an older item needs — `in-memory.ts`'s `migrate()` is the
+seam, currently the identity function since there is only one version. The
+field is required, not defaulted, so a hand-constructed item can never
+silently skip a future migration by omission.
 
 ## Sensitivity
 

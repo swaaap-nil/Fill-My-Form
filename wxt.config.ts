@@ -2,6 +2,7 @@ import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, type WxtViteConfig } from "wxt";
+import { applyHostPermissionsPolicy } from "./scripts/manifest-hook";
 
 /**
  * Persistent dev profile. `chrome-launcher` writes its log here on startup and
@@ -63,7 +64,14 @@ export default defineConfig({
   },
   srcDir: "src",
   entrypointsDir: "app",
-  outDir: "build",
+  /**
+   * A `WXT_E2E=1` build carries a `host_permissions` entry (see the
+   * `build:manifestGenerated` hook below) that a release build must never
+   * have. Separate output directories, rather than one directory rebuilt
+   * twice, mean `e2e/fill.spec.ts` and every other e2e spec can load their
+   * own build without one clobbering the other's manifest.
+   */
+  outDir: process.env.WXT_E2E === "1" ? "build-e2e" : "build",
   modules: ["@wxt-dev/module-react", "@wxt-dev/auto-icons"],
   imports: false,
   vite: () =>
@@ -106,9 +114,22 @@ export default defineConfig({
      * `optional_host_permissions` via `permissions.request()`. If this hook
      * is ever removed, `chrome://extensions` will silently start saying
      * "on all sites". See docs/privacy.md.
+     *
+     * `WXT_E2E=1` is the one exception, and a narrow one: Playwright cannot
+     * click Chrome's native permission bubble, so `e2e/fill.spec.ts` needs
+     * `localhost:4173` (the fixture site) pre-granted to exercise the fill
+     * flow without that click. This still owns host permissions in one
+     * place — the flag only ever adds `localhost`, never `<all_urls>` — and
+     * `scripts/check-release-manifest.ts` fails any build, `WXT_E2E` or
+     * not, that has `host_permissions` at all, so the flag cannot leak into
+     * a release build even if someone sets it by mistake. The policy itself
+     * is `scripts/manifest-hook.ts`, unit-tested there.
      */
     "build:manifestGenerated": (_wxt, manifest) => {
-      delete manifest.host_permissions;
+      applyHostPermissionsPolicy(
+        manifest as { host_permissions?: unknown },
+        process.env,
+      );
     },
   },
   webExt: {

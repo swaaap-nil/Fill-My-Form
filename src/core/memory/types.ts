@@ -17,6 +17,31 @@
 /** Usually an ontology concept key, but free-form keys are permitted. */
 export type MemoryKey = string;
 
+/**
+ * Which person a memory item is about. `identity.first_name` assumes one
+ * person, but the Indian government-form use case routinely means filling
+ * on behalf of a spouse, a child or a parent — so the key space is
+ * qualified by profile from day one rather than bolted on later, which
+ * would mean migrating every stored key and every call site at once.
+ *
+ * `DEFAULT_PROFILE_ID` is the user themselves; nothing in v1's UI creates a
+ * second profile, but every store method already takes one so that adding
+ * the "fill this for my son" flow later is new UI over an existing
+ * dimension, not a schema migration.
+ */
+export type ProfileId = string;
+export const DEFAULT_PROFILE_ID: ProfileId = "self";
+
+/**
+ * Bumped whenever `MemoryItem`'s shape changes incompatibly. A backend
+ * reads this on load and runs any migrations older items need; see
+ * `~/core/memory/in-memory.ts` for the (currently trivial, since this is
+ * version 1) migration seam. Required rather than defaulted so a
+ * hand-constructed item can never silently skip the check.
+ */
+export type MemorySchemaVersion = number;
+export const CURRENT_MEMORY_SCHEMA_VERSION: MemorySchemaVersion = 1;
+
 /** JSON-representable, so a run stays serialisable and resumable. */
 export type MemoryValue =
   | string
@@ -71,14 +96,17 @@ export interface MemoryProvenance {
 }
 
 export interface MemoryItem {
+  readonly profileId: ProfileId;
   readonly key: MemoryKey;
   readonly value: MemoryValue;
   readonly provenance: MemoryProvenance;
   /** Human label for review UI. Falls back to the ontology concept label. */
   readonly label?: string;
+  readonly schemaVersion: MemorySchemaVersion;
 }
 
 export interface MemoryQuery {
+  readonly profileId: ProfileId;
   readonly keys?: readonly MemoryKey[];
   /** Dotted-prefix match, e.g. "education." */
   readonly prefix?: string;
