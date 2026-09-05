@@ -46,6 +46,12 @@ decided.
 **Export and wipe.** A local-first product must let users take their data and destroy it. It is
 also a store-review asset and a genuine differentiator.
 
+Both need UI. Follow the "Building UI" rules in [`_context.md`](./_context.md) — compose from
+`src/components/ui/`, `lucide-react` for icons, nothing hardcoded. Wipe is destructive and
+irreversible, so it needs a real confirmation step rather than a single button; that much is a
+behaviour requirement, not a design decision, and it stays true whatever the eventual design
+looks like.
+
 ## Testing decisions
 
 | Deliverable | Tests | Why |

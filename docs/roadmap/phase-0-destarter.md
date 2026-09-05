@@ -1,5 +1,9 @@
 # Phase 0 — De-starter, rebrand, spikes, release track
 
+**Status: complete** (`8278b37`). Kept for the record — the spike answers it produced live in
+[`docs/spikes-phase-0.md`](../spikes-phase-0.md), and the release-track items (publisher
+verification, hosting the privacy policy) may still be in flight.
+
 **Depends on:** nothing. **Unblocks:** everything.
 
 ## Goal

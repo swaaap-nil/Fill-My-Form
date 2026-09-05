@@ -82,7 +82,13 @@ bun check        # lint + typecheck + unit tests
 bun run build    # both browser targets
 ```
 
-Both green, plus the phase's own gate. A phase that leaves `main` red is not done.
+Both green **with no warnings**, plus the phase's own gate. Not just no errors — no Biome
+`info`/`warn` lines, no TypeScript diagnostics, no build or deprecation warnings, no console
+warnings in e2e. Warnings are never suppressed to reach this bar; a warning you cannot
+legitimately fix is an escalation to the user, not a `biome-ignore`. See
+[`_context.md`](./_context.md).
+
+A phase that leaves `main` red — or noisier than it found it — is not done.
 
 ## Rules for the orchestrator
 
@@ -97,7 +103,10 @@ Both green, plus the phase's own gate. A phase that leaves `main` red is not don
 
 ## Current status
 
-Nothing started. The repo is at the end of the foundation stage: contracts written, quality
-gates in place, 16 files of ADRs and doc updates uncommitted at the time of writing.
+**Phase 0 is complete** (`8278b37`). The starter surface is gone, branding is the product's own,
+`scripts/check-release-manifest.ts` guards the removal in CI, Supabase is dormant behind an
+import restriction, and the three spikes are answered in
+[`docs/spikes-phase-0.md`](../spikes-phase-0.md) — including confirmation that
+`permissions.request()` works from the side panel, which was the gate on Phase 1c.
 
-Phase 0 is unblocked.
+**Phase 1a is unblocked.**

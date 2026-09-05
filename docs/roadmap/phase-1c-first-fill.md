@@ -2,9 +2,16 @@
 
 **Depends on:** 1a (extractor), 1b (matcher), and Phase 0 spike 1. **Unblocks:** 1d, 2.
 
-> **Do not start this phase until Phase 0's spike 1 is answered.** If
-> `permissions.request()` does not work from the side panel, the UI shape changes and this
-> brief must be rewritten before it is handed over.
+> **Unblocked.** Spike 1 is answered: `permissions.request()` works from the side panel in
+> Chrome 151, invoked from a trusted click. See
+> [`docs/spikes-phase-0.md`](../spikes-phase-0.md), which also carries the caveat — the
+> automated build may auto-accept prompts, so do **one manual click-through in a real Chrome
+> window** before shipping the button, to confirm the bubble renders and "Allow" behaves.
+>
+> **This is the first phase that builds real UI.** Read the "Building UI" section of
+> [`_context.md`](./_context.md) before you write a component: no design exists yet, nothing is
+> hardcoded, compose from `src/components/ui/`, icons from `lucide-react`, marked placeholders
+> over invented designs.
 
 ## Goal
 
@@ -82,6 +89,10 @@ Drive it from `concepts.json` — do not hand-write a form. Group by key prefix,
 concept, input type from `expects`, and respect `sensitivity` in how prominently a field is
 presented. Adding a concept in 1b should add a field here with no code change.
 
+That data-driven shape is also what makes the form survive a redesign: the mapping from
+`expects` to a primitive in `src/components/ui/` is the only place presentation is decided, so
+replacing the look is replacing primitives, not rewriting a form.
+
 **Tests:** yes, one e2e asserting that a value entered in onboarding is retrievable from the
 store and appears in a subsequent fill. **Why:** it is the seam between UI and domain; unit
 tests on either side would both pass while the wiring is broken.
@@ -129,6 +140,11 @@ in bulk. Nothing enters the page before a confirmation.
 
 Also render the three outcomes that are not "here is a value": `UNKNOWN` (ask), `AMBIGUOUS`
 (offer the candidates from 1b), and `restricted` (always ask, even when confirmed before).
+
+Those four states are the thing to get structurally right; how they *look* is a later decision.
+Give each one a distinct component so a designer can restyle them independently, and use a
+`lucide-react` icon per state rather than colour alone — colour meanings will change with the
+design, and colour-only signalling fails for a chunk of users regardless.
 
 **Tests:** covered by the e2e in the gate. No component tests. **Why:** the assertions that
 matter are "nothing was filled before confirmation" and "restricted was not filled", and both
@@ -213,3 +229,5 @@ model. No files.
   the shortcut that makes policy decorative.
 - **Filling the `csrf` field** because it is in the form. 1a's skip rules should have excluded
   it; if it reaches you, that is a 1a regression worth escalating.
+- **Designing.** You are building surfaces that work and can be replaced, not surfaces that
+  look finished. A hardcoded colour or spacing value now is a search-and-replace later.

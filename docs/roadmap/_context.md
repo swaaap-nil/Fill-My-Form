@@ -28,12 +28,14 @@ contracts, most of which have no implementation.
 | `src/core/memory/` | Types + a 20-line `MemoryStore` interface. **No implementation.** |
 | `src/core/agent/types.ts` | Types, `PHASE_TRANSITIONS`, `canTransition`. **No reducer, no loop.** |
 | `src/core/verification/types.ts` | Types only. **No `Verifier`.** |
-| `src/app/sidepanel`, `options` | Starter placeholders rendering "Hello from …". |
+| `src/app/sidepanel`, `options` | Render `<Layout />` and nothing else. The product UI starts in 1c. |
 | `src/app/content/index.tsx` | Renders a badge. No DOM scanning, no fill, no messaging. |
+| `src/components/ui/` | shadcn-style primitives (button, card, input, form, …). Compose from these. |
+| `scripts/check-release-manifest.ts` | **Works,** wired into CI, with its own tests. Phase 0 built it. |
 
 52 unit tests (`bun test`, plain Bun, no DOM) and 10 Playwright e2e smoke tests pass today.
 
-## Three defects to know about before you start
+## Four defects to know about before you start
 
 These were verified this session. Do not "discover" them again.
 
@@ -45,7 +47,21 @@ These were verified this session. Do not "discover" them again.
    field passes for the wrong reason, and — since nothing is `public` — **no field can
    auto-fill at all today**. Every fill needs confirmation.
 3. **`registerContentScripts` does not affect the already-open tab.** After a grant the
-   user sees nothing until reload. Needs a follow-up `scripting.executeScript`.
+   user sees nothing until reload. The fix, specified in
+   [`docs/spikes-phase-0.md`](../spikes-phase-0.md) and due in Phase 1c: after
+   `registerContentScripts` succeeds, also `scripting.executeScript` into the active tab.
+   Registration covers future navigations; the direct injection covers the tab open now.
+
+4. **Phase 0's guard tests never run.** `bunfig.toml` sets `[test] root = "src"`, so in
+   `bun test src scripts` the `scripts` argument is treated as a *name filter*, not a path, and
+   is silently ignored. `scripts/tests/check-release-manifest.test.ts` — 17 tests protecting the
+   de-starter from regressing — has never executed locally or in CI, which still reports green.
+   `bun test ./src ./scripts` collects all 63. This is the failure `docs/testing.md` warns
+   about: a guard nobody has watched fail is not a guard.
+
+Phase 0 is complete. Its spike answers — including confirmation that
+`permissions.request()` works from the side panel — are in
+[`docs/spikes-phase-0.md`](../spikes-phase-0.md). Read it if your phase touches site access.
 
 ## Non-negotiables
 
@@ -84,6 +100,40 @@ and escalate — see the last section.
   versioned, schema-validated, remotely-supplied file that already exists in ADR 006 form.
   Do not invent a second channel, and do not let anything about an individual user flow up.
 
+## Building UI
+
+**There is no design yet, and you are not inventing one.** Build every surface so it can be
+replaced wholesale later without touching logic. Optimise for replaceability, not for looks.
+
+**Nothing about a UI element is hardcoded.** No hex colours, no pixel values, no magic spacing,
+no inline styles in a feature component. Sizing, colour and spacing come from Tailwind tokens
+and the CSS variables in `src/assets/styles/globals.css`. If the token you need does not exist,
+add it there — never inline the value at the call site. A redesign should be a change to tokens
+and primitives, not a search across every component.
+
+**Compose from `src/components/ui/`.** Those primitives (button, card, input, form, label,
+separator, and the rest) are the vocabulary. If a feature needs something they do not offer, add
+a primitive there rather than styling ad hoc in the feature component.
+
+**Icons come from `lucide-react`**, which is already a dependency. Pick the closest generic icon
+and move on. Never hand-author an SVG in a feature component, and never use an emoji as an icon.
+If nothing fits, use a clearly marked placeholder.
+
+**Placeholders are correct, not lazy.** A marked placeholder beats an invented design, because
+the invented one gets mistaken for a decision. Mark them so they are greppable when design
+lands:
+
+```tsx
+{/* TODO(design): placeholder — see docs/roadmap/_context.md */}
+```
+
+**Keep presentation dumb.** Behaviour lives in hooks and services; components render what they
+are given. A designer replacing the presentation layer must not have to understand the agent,
+the policy engine or the memory store to do it.
+
+**All user-visible strings go through `browser.i18n`** — decided in Phase 0, and the same
+principle: no hardcoded content in components.
+
 ## Commands
 
 ```bash
@@ -94,6 +144,28 @@ bun run build    # production build + zips, both browsers
 bun dev          # Chrome with hot reload
 bun dev:site     # fixtures at http://localhost:4173
 ```
+
+## Clean means no warnings either
+
+**A phase is not done while anything it touches emits a warning.** Errors are obvious; warnings
+are the ones that accumulate until nobody reads the output, and then a real one hides in the
+noise. That applies to all of it: Biome `info`/`warn` lines, TypeScript diagnostics, Vite and
+WXT build warnings, deprecation notices, and browser console warnings in e2e — not only console
+errors.
+
+**Never silence a warning to make it go away.** No `biome-ignore`, no `@ts-expect-error`, no
+`@ts-ignore`, no widening a type to `any`, no filtering the console in a test. Suppression turns
+a visible problem into an invisible one.
+
+**If you cannot legitimately fix it, stop and ask the user.** Report it under escalations with
+the exact output, what you tried, and why the fix is not yours to make — a third-party
+deprecation, an upstream bug, a dependency you were told not to touch. Asking is the expected
+outcome for those; suppressing is not.
+
+There is one standing warning right now: `biome.json` pins schema `2.5.0` while the CLI is
+`2.5.11`, so `bun lint` ends with `Found 1 info`. It is fixable (`biome migrate`), but
+`biome.json` carries the load-bearing `noRestrictedImports` boundaries, so raise it rather than
+migrating it as a side effect of another phase.
 
 ## Testing policy
 

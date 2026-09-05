@@ -55,6 +55,11 @@ Rules the prompt must obey, because they are also store-review rules:
 - No pre-ticked boxes, no consent bundled into onboarding, no feature held hostage behind it.
   The extension must be exactly as useful for someone who says no.
 
+Build it under the "Building UI" rules in [`_context.md`](./_context.md). The payload view in
+particular should be a plain, honest rendering of the queued entries — a table of what is there.
+Resist making it look reassuring; the persuasive version of a consent screen is the one that
+gets read as a dark pattern, by users and reviewers alike.
+
 ### What gets contributed
 
 Two kinds of observation, both already being collected locally by then:
