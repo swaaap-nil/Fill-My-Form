@@ -215,16 +215,23 @@ const precedingSiblingText = (el: Element): string | undefined => {
 
 /**
  * A sibling that marks the edge of this control's own territory: another
- * control, or a `<label>` (almost always that other control's label).
- * `nearbyTextOf` stops at the first one in each direction, rather than
- * walking to the end of the parent — the difference between `messy.html`'s
- * `fld_7` (alone in its row, so the scan naturally stops at the row
- * boundary) and `controlled.html` (every field a direct sibling of every
- * other, where an unbounded scan would hand every field the whole page's
- * text as `nearbyText`).
+ * control, a `<label>` (almost always that other control's label), a
+ * `<button>`, or a `<fieldset>` (a self-contained group with its own
+ * controls and its own `<legend>` — `simple.html`'s "Cover note" textarea
+ * sits right before the "Preferred contact method" radio group's fieldset,
+ * and without this the whole group's rendered text leaks in as this
+ * unrelated field's `nearbyText`). `nearbyTextOf` stops at the first one in
+ * each direction, rather than walking to the end of the parent — the
+ * difference between `messy.html`'s `fld_7` (alone in its row, so the scan
+ * naturally stops at the row boundary) and `controlled.html` (every field a
+ * direct sibling of every other, where an unbounded scan would hand every
+ * field the whole page's text as `nearbyText`).
  */
 const isNearbyTextBoundary = (el: Element): boolean =>
-  isFormControl(el) || el.tagName === "LABEL" || el.tagName === "BUTTON";
+  isFormControl(el) ||
+  el.tagName === "LABEL" ||
+  el.tagName === "BUTTON" ||
+  el.tagName === "FIELDSET";
 
 /**
  * Sibling text within the same parent, both directions, stopping at the

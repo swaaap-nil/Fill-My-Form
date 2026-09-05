@@ -1,0 +1,22 @@
+[
+  {
+    "fieldId": "0/08295d52/0",
+    "expectedConcept": "identity.full_name",
+    "expectedCertainty": "known"
+  },
+  {
+    "fieldId": "0/9c6c7b37/0",
+    "expectedConcept": "contact.phone",
+    "expectedCertainty": "known"
+  },
+  {
+    "fieldId": "0/497ccbc8/0",
+    "expectedConcept": "contact.address.country",
+    "expectedCertainty": "known"
+  },
+  {
+    "fieldId": "0/c9c14626/0",
+    "expectedConcept": "identity.date_of_birth",
+    "expectedCertainty": "known"
+  }
+]

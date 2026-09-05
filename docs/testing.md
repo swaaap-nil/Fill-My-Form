@@ -36,9 +36,19 @@ bun dev:site   # http://localhost:4173
 
 | Fixture | Exercises |
 |---|---|
-| `simple.html` | Well-formed: `<label for>` on every control, all common input types. Field detection should reach 100% here with no model. |
+| `simple.html` | Well-formed: `<label for>` on every control, all common input types. |
 | `messy.html` | No labels at all. Opaque names (`fld_1`), placeholder-only fields, meaning in adjacent text, a bare "Year" that is genuinely ambiguous, a Hindi label, and an Aadhaar field that must never be auto-filled. |
 | `dynamic.html` | Fields injected after load and between steps, plus page-level validation. Observation must be re-run rather than cached. |
+| `controlled.html` | A React-controlled input, a masked phone field, a custom combobox and a strict-format date — the fill-time hard cases. |
+
+**"100% field detection" is not a well-formed metric**, and `simple.html` does not
+reach it: it has 12 in-scope controls (the `csrf` hidden field is never a
+candidate), and the ontology maps 9 of them. "Cover note", "Preferred contact
+method" and "I accept the terms" have no concept and are correctly abstained on
+— an abstention there is a *correct* outcome, not a miss. `bun run eval` prints
+the real breakdown across all five outcomes (`resolved_correct`,
+`resolved_wrong`, `abstained_correct`, `missed`, `ambiguous_correct`); see
+`~/core/matching/eval` and the phase 1b handback for the numbers.
 
 Automated tests never depend on a third-party website. Real sites change without
 warning, rate-limit, and make a red build mean nothing.

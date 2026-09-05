@@ -46,6 +46,8 @@ extraction later if a `web` app appears. See
 |---|---|
 | `form/` | FormIR: the normalised, DOM-free representation of a form |
 | `ontology/` | Canonical concept keys and multilingual aliases, as data |
+| `matching/` | Deterministic `FormField` -> candidate concept(s), and the eval harness that measures it |
+| `journal/` | The local, unsent record of fields the matcher could not resolve |
 | `memory/` | Personal memory types and the `MemoryStore` contract |
 | `agent/` | Phases, statuses, events, the legal transition table |
 | `tools/` | Tool contracts, the registry, the validated execution path |
@@ -91,5 +93,5 @@ added when a second case demands them, not in anticipation.
 | An LLM provider | Implement `LLMProvider`. Business logic does not change. |
 | An ontology concept | Append to `concepts.json`. No code changes. |
 | A memory backend | Implement `MemoryStore`. |
-| A matching tier | Add behind `ConceptIndex`; callers do not change. |
+| A matching tier | Add to `~/core/matching`'s cascade; `resolve()`'s candidate-set return shape does not change. (Corrected in phase 1b: `ConceptIndex.byAlias` returns a single optional `Concept` and cannot represent a tie, so a tier cannot live behind it — see `messy.html`'s `fld_7`.) |
 | Semantic retrieval | Implement `MemoryQuery.text`; callers do not change. |

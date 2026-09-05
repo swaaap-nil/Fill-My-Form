@@ -1,0 +1,57 @@
+[
+  {
+    "fieldId": "0/a09306a1/0",
+    "expectedConcept": "identity.full_name",
+    "expectedCertainty": "known"
+  },
+  {
+    "fieldId": "0/9d9301e8/0",
+    "expectedConcept": "contact.email",
+    "expectedCertainty": "known"
+  },
+  {
+    "fieldId": "0/9e93037b/0",
+    "expectedConcept": "contact.phone",
+    "expectedCertainty": "known"
+  },
+  {
+    "fieldId": "0/a3930b5a/0",
+    "expectedConcept": "education.secondary.completion_year",
+    "expectedCertainty": "known"
+  },
+  {
+    "fieldId": "0/a4930ced/0",
+    "expectedConcept": "education.higher_secondary.completion_year",
+    "expectedCertainty": "known"
+  },
+  {
+    "fieldId": "0/a1930834/0",
+    "expectedConcept": "education.undergraduate.completion_year",
+    "expectedCertainty": "known"
+  },
+  {
+    "fieldId": "0/a29309c7/0",
+    "expectedConcept": null,
+    "expectedCertainty": "ambiguous"
+  },
+  {
+    "fieldId": "0/9792f876/0",
+    "expectedConcept": "contact.address.postal_code",
+    "expectedCertainty": "known"
+  },
+  {
+    "fieldId": "0/9892fa09/0",
+    "expectedConcept": "education.undergraduate.degree",
+    "expectedCertainty": "known"
+  },
+  {
+    "fieldId": "0/58735643/0",
+    "expectedConcept": "education.secondary.completion_year",
+    "expectedCertainty": "known"
+  },
+  {
+    "fieldId": "0/577354b0/0",
+    "expectedConcept": "documents.national_id",
+    "expectedCertainty": "known"
+  }
+]

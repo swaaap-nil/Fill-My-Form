@@ -21,6 +21,7 @@
     "lint": "biome check",
     "lint:fix": "biome check --write",
     "test": "bun test ./src ./scripts",
+    "eval": "bun run scripts/eval.ts",
     "test:watch": "bun test ./src ./scripts --watch",
     "test:e2e": "bun run build:chrome && bun run build:extractor && playwright test",
     "test:e2e:ui": "bun run build:chrome && bun run build:extractor && playwright test --ui",

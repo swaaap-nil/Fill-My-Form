@@ -18,13 +18,15 @@ contracts, most of which have no implementation.
 
 | Module | State |
 |---|---|
-| `src/core/ontology/` | **Works.** `createConceptIndex`, `normaliseLabel` (Devanagari-safe), exact/normalised `byAlias`. 16 concepts. |
+| `src/core/ontology/` | **Works.** `createConceptIndex`, `normaliseLabel` (Devanagari-safe), exact/normalised `byAlias`. 50 concepts, with `autocomplete` tokens (Phase 1b). |
+| `src/lib/form/extract.ts` | **Works (Phase 1a).** DOM → `FormIR`. Four fixtures golden-tested, including the hard-fill `controlled.html`. |
+| `src/core/matching/` | **Works (Phase 1b).** `resolve()` returns a candidate set across 5 tiers; `eval.ts` is the harness, `bun run eval` prints coverage. `resolved_wrong: 0` across all four fixtures. |
+| `src/core/journal/` | **Works (Phase 1b), in-memory only.** Records fields the matcher could not resolve, screened against memory at write time. No IndexedDB backend yet, no panel UI. |
 | `src/core/tools/registry.ts` | **Works.** validate → policy → execute → validate, plus `describe(domains)`. |
 | `src/core/llm/` | **Works.** `LLMProvider` port, `MockLLMProvider`, `AiSdkProvider`. |
 | `src/core/policy/default.ts` | **Works.** Default-deny; submission denied unconditionally. |
 | `src/core/logging.ts`, `errors.ts` | **Works.** `LogFields` is a closed allowlist with no index signature. |
 | `src/lib/site-access.ts` | Written, **zero UI call sites**, no unit tests, imports `wxt/browser` at module scope. |
-| `src/core/form/types.ts` | Types only. **Nothing produces a `FormIR`.** |
 | `src/core/memory/` | Types + a 20-line `MemoryStore` interface. **No implementation.** |
 | `src/core/agent/types.ts` | Types, `PHASE_TRANSITIONS`, `canTransition`. **No reducer, no loop.** |
 | `src/core/verification/types.ts` | Types only. **No `Verifier`.** |

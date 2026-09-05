@@ -167,7 +167,6 @@
         "required": false,
         "hasValue": false,
         "name": "cover",
-        "nearbyText": ["Preferred contact method Email Phone"],
         "constraints": [
           {
             "kind": "maxLength",

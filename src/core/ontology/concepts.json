@@ -5,9 +5,22 @@
     "sensitivity": "personal",
     "volatility": "stable",
     "expects": "text",
+    "autocomplete": ["given-name"],
     "aliases": {
       "en": ["first name", "given name", "forename", "fname"],
       "hi": ["पहला नाम", "नाम"]
+    }
+  },
+  {
+    "key": "identity.middle_name",
+    "label": "Middle name",
+    "sensitivity": "personal",
+    "volatility": "stable",
+    "expects": "text",
+    "autocomplete": ["additional-name"],
+    "aliases": {
+      "en": ["middle name", "father's name initial", "mname"],
+      "hi": ["मध्य नाम"]
     }
   },
   {
@@ -16,6 +29,7 @@
     "sensitivity": "personal",
     "volatility": "stable",
     "expects": "text",
+    "autocomplete": ["family-name"],
     "aliases": {
       "en": ["last name", "surname", "family name", "lname"],
       "hi": ["उपनाम", "कुलनाम"]
@@ -27,6 +41,7 @@
     "sensitivity": "personal",
     "volatility": "stable",
     "expects": "text",
+    "autocomplete": ["name"],
     "aliases": {
       "en": ["full name", "name", "your name", "candidate name"],
       "hi": ["पूरा नाम", "अभ्यर्थी का नाम"]
@@ -38,9 +53,178 @@
     "sensitivity": "sensitive",
     "volatility": "permanent",
     "expects": "date",
+    "autocomplete": ["bday"],
     "aliases": {
       "en": ["date of birth", "dob", "birth date", "birthday"],
       "hi": ["जन्म तिथि", "जन्मदिन"]
+    }
+  },
+  {
+    "key": "identity.gender",
+    "label": "Gender",
+    "sensitivity": "sensitive",
+    "volatility": "stable",
+    "expects": "select",
+    "aliases": {
+      "en": ["gender", "sex"],
+      "hi": ["लिंग"]
+    }
+  },
+  {
+    "key": "identity.marital_status",
+    "label": "Marital status",
+    "sensitivity": "sensitive",
+    "volatility": "volatile",
+    "expects": "select",
+    "aliases": {
+      "en": ["marital status", "married status"],
+      "hi": ["वैवाहिक स्थिति"]
+    }
+  },
+  {
+    "key": "identity.nationality",
+    "label": "Nationality",
+    "sensitivity": "personal",
+    "volatility": "stable",
+    "expects": "text",
+    "aliases": {
+      "en": ["nationality", "citizenship"],
+      "hi": ["राष्ट्रीयता", "नागरिकता"]
+    }
+  },
+  {
+    "key": "identity.religion",
+    "label": "Religion",
+    "sensitivity": "sensitive",
+    "volatility": "stable",
+    "expects": "text",
+    "aliases": {
+      "en": ["religion"],
+      "hi": ["धर्म"]
+    }
+  },
+  {
+    "key": "identity.category",
+    "label": "Reservation category",
+    "sensitivity": "sensitive",
+    "volatility": "stable",
+    "expects": "select",
+    "aliases": {
+      "en": ["category", "caste category", "reservation category", "sc/st/obc"],
+      "hi": ["श्रेणी", "जाति श्रेणी", "आरक्षण श्रेणी"]
+    }
+  },
+  {
+    "key": "identity.father_name",
+    "label": "Father's name",
+    "sensitivity": "sensitive",
+    "volatility": "permanent",
+    "expects": "text",
+    "aliases": {
+      "en": ["father's name", "fathers name", "father name"],
+      "hi": ["पिता का नाम"]
+    }
+  },
+  {
+    "key": "identity.mother_name",
+    "label": "Mother's name",
+    "sensitivity": "sensitive",
+    "volatility": "permanent",
+    "expects": "text",
+    "aliases": {
+      "en": ["mother's name", "mothers name", "mother name"],
+      "hi": ["माता का नाम"]
+    }
+  },
+  {
+    "key": "identity.blood_group",
+    "label": "Blood group",
+    "sensitivity": "restricted",
+    "volatility": "permanent",
+    "expects": "select",
+    "aliases": {
+      "en": ["blood group", "blood type"],
+      "hi": ["रक्त समूह", "ब्लड ग्रुप"]
+    }
+  },
+  {
+    "key": "identity.ssn",
+    "label": "Social Security Number (US)",
+    "sensitivity": "restricted",
+    "volatility": "permanent",
+    "expects": "text",
+    "aliases": {
+      "en": ["social security number", "ssn"]
+    }
+  },
+  {
+    "key": "identity.work_authorization",
+    "label": "Work authorization status",
+    "sensitivity": "restricted",
+    "volatility": "volatile",
+    "expects": "select",
+    "aliases": {
+      "en": [
+        "work authorization",
+        "work authorization status",
+        "authorized to work",
+        "sponsorship required",
+        "require sponsorship"
+      ]
+    }
+  },
+  {
+    "key": "identity.visa_type",
+    "label": "Visa type",
+    "sensitivity": "restricted",
+    "volatility": "stable",
+    "expects": "text",
+    "aliases": {
+      "en": ["visa type", "visa category", "visa status"]
+    }
+  },
+  {
+    "key": "identity.visa_expiry",
+    "label": "Visa expiry date",
+    "sensitivity": "restricted",
+    "volatility": "self_dated",
+    "expects": "date",
+    "aliases": {
+      "en": ["visa expiry", "visa expiration date", "visa valid until"]
+    }
+  },
+  {
+    "key": "identity.veteran_status",
+    "label": "Veteran status",
+    "sensitivity": "restricted",
+    "volatility": "stable",
+    "expects": "select",
+    "aliases": {
+      "en": ["veteran status", "protected veteran status", "are you a veteran"]
+    }
+  },
+  {
+    "key": "identity.disability_status",
+    "label": "Disability status",
+    "sensitivity": "restricted",
+    "volatility": "stable",
+    "expects": "select",
+    "aliases": {
+      "en": [
+        "disability status",
+        "do you have a disability",
+        "voluntary self-identification of disability"
+      ]
+    }
+  },
+  {
+    "key": "identity.race_ethnicity",
+    "label": "Race / ethnicity",
+    "sensitivity": "restricted",
+    "volatility": "stable",
+    "expects": "select",
+    "aliases": {
+      "en": ["race", "ethnicity", "race/ethnicity", "race or ethnicity"]
     }
   },
   {
@@ -49,6 +233,7 @@
     "sensitivity": "personal",
     "volatility": "slow",
     "expects": "email",
+    "autocomplete": ["email"],
     "aliases": {
       "en": ["email", "e-mail", "email address", "email id"],
       "hi": ["ईमेल", "ईमेल पता"]
@@ -60,6 +245,7 @@
     "sensitivity": "personal",
     "volatility": "slow",
     "expects": "tel",
+    "autocomplete": ["tel", "tel-national"],
     "aliases": {
       "en": [
         "phone",
@@ -72,14 +258,78 @@
     }
   },
   {
+    "key": "contact.alternate_phone",
+    "label": "Alternate phone number",
+    "sensitivity": "personal",
+    "volatility": "slow",
+    "expects": "tel",
+    "aliases": {
+      "en": [
+        "alternate phone",
+        "alternate mobile number",
+        "secondary phone number"
+      ],
+      "hi": ["वैकल्पिक फ़ोन नंबर"]
+    }
+  },
+  {
+    "key": "contact.address.line1",
+    "label": "Address line 1",
+    "sensitivity": "sensitive",
+    "volatility": "slow",
+    "expects": "text",
+    "autocomplete": ["address-line1"],
+    "aliases": {
+      "en": ["address line 1", "address 1", "street address", "house no"],
+      "hi": ["पता पंक्ति 1", "मकान नंबर"]
+    }
+  },
+  {
+    "key": "contact.address.line2",
+    "label": "Address line 2",
+    "sensitivity": "sensitive",
+    "volatility": "slow",
+    "expects": "text",
+    "autocomplete": ["address-line2"],
+    "aliases": {
+      "en": ["address line 2", "address 2", "locality", "landmark"],
+      "hi": ["पता पंक्ति 2"]
+    }
+  },
+  {
     "key": "contact.address.city",
     "label": "City",
     "sensitivity": "sensitive",
     "volatility": "slow",
     "expects": "text",
+    "autocomplete": ["address-level2"],
     "aliases": {
       "en": ["city", "town", "city/town"],
       "hi": ["शहर", "नगर"]
+    }
+  },
+  {
+    "key": "contact.address.state",
+    "label": "State",
+    "sensitivity": "sensitive",
+    "volatility": "slow",
+    "expects": "text",
+    "autocomplete": ["address-level1"],
+    "aliases": {
+      "en": ["state", "state/province", "province"],
+      "hi": ["राज्य"]
+    }
+  },
+  {
+    "key": "contact.address.country",
+    "label": "Country",
+    "sensitivity": "personal",
+    "volatility": "slow",
+    "expects": "text",
+    "autocomplete": ["country-name", "country"],
+    "aliases": {
+      "en": ["country"],
+      "hi": ["देश"]
     }
   },
   {
@@ -88,9 +338,65 @@
     "sensitivity": "sensitive",
     "volatility": "slow",
     "expects": "text",
+    "autocomplete": ["postal-code"],
     "aliases": {
       "en": ["postal code", "zip", "zip code", "pin code", "pincode"],
       "hi": ["पिन कोड", "डाक कोड"]
+    }
+  },
+  {
+    "key": "contact.emergency_contact_name",
+    "label": "Emergency contact name",
+    "sensitivity": "sensitive",
+    "volatility": "volatile",
+    "expects": "text",
+    "aliases": {
+      "en": ["emergency contact name", "emergency contact person"],
+      "hi": ["आपातकालीन संपर्क नाम"]
+    }
+  },
+  {
+    "key": "contact.emergency_contact_phone",
+    "label": "Emergency contact phone",
+    "sensitivity": "sensitive",
+    "volatility": "volatile",
+    "expects": "tel",
+    "aliases": {
+      "en": ["emergency contact number", "emergency contact phone"],
+      "hi": ["आपातकालीन संपर्क नंबर"]
+    }
+  },
+  {
+    "key": "contact.linkedin_url",
+    "label": "LinkedIn profile",
+    "sensitivity": "personal",
+    "volatility": "slow",
+    "expects": "url",
+    "aliases": {
+      "en": ["linkedin", "linkedin url", "linkedin profile"],
+      "hi": ["लिंक्डइन प्रोफाइल"]
+    }
+  },
+  {
+    "key": "contact.portfolio_url",
+    "label": "Portfolio website",
+    "sensitivity": "personal",
+    "volatility": "slow",
+    "expects": "url",
+    "aliases": {
+      "en": ["portfolio", "portfolio url", "website", "personal website"],
+      "hi": ["पोर्टफोलियो वेबसाइट"]
+    }
+  },
+  {
+    "key": "contact.github_url",
+    "label": "GitHub profile",
+    "sensitivity": "personal",
+    "volatility": "slow",
+    "expects": "url",
+    "aliases": {
+      "en": ["github", "github url", "github profile"],
+      "hi": ["गिटहब प्रोफाइल"]
     }
   },
   {
@@ -111,6 +417,38 @@
     }
   },
   {
+    "key": "education.secondary.percentage",
+    "label": "Class 10 percentage",
+    "sensitivity": "personal",
+    "volatility": "permanent",
+    "expects": "number",
+    "aliases": {
+      "en": [
+        "10th percentage",
+        "class 10 percentage",
+        "ssc percentage",
+        "matriculation percentage"
+      ],
+      "hi": ["दसवीं प्रतिशत"]
+    }
+  },
+  {
+    "key": "education.secondary.cgpa",
+    "label": "Class 10 CGPA",
+    "sensitivity": "personal",
+    "volatility": "permanent",
+    "expects": "number",
+    "aliases": {
+      "en": [
+        "10th cgpa",
+        "class 10 cgpa",
+        "ssc cgpa",
+        "10th grade point average"
+      ],
+      "hi": ["दसवीं सीजीपीए"]
+    }
+  },
+  {
     "key": "education.higher_secondary.completion_year",
     "label": "Class 12 completion year",
     "sensitivity": "personal",
@@ -125,6 +463,33 @@
         "year of passing 12th"
       ],
       "hi": ["बारहवीं उत्तीर्ण वर्ष", "१२वीं पास वर्ष"]
+    }
+  },
+  {
+    "key": "education.higher_secondary.percentage",
+    "label": "Class 12 percentage",
+    "sensitivity": "personal",
+    "volatility": "permanent",
+    "expects": "number",
+    "aliases": {
+      "en": [
+        "12th percentage",
+        "class 12 percentage",
+        "hsc percentage",
+        "intermediate percentage"
+      ],
+      "hi": ["बारहवीं प्रतिशत"]
+    }
+  },
+  {
+    "key": "education.higher_secondary.cgpa",
+    "label": "Class 12 CGPA",
+    "sensitivity": "personal",
+    "volatility": "permanent",
+    "expects": "number",
+    "aliases": {
+      "en": ["12th cgpa", "class 12 cgpa", "hsc cgpa"],
+      "hi": ["बारहवीं सीजीपीए"]
     }
   },
   {
@@ -156,7 +521,8 @@
         "university",
         "institution",
         "college name",
-        "university name"
+        "university name",
+        "college university"
       ],
       "hi": ["महाविद्यालय", "विश्वविद्यालय", "संस्थान"]
     }
@@ -178,16 +544,140 @@
     }
   },
   {
+    "key": "education.undergraduate.start_year",
+    "label": "Undergraduate start year",
+    "sensitivity": "personal",
+    "volatility": "permanent",
+    "expects": "number",
+    "aliases": {
+      "en": [
+        "undergraduate start year",
+        "year of joining college",
+        "ug start year",
+        "college joining year"
+      ],
+      "hi": ["स्नातक प्रारंभ वर्ष"]
+    }
+  },
+  {
+    "key": "education.undergraduate.percentage",
+    "label": "Undergraduate percentage",
+    "sensitivity": "personal",
+    "volatility": "permanent",
+    "expects": "number",
+    "aliases": {
+      "en": [
+        "undergraduate percentage",
+        "ug percentage",
+        "degree percentage",
+        "graduation percentage"
+      ],
+      "hi": ["स्नातक प्रतिशत"]
+    }
+  },
+  {
+    "key": "education.undergraduate.cgpa",
+    "label": "Undergraduate CGPA",
+    "sensitivity": "personal",
+    "volatility": "permanent",
+    "expects": "number",
+    "aliases": {
+      "en": ["undergraduate cgpa", "ug cgpa", "degree cgpa", "graduation cgpa"],
+      "hi": ["स्नातक सीजीपीए"]
+    }
+  },
+  {
+    "key": "education.postgraduate.degree",
+    "label": "Postgraduate degree",
+    "sensitivity": "personal",
+    "volatility": "permanent",
+    "expects": "text",
+    "aliases": {
+      "en": ["postgraduate degree", "master's degree", "pg degree", "masters"],
+      "hi": ["स्नातकोत्तर डिग्री"]
+    }
+  },
+  {
+    "key": "education.postgraduate.institution",
+    "label": "Postgraduate institution",
+    "sensitivity": "personal",
+    "volatility": "permanent",
+    "expects": "text",
+    "aliases": {
+      "en": [
+        "postgraduate college",
+        "postgraduate university",
+        "pg institution"
+      ],
+      "hi": ["स्नातकोत्तर संस्थान"]
+    }
+  },
+  {
+    "key": "education.postgraduate.completion_year",
+    "label": "Postgraduate completion year",
+    "sensitivity": "personal",
+    "volatility": "permanent",
+    "expects": "number",
+    "aliases": {
+      "en": [
+        "pg passing year",
+        "postgraduate completion year",
+        "masters completion year"
+      ],
+      "hi": ["स्नातकोत्तर वर्ष"]
+    }
+  },
+  {
+    "key": "education.postgraduate.start_year",
+    "label": "Postgraduate start year",
+    "sensitivity": "personal",
+    "volatility": "permanent",
+    "expects": "number",
+    "aliases": {
+      "en": [
+        "postgraduate start year",
+        "year of joining pg",
+        "pg start year",
+        "masters start year"
+      ],
+      "hi": ["स्नातकोत्तर प्रारंभ वर्ष"]
+    }
+  },
+  {
+    "key": "education.postgraduate.percentage",
+    "label": "Postgraduate percentage",
+    "sensitivity": "personal",
+    "volatility": "permanent",
+    "expects": "number",
+    "aliases": {
+      "en": ["postgraduate percentage", "pg percentage", "masters percentage"],
+      "hi": ["स्नातकोत्तर प्रतिशत"]
+    }
+  },
+  {
+    "key": "education.postgraduate.cgpa",
+    "label": "Postgraduate CGPA",
+    "sensitivity": "personal",
+    "volatility": "permanent",
+    "expects": "number",
+    "aliases": {
+      "en": ["postgraduate cgpa", "pg cgpa", "masters cgpa"],
+      "hi": ["स्नातकोत्तर सीजीपीए"]
+    }
+  },
+  {
     "key": "employment.current.company",
     "label": "Current employer",
     "sensitivity": "personal",
     "volatility": "volatile",
     "expects": "text",
+    "autocomplete": ["organization"],
     "aliases": {
       "en": [
         "company",
         "employer",
         "current company",
+        "current employer",
         "organisation",
         "organization"
       ],
@@ -200,9 +690,150 @@
     "sensitivity": "personal",
     "volatility": "volatile",
     "expects": "text",
+    "autocomplete": ["organization-title"],
     "aliases": {
       "en": ["job title", "designation", "role", "position", "current title"],
       "hi": ["पद", "पदनाम"]
+    }
+  },
+  {
+    "key": "employment.current.start_year",
+    "label": "Current employer start year",
+    "sensitivity": "personal",
+    "volatility": "volatile",
+    "expects": "number",
+    "aliases": {
+      "en": ["joining year", "date of joining", "employment start year"],
+      "hi": ["वर्तमान नियोक्ता में शामिल होने का वर्ष"]
+    }
+  },
+  {
+    "key": "employment.current.salary",
+    "label": "Current salary",
+    "sensitivity": "restricted",
+    "volatility": "volatile",
+    "expects": "number",
+    "aliases": {
+      "en": ["current salary", "current ctc", "annual salary", "compensation"],
+      "hi": ["वर्तमान वेतन", "सीटीसी"]
+    }
+  },
+  {
+    "key": "employment.total_experience_years",
+    "label": "Total years of experience",
+    "sensitivity": "personal",
+    "volatility": "volatile",
+    "expects": "number",
+    "aliases": {
+      "en": ["total experience", "years of experience", "work experience"],
+      "hi": ["कुल अनुभव", "अनुभव के वर्ष"]
+    }
+  },
+  {
+    "key": "employment.notice_period",
+    "label": "Notice period",
+    "sensitivity": "personal",
+    "volatility": "volatile",
+    "expects": "text",
+    "aliases": {
+      "en": ["notice period"],
+      "hi": ["नोटिस अवधि"]
+    }
+  },
+  {
+    "key": "employment.industry",
+    "label": "Industry",
+    "sensitivity": "personal",
+    "volatility": "volatile",
+    "expects": "text",
+    "aliases": {
+      "en": ["industry", "sector", "industry type"],
+      "hi": ["उद्योग", "क्षेत्र"]
+    }
+  },
+  {
+    "key": "employment.history.company",
+    "label": "Previous employer",
+    "sensitivity": "personal",
+    "volatility": "permanent",
+    "expects": "text",
+    "aliases": {
+      "en": [
+        "previous employer",
+        "previous company",
+        "past employer",
+        "former employer",
+        "last company"
+      ],
+      "hi": ["पूर्व नियोक्ता", "पिछली कंपनी"]
+    }
+  },
+  {
+    "key": "employment.history.title",
+    "label": "Previous job title",
+    "sensitivity": "personal",
+    "volatility": "permanent",
+    "expects": "text",
+    "aliases": {
+      "en": [
+        "previous job title",
+        "previous designation",
+        "past role",
+        "former position",
+        "job profile"
+      ],
+      "hi": ["पूर्व पद", "पूर्व पदनाम"]
+    }
+  },
+  {
+    "key": "employment.history.start_date",
+    "label": "Previous job start date",
+    "sensitivity": "personal",
+    "volatility": "permanent",
+    "expects": "date",
+    "aliases": {
+      "en": [
+        "start date",
+        "employment start date",
+        "job start date",
+        "period from",
+        "worked from"
+      ],
+      "hi": ["आरंभ तिथि"]
+    }
+  },
+  {
+    "key": "employment.history.end_date",
+    "label": "Previous job end date",
+    "sensitivity": "personal",
+    "volatility": "permanent",
+    "expects": "date",
+    "aliases": {
+      "en": [
+        "end date",
+        "employment end date",
+        "job end date",
+        "relieving date",
+        "period to",
+        "worked till"
+      ],
+      "hi": ["अंतिम तिथि", "कार्यमुक्ति तिथि"]
+    }
+  },
+  {
+    "key": "employment.history.description",
+    "label": "Job responsibilities / description",
+    "sensitivity": "personal",
+    "volatility": "permanent",
+    "expects": "text",
+    "aliases": {
+      "en": [
+        "job description",
+        "roles and responsibilities",
+        "brief description of work",
+        "job summary"
+      ],
+      "hi": ["कार्य विवरण"]
     }
   },
   {
@@ -214,6 +845,121 @@
     "aliases": {
       "en": ["resume", "cv", "curriculum vitae", "upload resume"],
       "hi": ["बायोडाटा", "रिज्यूमे"]
+    }
+  },
+  {
+    "key": "documents.photo",
+    "label": "Photograph",
+    "sensitivity": "sensitive",
+    "volatility": "stable",
+    "expects": "file",
+    "autocomplete": ["photo"],
+    "aliases": {
+      "en": ["photo", "photograph", "passport size photo", "upload photo"],
+      "hi": ["फोटो", "फोटोग्राफ"]
+    }
+  },
+  {
+    "key": "documents.national_id",
+    "label": "National ID number (Aadhaar)",
+    "sensitivity": "restricted",
+    "volatility": "permanent",
+    "expects": "text",
+    "aliases": {
+      "en": [
+        "aadhaar number",
+        "aadhar number",
+        "aadhaar card number",
+        "national id"
+      ],
+      "hi": ["आधार नंबर", "आधार कार्ड नंबर"]
+    }
+  },
+  {
+    "key": "documents.tax_id",
+    "label": "Tax ID number (PAN)",
+    "sensitivity": "restricted",
+    "volatility": "permanent",
+    "expects": "text",
+    "aliases": {
+      "en": [
+        "pan number",
+        "pan card number",
+        "permanent account number",
+        "tax id"
+      ],
+      "hi": ["पैन नंबर", "पैन कार्ड नंबर"]
+    }
+  },
+  {
+    "key": "documents.passport_number",
+    "label": "Passport number",
+    "sensitivity": "restricted",
+    "volatility": "permanent",
+    "expects": "text",
+    "aliases": {
+      "en": ["passport number", "passport no"],
+      "hi": ["पासपोर्ट नंबर"]
+    }
+  },
+  {
+    "key": "documents.passport_expiry",
+    "label": "Passport expiry date",
+    "sensitivity": "restricted",
+    "volatility": "self_dated",
+    "expects": "date",
+    "aliases": {
+      "en": ["passport expiry", "passport expiry date", "passport valid till"],
+      "hi": ["पासपोर्ट समाप्ति तिथि"]
+    }
+  },
+  {
+    "key": "documents.driving_license_number",
+    "label": "Driving licence number",
+    "sensitivity": "restricted",
+    "volatility": "permanent",
+    "expects": "text",
+    "aliases": {
+      "en": ["driving licence number", "driving license number", "dl number"],
+      "hi": ["ड्राइविंग लाइसेंस नंबर"]
+    }
+  },
+  {
+    "key": "documents.voter_id",
+    "label": "Voter ID number",
+    "sensitivity": "restricted",
+    "volatility": "permanent",
+    "expects": "text",
+    "aliases": {
+      "en": [
+        "voter id",
+        "voter id number",
+        "epic number",
+        "election card number"
+      ],
+      "hi": ["वोटर आईडी", "मतदाता पहचान पत्र"]
+    }
+  },
+  {
+    "key": "bank.account_number",
+    "label": "Bank account number",
+    "sensitivity": "restricted",
+    "volatility": "stable",
+    "expects": "text",
+    "aliases": {
+      "en": ["bank account number", "account number"],
+      "hi": ["बैंक खाता संख्या", "खाता संख्या"]
+    }
+  },
+  {
+    "key": "bank.ifsc_code",
+    "label": "Bank IFSC code",
+    "sensitivity": "restricted",
+    "volatility": "stable",
+    "expects": "text",
+    "aliases": {
+      "en": ["ifsc code", "ifsc"],
+      "hi": ["आईएफएससी कोड"]
     }
   }
 ]

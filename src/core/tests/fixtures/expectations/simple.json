@@ -1,0 +1,62 @@
+[
+  {
+    "fieldId": "0/fbbf2ac1/0",
+    "expectedConcept": "identity.first_name",
+    "expectedCertainty": "known"
+  },
+  {
+    "fieldId": "0/68f1d8f9/0",
+    "expectedConcept": "identity.last_name",
+    "expectedCertainty": "known"
+  },
+  {
+    "fieldId": "0/8a8753c7/0",
+    "expectedConcept": "contact.email",
+    "expectedCertainty": "known"
+  },
+  {
+    "fieldId": "0/773611af/0",
+    "expectedConcept": "contact.phone",
+    "expectedCertainty": "known"
+  },
+  {
+    "fieldId": "0/e968c1c2/0",
+    "expectedConcept": "identity.date_of_birth",
+    "expectedCertainty": "known"
+  },
+  {
+    "fieldId": "0/d9b08a94/0",
+    "expectedConcept": "education.secondary.completion_year",
+    "expectedCertainty": "known"
+  },
+  {
+    "fieldId": "0/98d3be69/0",
+    "expectedConcept": "education.undergraduate.degree",
+    "expectedCertainty": "known"
+  },
+  {
+    "fieldId": "0/8df57242/0",
+    "expectedConcept": "education.undergraduate.institution",
+    "expectedCertainty": "known"
+  },
+  {
+    "fieldId": "0/bacd0480/0",
+    "expectedConcept": null,
+    "expectedCertainty": "unknown"
+  },
+  {
+    "fieldId": "0/1d68bc11/0",
+    "expectedConcept": null,
+    "expectedCertainty": "unknown"
+  },
+  {
+    "fieldId": "0/ff39a36a/0",
+    "expectedConcept": "documents.resume",
+    "expectedCertainty": "known"
+  },
+  {
+    "fieldId": "0/ee7a3c2c/0",
+    "expectedConcept": null,
+    "expectedCertainty": "unknown"
+  }
+]

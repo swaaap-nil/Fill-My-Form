@@ -85,6 +85,14 @@ export const conceptSchema = z.object({
    * deterministic and keyword matching tiers before any model is consulted.
    */
   aliases: z.record(z.string(), z.array(z.string().min(1))),
+  /**
+   * WHATWG `autocomplete` token(s) that identify this concept with the
+   * highest precision available and zero string-matching cost — an
+   * `autocomplete="given-name"` attribute is a stronger signal than any
+   * label text. Optional: most concepts (government ids, employer, most
+   * education fields) have no standard token. See `~/core/matching`, tier 1.
+   */
+  autocomplete: z.array(z.string().min(1)).optional(),
 });
 
 export type Concept = z.infer<typeof conceptSchema>;
