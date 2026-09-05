@@ -1,8 +1,10 @@
 import { defineExtensionMessaging } from "@webext-core/messaging";
+import type { AgentPhase, AgentStatus } from "~/core/agent/types";
 import type { DecisionId, FieldProposal } from "~/core/fill/types";
-import type { Form } from "~/core/form/types";
+import type { FieldId, Form } from "~/core/form/types";
 import type { MemoryItem, MemoryKey, MemoryValue } from "~/core/memory/types";
 import type { FillFieldPayload } from "~/core/messaging/fill-instruction";
+import type { VerificationResult } from "~/core/verification/types";
 
 /**
  * The panel <-> background <-> content-script protocol.
@@ -46,6 +48,24 @@ export interface ConfirmFillOutcome {
   readonly ok: boolean;
 }
 
+/**
+ * What the panel needs to render one agent-loop run — a purpose-built
+ * projection of `RunSnapshot` (`~/core/agent/loop`), not the snapshot
+ * itself: the panel has no business seeing `matches`/`handled`/internal
+ * step history, only what it must show or act on next.
+ */
+export interface RunView {
+  readonly runId: string;
+  readonly phase: AgentPhase;
+  readonly status: AgentStatus;
+  readonly pendingQuestion?: string;
+  readonly review: {
+    readonly fieldId: FieldId;
+    readonly value: string;
+    readonly label?: string;
+  } | null;
+}
+
 interface Messages {
   // Panel -> background. `tabId` is resolved by the panel, not
   // re-derived in the background: a service worker has no window of its
@@ -65,9 +85,28 @@ interface Messages {
   }): { ok: boolean };
   getMemorySnapshot(): { items: readonly MemoryItem[] };
 
+  // Panel -> background: the Phase 2 agent loop, alongside (not replacing)
+  // the straight-line runFill/confirmFill above. Starts a run for the tab if
+  // none is in progress, or drives an existing one (persisted in
+  // `chrome.storage.session`, see `~/lib/agent-runs`) as far as it can go.
+  startRun(data: { tabId: number }): { started: boolean; view: RunView | null };
+  getRunState(data: { tabId: number }): { view: RunView | null };
+  answerRunQuestion(data: { tabId: number; value: string }): {
+    ok: boolean;
+    view: RunView | null;
+  };
+  confirmRunReview(data: { tabId: number; approve: boolean }): {
+    ok: boolean;
+    view: RunView | null;
+  };
+
   // Background -> content script (sent with a tabId).
   extractFullForm(): { forms: readonly Form[] };
   fillField(data: FillFieldPayload): { ok: boolean };
+  verifyField(data: {
+    fieldId: FieldId;
+    expectedValue: string;
+  }): VerificationResult;
 }
 
 export const { sendMessage, onMessage } = defineExtensionMessaging<Messages>();

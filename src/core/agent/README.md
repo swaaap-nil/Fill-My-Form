@@ -28,7 +28,26 @@ union is a security decision, not a feature decision.
 returns to `PLAN`, never straight back to `ACT` — a retry must be re-decided,
 not repeated blindly.
 
-## What lands here next
+## The reducer and the loop (Phase 2)
 
-The reducer (`AgentState` + `AgentEvent` -> `AgentState`) and the loop that
-drives it. Both pure and UI-free.
+`reducer.ts` is the pure `(AgentState, AgentEvent) -> AgentState` function.
+Its two safety rules — a terminal status is absorbing, and a phase only ever
+moves through an edge `canTransition` allows — are what let a property test
+throw thousands of random event sequences at it and never see an illegal
+transition or an un-terminated terminal state.
+
+`loop.ts` drives it, with every side effect (`ToolRegistry`, `PolicyEngine`,
+`MemoryStore`, `ConceptIndex`, `Verifier`, the clock, id generation) injected
+as `LoopPorts`. It is a `step`/`drive` pair rather than one long-running
+async function on purpose: a run must survive the service worker being torn
+down mid-`ask_user`, so `step` performs exactly one phase's work and returns
+a new, JSON-serialisable `RunSnapshot` for the composition root to persist
+(`chrome.storage.session`, via `~/lib/agent-runs`) and resume later — from a
+fresh worker's `LoopPorts` if it comes to that, indistinguishably from
+continuing in the same one.
+
+No model exists yet (Phase 3), so `PLAN` is deterministic: it reuses 1c's
+`resolve() -> memory -> policy.evaluate()` pipeline, restructured to decide
+one field at a time. See `loop.ts`'s module doc for the full reasoning,
+including why `ACT -> ACT` covers both a tool-execution retry and an
+`ask_user`/`request_review` pause resolving into the actual write.

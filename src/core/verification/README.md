@@ -20,7 +20,15 @@ re-decided rather than repeated.
 for the review UI and the agent's next decision. Log `code` and `fieldId` only —
 `LogFields` in `~/core/logging` will not let you log the others by accident.
 
-## What lands here next
+## The `Verifier` implementation (Phase 2)
 
-The DOM-reading `Verifier` implementation, which is an adapter and lives outside
-`src/core`.
+`~/lib/form/verify.ts`'s `compareFieldValue` is the DOM-reading half — pure
+enough to unit-test its one hard rule (never reads a `password` field, a
+duck-typed check so it needs no real DOM) without a browser, everything else
+covered by `e2e/verify.spec.ts` against `controlled.html`. It never uses
+`failed()` for `VALUE_NORMALISED`: a masked field reformatting what was typed
+is treated as a pass whose issue is still recorded, not a failure to retry.
+
+`~/app/background`'s `buildLoopPorts` supplies the other half — a `Verifier`
+that sends the `verifyField` message the content script answers — so the
+loop never touches the DOM itself, only through this port.

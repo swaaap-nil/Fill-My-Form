@@ -126,6 +126,54 @@ pinning — and generate the baselines in a container when you do.
 magnitude slower than the unit tests. They run as a separate CI job so a lint
 failure still surfaces in seconds.
 
+### Known flakiness: resource-starved hangs, not code bugs
+
+Four specs — `e2e/resume.spec.ts` (both tests), `e2e/dynamic-form.spec.ts`'s
+"fields revealed by a step transition" test, and intermittently `e2e/fill
+.spec.ts`'s pre-existing "grant" test — can hang for 30–90+ seconds and fail
+with something like:
+
+```
+Test timeout of Nms exceeded.
+Error: locator.click: Target page, context or browser has been closed
+Call log:
+  - waiting for getByRole('button', { name: 'Grant access to this site' })
+```
+
+(or waiting on "Fill with agent" / "Confirm" instead). **Before treating this
+as a regression, check the host's load first** (`uptime`, and on macOS `top
+-l 1` for free memory) — this exact failure was chased at length during Phase
+2 and traced to the *host machine* being memory- and CPU-starved (another
+`bun dev` session and other agent processes competing for the same box), not
+the extension. The evidence, so nobody has to redo this:
+
+- Standalone Playwright scripts (bypassing the `test` runner entirely —
+  `chromium.launchPersistentContext` + the same click sequence) reproduced
+  the exact same interactions and completed in under a second, every time.
+- The background service worker's own debug log, captured mid-"hang" via
+  `worker.evaluate(() => chrome.storage.session.get(null))`, showed the run
+  had already reached `phase: done, status: completed` — the extension's
+  logic was never actually stuck; the *page* just never got to render or
+  respond to the click.
+- The same test passed in isolation (`npx playwright test e2e/resume.spec.ts`)
+  and under `DEBUG=pw:api`, then failed again minutes later as part of the
+  full suite with no code change in between.
+
+If you land here: rerun the specific failing spec alone, ideally when nothing
+else heavy is running, before spending time in the extension's own code. Only
+treat it as a real regression if it fails *consistently* on an otherwise-idle
+machine, or if the error is something other than a timeout waiting on a
+button/locator that plainly exists in the component tree.
+
+Two *real* bugs were found and fixed while chasing this (so don't rediscover
+them as "maybe this is it"): `~/core/agent/loop`'s `performFill` used to read
+the tool-execution envelope's `ok` instead of the fill's actual `{ ok: false
+}` payload (a control `writeFieldValue` can't write, like `controlled.html`'s
+combobox, looked like a clean write), and the per-field verification retry
+cap used to read `AgentState.attempt`, which the reducer resets on every
+`planned` event — so it could never actually reach its cap. Both are fixed;
+`RunSnapshot.cursorAttempts` is the field-level counter now.
+
 ## Not yet built
 
 **An evaluation runner.** A JSON dataset of `label → expected concept key`

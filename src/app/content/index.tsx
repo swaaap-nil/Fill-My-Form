@@ -5,6 +5,7 @@ import { Logo } from "@/components/common/logo";
 import type { FieldElements } from "~/lib/form/extract";
 import { extractFullWithElements } from "~/lib/form/extract";
 import { writeFieldValue } from "~/lib/form/fill";
+import { compareFieldValue } from "~/lib/form/verify";
 import { assertValidFillInstruction, onMessage } from "~/lib/messaging";
 
 import "~/assets/styles/globals.css";
@@ -34,6 +35,15 @@ const registerFillHandlers = () => {
     if (!target) return { ok: false };
 
     return { ok: writeFieldValue(target, value) };
+  });
+
+  onMessage("verifyField", ({ data }) => {
+    // Same cache `fillField` reads: a verify must check the same element the
+    // fill wrote to, from the same extraction pass a `FieldId` came from.
+    return compareFieldValue(
+      lastElementsById.get(data.fieldId),
+      data.expectedValue,
+    );
   });
 };
 

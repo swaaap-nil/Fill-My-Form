@@ -5,6 +5,7 @@ import { Separator } from "~/components/ui/separator";
 import type { DecisionId, FieldProposal } from "~/lib/messaging";
 import { sendMessage } from "~/lib/messaging";
 import { siteAccess } from "~/lib/site-access";
+import { AgentRunPanel } from "./agent-run-panel";
 import { ProposalCard } from "./proposal-card";
 
 /**
@@ -178,6 +179,8 @@ export const FillPanel = () => {
           ))}
         </div>
       )}
+
+      {activeTabGranted && <AgentRunPanel tabId={activeTabId} />}
 
       <Separator />
 

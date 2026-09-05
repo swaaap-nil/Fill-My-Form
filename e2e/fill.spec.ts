@@ -1,5 +1,6 @@
-import type { BrowserContext, Page } from "@playwright/test";
+import type { BrowserContext } from "@playwright/test";
 import { expect, test } from "./fill-fixtures";
+import { grantAccess, openPanel, seedAnswer } from "./fill-helpers";
 
 /**
  * The first real fill, end to end, against the `WXT_E2E=1` build
@@ -17,37 +18,10 @@ import { expect, test } from "./fill-fixtures";
  * resolving to the *form* tab is preceded by `formPage.bringToFront()`.
  * Playwright can still drive `panelPage`'s elements afterwards regardless
  * of which tab is visually frontmost.
+ *
+ * `openPanel`/`seedAnswer`/`grantAccess` live in `./fill-helpers` now,
+ * shared with `verify.spec.ts`, `dynamic-form.spec.ts` and `resume.spec.ts`.
  */
-
-const openPanel = async (context: BrowserContext, extensionId: string) => {
-  const panelPage = await context.newPage();
-  await panelPage.goto(`chrome-extension://${extensionId}/sidepanel.html`);
-  return panelPage;
-};
-
-/** Fills one onboarding field by its concept label and saves. */
-const seedAnswer = async (panelPage: Page, label: string, value: string) => {
-  await panelPage.getByRole("button", { name: "My information" }).click();
-  await panelPage.getByLabel(label, { exact: true }).fill(value);
-  await panelPage.getByRole("button", { name: "Save" }).click();
-  await expect(panelPage.getByTestId("saved-count")).toContainText("1 value");
-  await panelPage.getByRole("button", { name: "Fill this page" }).click();
-};
-
-/**
- * Spike 2's fix, exercised: `registerContentScripts` only affects future
- * navigations, so a tab that was already open before access was granted
- * needs the direct `executeScript` injection `requestSiteAccess` performs
- * for whichever tab is currently active — hence `formPage.bringToFront()`
- * first. Every test that extracts or fills calls this, exactly as a real
- * user would need to click "Grant access" before the first scan works.
- */
-const grantAccess = async (formPage: Page, panelPage: Page) => {
-  await formPage.bringToFront();
-  await panelPage
-    .getByRole("button", { name: "Grant access to this site" })
-    .click();
-};
 
 /** Minimal shape of what the worker-side `evaluate` callback needs. */
 interface ScriptingGlobal {
