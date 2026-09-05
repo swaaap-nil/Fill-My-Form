@@ -35,7 +35,7 @@ contracts, most of which have no implementation.
 
 52 unit tests (`bun test`, plain Bun, no DOM) and 10 Playwright e2e smoke tests pass today.
 
-## Four defects to know about before you start
+## Three defects to know about before you start
 
 These were verified this session. Do not "discover" them again.
 
@@ -51,13 +51,6 @@ These were verified this session. Do not "discover" them again.
    [`docs/spikes-phase-0.md`](../spikes-phase-0.md) and due in Phase 1c: after
    `registerContentScripts` succeeds, also `scripting.executeScript` into the active tab.
    Registration covers future navigations; the direct injection covers the tab open now.
-
-4. **Phase 0's guard tests never run.** `bunfig.toml` sets `[test] root = "src"`, so in
-   `bun test src scripts` the `scripts` argument is treated as a *name filter*, not a path, and
-   is silently ignored. `scripts/tests/check-release-manifest.test.ts` — 17 tests protecting the
-   de-starter from regressing — has never executed locally or in CI, which still reports green.
-   `bun test ./src ./scripts` collects all 63. This is the failure `docs/testing.md` warns
-   about: a guard nobody has watched fail is not a guard.
 
 Phase 0 is complete. Its spike answers — including confirmation that
 `permissions.request()` works from the side panel — are in
@@ -162,10 +155,20 @@ the exact output, what you tried, and why the fix is not yours to make — a thi
 deprecation, an upstream bug, a dependency you were told not to touch. Asking is the expected
 outcome for those; suppressing is not.
 
-There is one standing warning right now: `biome.json` pins schema `2.5.0` while the CLI is
-`2.5.11`, so `bun lint` ends with `Found 1 info`. It is fixable (`biome migrate`), but
-`biome.json` carries the load-bearing `noRestrictedImports` boundaries, so raise it rather than
-migrating it as a side effect of another phase.
+**`bun check` is currently silent** — lint, typecheck and tests emit nothing. Any warning you
+see there is one you introduced. Keep it that way; the value of this rule comes entirely from
+the output staying empty.
+
+**`bun run build` is not silent**, and the exception is recorded here rather than suppressed,
+which is what the rule above asks of you:
+
+- `` `esbuild` option was specified by "vite:react-babel" plugin … use `oxc` instead ``
+- `` `optimizeDeps.rollupOptions` … is deprecated. Use `optimizeDeps.rolldownOptions` ``
+
+Both come from `@vitejs/plugin-react` inside WXT's Vite pipeline (`@wxt-dev/module-react`
+1.1.3; Vite is transitive via `wxt`). Our own config sets `optimizeDeps.entries` and never
+touches `esbuild`, so neither is ours to fix without upgrading or patching upstream. Treat these
+two lines as the known baseline: if `bun run build` grows a *third* warning, it is yours.
 
 ## Testing policy
 

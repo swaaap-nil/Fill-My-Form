@@ -43,7 +43,7 @@ jobs:
         run: bun typecheck
 
       - name: 🧪 Unit tests
-        run: bun test src scripts
+        run: bun test ./src ./scripts
 
       - name: 📦 Build
         run: bun run build
