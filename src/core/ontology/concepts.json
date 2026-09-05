@@ -7,8 +7,14 @@
     "expects": "text",
     "autocomplete": ["given-name"],
     "aliases": {
-      "en": ["first name", "given name", "forename", "fname"],
-      "hi": ["पहला नाम", "नाम"]
+      "en": [
+        "first name",
+        "given name",
+        "forename",
+        "fname",
+        "confirm first name"
+      ],
+      "hi": ["पहला नाम", "नाम", "पहला नाम की पुष्टि करें"]
     }
   },
   {
@@ -31,8 +37,14 @@
     "expects": "text",
     "autocomplete": ["family-name"],
     "aliases": {
-      "en": ["last name", "surname", "family name", "lname"],
-      "hi": ["उपनाम", "कुलनाम"]
+      "en": [
+        "last name",
+        "surname",
+        "family name",
+        "lname",
+        "confirm last name"
+      ],
+      "hi": ["उपनाम", "कुलनाम", "उपनाम की पुष्टि करें"]
     }
   },
   {
@@ -235,8 +247,30 @@
     "expects": "email",
     "autocomplete": ["email"],
     "aliases": {
-      "en": ["email", "e-mail", "email address", "email id"],
-      "hi": ["ईमेल", "ईमेल पता"]
+      "en": [
+        "email",
+        "e-mail",
+        "email address",
+        "email id",
+        "confirm email id"
+      ],
+      "hi": ["ईमेल", "ईमेल पता", "ईमेल की पुष्टि करें"]
+    }
+  },
+  {
+    "key": "contact.alternate_email",
+    "label": "Alternate email address",
+    "sensitivity": "personal",
+    "volatility": "slow",
+    "expects": "email",
+    "aliases": {
+      "en": [
+        "alternate email",
+        "alternate email address",
+        "secondary email",
+        "secondary email address"
+      ],
+      "hi": ["वैकल्पिक ईमेल", "वैकल्पिक ईमेल पता"]
     }
   },
   {
@@ -252,9 +286,10 @@
         "mobile",
         "phone number",
         "mobile number",
-        "contact number"
+        "contact number",
+        "confirm mobile number"
       ],
-      "hi": ["फ़ोन", "मोबाइल नंबर", "संपर्क नंबर"]
+      "hi": ["फ़ोन", "मोबाइल नंबर", "संपर्क नंबर", "मोबाइल नंबर की पुष्टि करें"]
     }
   },
   {
@@ -870,9 +905,10 @@
         "aadhaar number",
         "aadhar number",
         "aadhaar card number",
-        "national id"
+        "national id",
+        "confirm aadhaar number"
       ],
-      "hi": ["आधार नंबर", "आधार कार्ड नंबर"]
+      "hi": ["आधार नंबर", "आधार कार्ड नंबर", "आधार नंबर की पुष्टि करें"]
     }
   },
   {
@@ -947,8 +983,8 @@
     "volatility": "stable",
     "expects": "text",
     "aliases": {
-      "en": ["bank account number", "account number"],
-      "hi": ["बैंक खाता संख्या", "खाता संख्या"]
+      "en": ["bank account number", "account number", "confirm account number"],
+      "hi": ["बैंक खाता संख्या", "खाता संख्या", "खाता संख्या की पुष्टि करें"]
     }
   },
   {

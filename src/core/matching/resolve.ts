@@ -81,11 +81,11 @@ const matchAutocomplete = (
 
 /**
  * Only fires when the field's kind maps to an `expects` value that exactly
- * one concept in the whole ontology declares — `type=email` narrows to
- * `contact.email` because nothing else expects email. `type=tel` does
- * *not* narrow (three concepts expect a phone number), so this
- * intentionally produces no candidate for it, deferring to alias/nearby
- * text tiers that can actually tell the phones apart.
+ * one concept in the whole ontology declares. `type=url` still narrows this
+ * way. `type=tel` and `type=email` do *not* narrow — three concepts expect a
+ * phone number, and `contact.email`/`contact.alternate_email` both expect
+ * email — so this intentionally produces no candidate for either,
+ * deferring to alias/nearby text tiers that can actually tell them apart.
  */
 const matchTypeNarrowing = (
   field: FormField,

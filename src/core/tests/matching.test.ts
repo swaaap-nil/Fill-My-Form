@@ -53,12 +53,27 @@ describe("tier 1: autocomplete token", () => {
 });
 
 describe("tier 2: type narrowing", () => {
-  it("resolves an email input with no other signal", () => {
-    const result = resolve(field({ kind: FieldKind.EMAIL }), ontology);
+  it("narrows when exactly one concept declares a kind's expects value", () => {
+    // The real ontology no longer has a lone concept for any kind
+    // (`contact.alternate_email` joined `contact.email` on "email", same as
+    // "tel" already had three) — so this proves the tier's own logic
+    // against a minimal synthetic index, independent of whether today's
+    // ontology happens to have a collision for every kind.
+    const solo = createConceptIndex([
+      {
+        key: "test.only_url_concept",
+        label: "Only URL concept",
+        sensitivity: "public",
+        volatility: "stable",
+        expects: "url",
+        aliases: { en: ["only url concept"] },
+      },
+    ]);
+    const result = resolve(field({ kind: FieldKind.URL }), solo);
     expect(result.certainty).toBe(Certainty.KNOWN);
     expect(result.candidates).toEqual([
       {
-        conceptKey: "contact.email",
+        conceptKey: "test.only_url_concept",
         tier: MatchTier.TYPE_NARROWING,
         score: 0.8,
       },
@@ -67,6 +82,14 @@ describe("tier 2: type narrowing", () => {
 
   it("does not narrow a tel input alone: three concepts expect tel", () => {
     const result = resolve(field({ kind: FieldKind.TEL }), ontology);
+    expect(result.certainty).toBe(Certainty.UNKNOWN);
+  });
+
+  it("does not narrow an email input alone: two concepts expect email", () => {
+    // contact.email and contact.alternate_email both expect "email" — the
+    // same "more than one concept, defer to alias/nearby-text" treatment
+    // tel already gets, not a regression.
+    const result = resolve(field({ kind: FieldKind.EMAIL }), ontology);
     expect(result.certainty).toBe(Certainty.UNKNOWN);
   });
 
