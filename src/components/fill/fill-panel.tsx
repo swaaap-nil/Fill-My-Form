@@ -16,11 +16,14 @@ import { ProposalCard } from "./proposal-card";
  * re-runs policy with `userConfirmed: true` in the background. See
  * `~/core/fill/driver` for why that split exists.
  *
- * "Grant access" is its own, always-present button rather than one that
- * only appears after a failed scan — the runtime half of the privacy
- * design (`~/lib/site-access`) had zero UI callers before this phase, and
- * a reachable, deliberate action is the point, not a fallback surfaced by
- * accident.
+ * **"Scan this page" does not exist as a button until the active tab's own
+ * origin is granted.** Showing it earlier would invite a click that always
+ * fails, and — more importantly — a visible "scan" affordance reads as
+ * "this works now" regardless of whether it does. Only "Grant access to
+ * this site" is shown before that; the runtime half of the privacy design
+ * (`~/lib/site-access`) had zero UI callers before this phase, and a
+ * reachable, deliberate grant action is the point, not a fallback
+ * surfaced by accident.
  *
  * **Site access is called directly here, not through a background
  * message.** `chrome.permissions.request()` only succeeds inside the
@@ -42,22 +45,51 @@ type ScanState =
       readonly proposals: readonly FieldProposal[];
     };
 
+/**
+ * The side panel's own `currentWindow` is unambiguous — it is attached to
+ * a specific window — unlike the background service worker, which has no
+ * window of its own and cannot reliably resolve "the active tab" the same
+ * way. Every action that needs a tab resolves it here, once, and passes
+ * the id through explicitly rather than letting the background re-derive
+ * (and potentially mis-derive) it.
+ */
+const getActiveTab = () =>
+  browser.tabs
+    .query({ active: true, currentWindow: true })
+    .then(([tab]) => tab);
+
 export const FillPanel = () => {
   const [scanState, setScanState] = useState<ScanState>({ kind: "idle" });
   const [confirmedIds, setConfirmedIds] = useState<Set<DecisionId>>(new Set());
   const [grantedOrigins, setGrantedOrigins] = useState<readonly string[]>([]);
+  const [activeTabId, setActiveTabId] = useState<number | undefined>();
+  // Whether the *currently active tab's* origin has been granted — not
+  // just whether the user has granted access to *some* site. "Scan this
+  // page" only ever means the active tab, so it stays hidden until that
+  // specific origin is granted, rather than as soon as any origin is.
+  const [activeTabGranted, setActiveTabGranted] = useState(false);
 
-  const refreshGrantedOrigins = useCallback(async () => {
+  const refreshAccessState = useCallback(async () => {
     setGrantedOrigins(await siteAccess.listGrantedOrigins());
+
+    const tab = await getActiveTab();
+    setActiveTabId(tab?.id);
+    setActiveTabGranted(
+      tab?.url ? await siteAccess.hasSiteAccess(tab.url) : false,
+    );
   }, []);
 
   useEffect(() => {
-    refreshGrantedOrigins();
-  }, [refreshGrantedOrigins]);
+    refreshAccessState();
+  }, [refreshAccessState]);
 
   const scan = async () => {
+    if (activeTabId === undefined) {
+      setScanState({ kind: "not_granted" });
+      return;
+    }
     try {
-      const result = await sendMessage("runFill", undefined);
+      const result = await sendMessage("runFill", { tabId: activeTabId });
       if (!result.granted) {
         setScanState({ kind: "not_granted" });
         return;
@@ -77,23 +109,27 @@ export const FillPanel = () => {
     // `permissions.request()` (inside `siteAccess.requestSiteAccess`)
     // valid — it must run here, synchronously reachable from the click,
     // not be proxied through a message to the background.
-    const [tab] = await browser.tabs.query({
-      active: true,
-      currentWindow: true,
-    });
+    const tab = await getActiveTab();
     if (tab?.url) {
       await siteAccess.requestSiteAccess(tab.url, tab.id);
     }
-    await refreshGrantedOrigins();
+    await refreshAccessState();
   };
 
   const revoke = async (origin: string) => {
     await siteAccess.revokeSiteAccess(origin);
-    await refreshGrantedOrigins();
+    // Revoking the active tab's own origin must hide "Scan this page"
+    // again immediately, not just drop it from the granted-origins list.
+    setScanState({ kind: "idle" });
+    await refreshAccessState();
   };
 
   const confirm = async (decisionIds: readonly DecisionId[]) => {
-    const { results } = await sendMessage("confirmFill", { decisionIds });
+    if (activeTabId === undefined) return;
+    const { results } = await sendMessage("confirmFill", {
+      decisionIds,
+      tabId: activeTabId,
+    });
     const ok = new Set(results.filter((r) => r.ok).map((r) => r.decisionId));
     setConfirmedIds((prev) => new Set([...prev, ...ok]));
   };
@@ -110,12 +146,15 @@ export const FillPanel = () => {
   return (
     <div className="flex w-full flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <Button type="button" variant="outline" onClick={grantAccess}>
-          Grant access to this site
-        </Button>
-        <Button type="button" onClick={scan}>
-          Scan this page
-        </Button>
+        {activeTabGranted ? (
+          <Button type="button" onClick={scan}>
+            Scan this page
+          </Button>
+        ) : (
+          <Button type="button" variant="outline" onClick={grantAccess}>
+            Grant access to this site
+          </Button>
+        )}
       </div>
 
       {grantedOrigins.length > 0 && (

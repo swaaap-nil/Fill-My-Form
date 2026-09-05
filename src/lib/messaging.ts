@@ -47,9 +47,15 @@ export interface ConfirmFillOutcome {
 }
 
 interface Messages {
-  // Panel -> background.
-  runFill(): RunFillResult;
-  confirmFill(data: { decisionIds: readonly DecisionId[] }): {
+  // Panel -> background. `tabId` is resolved by the panel, not
+  // re-derived in the background: a service worker has no window of its
+  // own, so `chrome.tabs.query({ currentWindow: true })` called from
+  // there is ambiguous the moment more than one window is open — it can
+  // silently resolve to the wrong tab. The side panel's `currentWindow`
+  // is unambiguous (it is attached to a specific window), so it resolves
+  // the tab once and passes the id through explicitly.
+  runFill(data: { tabId: number }): RunFillResult;
+  confirmFill(data: { decisionIds: readonly DecisionId[]; tabId: number }): {
     results: readonly ConfirmFillOutcome[];
   };
   recordOnboardingAnswer(data: {

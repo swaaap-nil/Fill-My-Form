@@ -32,11 +32,6 @@ const memoryStore = createInMemoryMemoryStore();
  */
 const pendingDecisions = new Map<DecisionId, PendingDecision>();
 
-const getActiveTab = async () => {
-  const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-  return tab;
-};
-
 const main = () => {
   // Clicking the toolbar icon opens the side panel. Requires no
   // `action.default_popup` in the manifest, and Chrome only. Firefox has no
@@ -56,16 +51,20 @@ const main = () => {
     .then((count: number) => logger.info("restored granted sites", { count }))
     .catch(() => logger.warn("could not restore granted sites"));
 
-  onMessage("runFill", async () => {
-    const tab = await getActiveTab();
-    if (!tab?.url || tab.id === undefined) {
+  onMessage("runFill", async ({ data }) => {
+    const tab = await browser.tabs.get(data.tabId);
+    if (!tab.url) {
       return { granted: false, proposals: [] };
     }
 
     const granted = await siteAccess.hasSiteAccess(tab.url);
     if (!granted) return { granted: false, proposals: [] };
 
-    const { forms } = await sendMessage("extractFullForm", undefined, tab.id);
+    const { forms } = await sendMessage(
+      "extractFullForm",
+      undefined,
+      data.tabId,
+    );
     const fields = forms.flatMap((form) => form.fields);
 
     const { proposals, decisions } = await planFill(
@@ -84,16 +83,7 @@ const main = () => {
   });
 
   onMessage("confirmFill", async ({ data }) => {
-    const tab = await getActiveTab();
-    if (tab?.id === undefined) {
-      return {
-        results: data.decisionIds.map((decisionId) => ({
-          decisionId,
-          ok: false,
-        })),
-      };
-    }
-    const tabId = tab.id;
+    const tabId = data.tabId;
 
     const results = await Promise.all(
       data.decisionIds.map(async (decisionId) => {
