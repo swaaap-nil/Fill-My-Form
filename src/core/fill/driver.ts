@@ -21,11 +21,17 @@
 import type { FormField } from "../form/types";
 import { tierToConfidence } from "../matching/confidence";
 import { resolve } from "../matching/resolve";
+import { FreshnessStatus, freshness } from "../memory/freshness";
 import type { MemoryStore } from "../memory/store";
 import type { ProfileId } from "../memory/types";
 import type { ConceptIndex, Sensitivity } from "../ontology/types";
 import { Sensitivity as SensitivityValue } from "../ontology/types";
-import { ActionRisk, PolicyEffect, type PolicyEngine } from "../policy/types";
+import {
+  ActionRisk,
+  ConfidenceLevel,
+  PolicyEffect,
+  type PolicyEngine,
+} from "../policy/types";
 import type {
   ConfirmDecisionResult,
   DecisionId,
@@ -51,6 +57,7 @@ export const planFill = async (
   profileId: ProfileId,
   policy: PolicyEngine,
   generateDecisionId: () => DecisionId = () => crypto.randomUUID(),
+  now: () => string = () => new Date().toISOString(),
 ): Promise<PlanFillResult> => {
   const proposals: FieldProposal[] = [];
   const decisions = new Map<DecisionId, PendingDecision>();
@@ -95,7 +102,11 @@ export const planFill = async (
       continue;
     }
 
-    const confidence = tierToConfidence(candidate.tier);
+    const itemFreshness = freshness(item, now());
+    const confidence =
+      itemFreshness === FreshnessStatus.DUE
+        ? ConfidenceLevel.LOW
+        : tierToConfidence(candidate.tier);
     const decision = policy.evaluate({
       risk: FILL_RISK,
       sensitivity: concept.sensitivity,
@@ -114,6 +125,7 @@ export const planFill = async (
       sensitivity: concept.sensitivity,
       risk: FILL_RISK,
       confidence,
+      stale: itemFreshness === FreshnessStatus.DUE,
     });
 
     proposals.push({

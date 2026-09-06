@@ -5,6 +5,7 @@ import type { FieldId, Form } from "~/core/form/types";
 import type { MemoryItem, MemoryKey, MemoryValue } from "~/core/memory/types";
 import type { FillFieldPayload } from "~/core/messaging/fill-instruction";
 import type { VerificationResult } from "~/core/verification/types";
+import type { LocalDataExport } from "./indexeddb-local-data";
 
 /**
  * The panel <-> background <-> content-script protocol.
@@ -84,6 +85,9 @@ interface Messages {
     label?: string;
   }): { ok: boolean };
   getMemorySnapshot(): { items: readonly MemoryItem[] };
+  exportLocalData(): { data: LocalDataExport };
+  importLocalData(data: { payload: unknown }): { ok: boolean };
+  wipeLocalData(): { ok: boolean };
 
   // Panel -> background: the Phase 2 agent loop, alongside (not replacing)
   // the straight-line runFill/confirmFill above. Starts a run for the tab if

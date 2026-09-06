@@ -173,11 +173,12 @@ which is what the rule above asks of you:
 
 - `` `esbuild` option was specified by "vite:react-babel" plugin … use `oxc` instead ``
 - `` `optimizeDeps.rollupOptions` … is deprecated. Use `optimizeDeps.rolldownOptions` ``
+- `` `[vite:react-babel] We recommend switching to @vitejs/plugin-react-oxc` ``
 
-Both come from `@vitejs/plugin-react` inside WXT's Vite pipeline (`@wxt-dev/module-react`
+These come from `@vitejs/plugin-react` inside WXT's Vite pipeline (`@wxt-dev/module-react`
 1.1.3; Vite is transitive via `wxt`). Our own config sets `optimizeDeps.entries` and never
 touches `esbuild`, so neither is ours to fix without upgrading or patching upstream. Treat these
-two lines as the known baseline: if `bun run build` grows a *third* warning, it is yours.
+three lines as the known baseline: if `bun run build` grows a *fourth* warning, it is yours.
 
 ## Testing policy
 

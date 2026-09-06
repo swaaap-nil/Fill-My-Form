@@ -12,11 +12,13 @@ import {
   type LoopPorts,
   type RunSnapshot,
 } from "~/core/agent/loop";
-import { isTerminal } from "~/core/agent/types";
+import { Certainty, isTerminal } from "~/core/agent/types";
 import { confirmDecision, planFill } from "~/core/fill/driver";
 import type { DecisionId, PendingDecision } from "~/core/fill/types";
 import { createLogger } from "~/core/logging";
-import { createInMemoryMemoryStore } from "~/core/memory/in-memory";
+import { resolve } from "~/core/matching/resolve";
+import { deriveFreshnessHorizon } from "~/core/memory/freshness";
+import { bundledFreshnessDurationPolicy } from "~/core/memory/freshness-policy";
 import { DEFAULT_PROFILE_ID, MemorySource } from "~/core/memory/types";
 import { recordAnswer } from "~/core/memory/write-service";
 import { ontology } from "~/core/ontology";
@@ -31,6 +33,11 @@ import {
   saveRunSnapshot,
 } from "~/lib/agent-runs";
 import { inspectFormOutputSchema } from "~/lib/form/schema";
+import {
+  createDefaultIndexedDbLocalDataStore,
+  isLocalDataExport,
+  type PersistentLocalDataStore,
+} from "~/lib/indexeddb-local-data";
 import { onMessage, type RunView, sendMessage } from "~/lib/messaging";
 import { siteAccess } from "~/lib/site-access";
 
@@ -45,7 +52,11 @@ import { siteAccess } from "~/lib/site-access";
  * here. See docs/agent.md and the phase 1c handback.
  */
 const logger = createLogger({ sessionId: crypto.randomUUID() });
-const memoryStore = createInMemoryMemoryStore();
+let localDataStore: Promise<PersistentLocalDataStore> | undefined;
+const getLocalDataStore = (): Promise<PersistentLocalDataStore> => {
+  localDataStore ??= createDefaultIndexedDbLocalDataStore();
+  return localDataStore;
+};
 
 /**
  * decisionId -> what `planFill` decided about one field. Cleared per id
@@ -64,7 +75,8 @@ const pendingDecisions = new Map<DecisionId, PendingDecision>();
  * the same trust boundary `~/core/fill/driver`'s `confirmDecision` enforces
  * for the straight-line flow above.
  */
-const buildLoopPorts = (tabId: number): LoopPorts => {
+const buildLoopPorts = async (tabId: number): Promise<LoopPorts> => {
+  const memoryStore = await getLocalDataStore();
   const tools = createToolRegistry();
 
   tools.register({
@@ -109,6 +121,7 @@ const buildLoopPorts = (tabId: number): LoopPorts => {
     tools,
     policy: defaultPolicy,
     memory: memoryStore,
+    journal: memoryStore,
     ontology,
     verifier,
     profileId: DEFAULT_PROFILE_ID,
@@ -160,6 +173,7 @@ const main = () => {
     .catch(() => logger.warn("could not restore granted sites"));
 
   onMessage("runFill", async ({ data }) => {
+    const memoryStore = await getLocalDataStore();
     const tab = await browser.tabs.get(data.tabId);
     if (!tab.url) {
       return { granted: false, proposals: [] };
@@ -174,6 +188,7 @@ const main = () => {
       data.tabId,
     );
     const fields = forms.flatMap((form) => form.fields);
+    const origin = new URL(tab.url).origin;
 
     const { proposals, decisions } = await planFill(
       fields,
@@ -181,7 +196,40 @@ const main = () => {
       memoryStore,
       DEFAULT_PROFILE_ID,
       defaultPolicy,
+      () => crypto.randomUUID(),
+      () => new Date().toISOString(),
     );
+
+    const memoryValues = (
+      await memoryStore.search({
+        profileId: DEFAULT_PROFILE_ID,
+      })
+    )
+      .map((item) => item.value)
+      .filter((value): value is string => typeof value === "string");
+
+    for (const field of fields) {
+      const match = resolve(field, ontology);
+      if (
+        match.certainty !== Certainty.UNKNOWN &&
+        match.certainty !== Certainty.AMBIGUOUS
+      ) {
+        continue;
+      }
+      await memoryStore.recordUnresolvedField(
+        {
+          origin,
+          fieldKey: field.id,
+          label: field.label ?? field.name ?? field.placeholder ?? field.id,
+          kind: field.kind,
+          autocomplete: field.autocomplete,
+          tiersTried: match.candidates.map((candidate) => candidate.tier),
+          certainty: match.certainty,
+          now: new Date().toISOString(),
+        },
+        memoryValues,
+      );
+    }
 
     for (const [decisionId, decision] of decisions) {
       pendingDecisions.set(decisionId, decision);
@@ -191,6 +239,7 @@ const main = () => {
   });
 
   onMessage("confirmFill", async ({ data }) => {
+    const memoryStore = await getLocalDataStore();
     const tabId = data.tabId;
 
     const results = await Promise.all(
@@ -207,6 +256,28 @@ const main = () => {
           tabId,
         );
 
+        if (ok) {
+          const concept = ontology.byKey(decision.conceptKey);
+          const confirmedAt = new Date().toISOString();
+          const horizon = concept
+            ? deriveFreshnessHorizon(
+                concept,
+                decision.value,
+                confirmedAt,
+                bundledFreshnessDurationPolicy,
+              )
+            : undefined;
+          await recordAnswer(memoryStore, {
+            profileId: DEFAULT_PROFILE_ID,
+            key: decision.conceptKey,
+            value: decision.value,
+            source: MemorySource.USER_CONFIRMED,
+            now: confirmedAt,
+            expiresAt: horizon?.expiresAt,
+            freshnessRule: horizon?.freshnessRule,
+          });
+        }
+
         // Consumed either way: a decisionId is single-use, so it cannot be
         // replayed against a later, different page state.
         pendingDecisions.delete(decisionId);
@@ -218,20 +289,51 @@ const main = () => {
   });
 
   onMessage("recordOnboardingAnswer", async ({ data }) => {
+    const memoryStore = await getLocalDataStore();
+    const concept = ontology.byKey(data.key);
+    const savedAt = new Date().toISOString();
+    const horizon = concept
+      ? deriveFreshnessHorizon(
+          concept,
+          data.value,
+          savedAt,
+          bundledFreshnessDurationPolicy,
+        )
+      : undefined;
     await recordAnswer(memoryStore, {
       profileId: DEFAULT_PROFILE_ID,
       key: data.key,
       value: data.value,
       label: data.label,
       source: MemorySource.USER_PROVIDED,
-      now: new Date().toISOString(),
+      now: savedAt,
+      expiresAt: horizon?.expiresAt,
+      freshnessRule: horizon?.freshnessRule,
     });
     return { ok: true };
   });
 
   onMessage("getMemorySnapshot", async () => ({
-    items: await memoryStore.search({ profileId: DEFAULT_PROFILE_ID }),
+    items: await (await getLocalDataStore()).search({
+      profileId: DEFAULT_PROFILE_ID,
+    }),
   }));
+
+  onMessage("exportLocalData", async () => ({
+    data: await (await getLocalDataStore()).exportLocalData(),
+  }));
+
+  onMessage("importLocalData", async ({ data }) => {
+    if (!isLocalDataExport(data.payload)) return { ok: false };
+    await (await getLocalDataStore()).importLocalData(data.payload);
+    return { ok: true };
+  });
+
+  onMessage("wipeLocalData", async () => {
+    await (await getLocalDataStore()).wipeLocalData();
+    pendingDecisions.clear();
+    return { ok: true };
+  });
 
   // --- Phase 2: the agent loop, alongside the straight-line flow above ---
 
@@ -242,7 +344,7 @@ const main = () => {
     const granted = await siteAccess.hasSiteAccess(tab.url);
     if (!granted) return { started: false, view: null };
 
-    const ports = buildLoopPorts(data.tabId);
+    const ports = await buildLoopPorts(data.tabId);
     const existing = await loadRunSnapshot(data.tabId);
     const snapshot =
       existing ?? createRun(ports, new URL(tab.url).origin, data.tabId);
@@ -260,7 +362,7 @@ const main = () => {
     const snapshot = await loadRunSnapshot(data.tabId);
     if (!snapshot) return { ok: false, view: null };
 
-    const ports = buildLoopPorts(data.tabId);
+    const ports = await buildLoopPorts(data.tabId);
     const answered = await answerQuestion(snapshot, ports, data.value);
     const next = await driveAndPersist(answered, ports);
     return { ok: true, view: toRunView(next) };
@@ -270,7 +372,7 @@ const main = () => {
     const snapshot = await loadRunSnapshot(data.tabId);
     if (!snapshot) return { ok: false, view: null };
 
-    const ports = buildLoopPorts(data.tabId);
+    const ports = await buildLoopPorts(data.tabId);
     const reviewed = confirmReview(snapshot, ports, data.approve);
     const next = await driveAndPersist(reviewed, ports);
     return { ok: true, view: toRunView(next) };

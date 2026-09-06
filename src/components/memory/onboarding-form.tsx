@@ -6,6 +6,7 @@ import { Label } from "~/components/ui/label";
 import { concepts } from "~/core/ontology";
 import { Sensitivity } from "~/core/ontology/types";
 import { sendMessage } from "~/lib/messaging";
+import { LocalDataControls } from "./local-data-controls";
 
 /**
  * An ontology-driven "tell us about yourself" form.
@@ -70,7 +71,7 @@ export const OnboardingForm = () => {
   const [savedKeys, setSavedKeys] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
+  const loadSnapshot = () => {
     sendMessage("getMemorySnapshot", undefined).then(({ items }) => {
       const loaded: Record<string, string> = {};
       for (const item of items) {
@@ -79,7 +80,9 @@ export const OnboardingForm = () => {
       setValues(loaded);
       setSavedKeys(new Set(items.map((i) => i.key)));
     });
-  }, []);
+  };
+
+  useEffect(loadSnapshot, []);
 
   const groupedStandard = useMemo(() => groupByPrefix(standardConcepts), []);
 
@@ -160,6 +163,7 @@ export const OnboardingForm = () => {
       <p className="text-muted-foreground text-xs" data-testid="saved-count">
         {savedKeys.size} value{savedKeys.size === 1 ? "" : "s"} saved
       </p>
+      <LocalDataControls onDataChanged={loadSnapshot} />
     </form>
   );
 };

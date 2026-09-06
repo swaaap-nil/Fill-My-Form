@@ -39,6 +39,12 @@ import { tierToConfidence } from "../matching/confidence";
 import { mapFieldWithModel } from "../matching/model-tier";
 import { resolve } from "../matching/resolve";
 import type { MatchResult } from "../matching/types";
+import {
+  deriveFreshnessHorizon,
+  FreshnessStatus,
+  freshness,
+} from "../memory/freshness";
+import { bundledFreshnessDurationPolicy } from "../memory/freshness-policy";
 import type { MemoryStore } from "../memory/store";
 import type { ProfileId } from "../memory/types";
 import { MemorySource } from "../memory/types";
@@ -76,6 +82,7 @@ export interface RetrievedValue {
   readonly conceptKey: string;
   readonly sensitivity: Sensitivity;
   readonly confirmedInRun?: boolean;
+  readonly stale?: boolean;
 }
 
 /**
@@ -120,6 +127,21 @@ export interface LoopPorts {
   readonly clock: () => string;
   readonly generateId: () => string;
   readonly logger: Logger;
+  readonly journal?: {
+    recordUnresolvedField(
+      input: {
+        readonly origin: string;
+        readonly fieldKey: string;
+        readonly label: string;
+        readonly kind: FormField["kind"];
+        readonly autocomplete?: string;
+        readonly tiersTried: readonly MatchResult["candidates"][number]["tier"][];
+        readonly certainty: "unknown" | "ambiguous";
+        readonly now: string;
+      },
+      memoryValues: readonly string[],
+    ): Promise<boolean> | boolean;
+  };
 }
 
 /** A field-cycle gets this many attempts (tool retries, verify retries) before PLAN gives up on it. */
@@ -258,6 +280,40 @@ const understandStep = async (
       ports.ontology,
     );
   }
+
+  if (ports.journal) {
+    const memoryValues = (
+      await ports.memory.search({ profileId: ports.profileId })
+    )
+      .map((item) => item.value)
+      .filter((value): value is string => typeof value === "string");
+
+    for (const field of snapshot.fields) {
+      const match = matches[field.id];
+      if (
+        !match ||
+        (match.certainty !== Certainty.UNKNOWN &&
+          match.certainty !== Certainty.AMBIGUOUS)
+      ) {
+        continue;
+      }
+      const label = field.label ?? field.name ?? field.placeholder ?? field.id;
+      await ports.journal.recordUnresolvedField(
+        {
+          origin: snapshot.run.origin,
+          fieldKey: field.id,
+          label,
+          kind: field.kind,
+          autocomplete: field.autocomplete,
+          tiersTried: match.candidates.map((candidate) => candidate.tier),
+          certainty: match.certainty,
+          now: ports.clock(),
+        },
+        memoryValues,
+      );
+    }
+  }
+
   return applyEvent({ ...snapshot, matches }, { type: "understood" }, ports);
 };
 
@@ -288,6 +344,7 @@ const retrieveValuesFor = async (
       conceptKey: concept.key,
       sensitivity: concept.sensitivity,
       confirmedInRun: false,
+      stale: freshness(item, ports.clock()) === FreshnessStatus.DUE,
     };
   }
 
@@ -400,7 +457,9 @@ const pickNextAction = (
       };
     }
 
-    const confidence = tierToConfidence(candidate.tier);
+    const confidence = existing.stale
+      ? ConfidenceLevel.LOW
+      : tierToConfidence(candidate.tier);
     const policyDecision = ports.policy.evaluate({
       risk: FILL_RISK,
       sensitivity: concept.sensitivity,
@@ -611,6 +670,28 @@ const retryAct = async (
         { type: "failed", errorCode: "REVIEW_POLICY_DENIED" },
         ports,
       );
+    }
+
+    const fieldValue = snapshot.values[fieldId];
+    if (fieldValue) {
+      const concept = ports.ontology.byKey(fieldValue.conceptKey);
+      const horizon = concept
+        ? deriveFreshnessHorizon(
+            concept,
+            fieldValue.value,
+            ports.clock(),
+            bundledFreshnessDurationPolicy,
+          )
+        : undefined;
+      await recordAnswer(ports.memory, {
+        profileId: ports.profileId,
+        key: fieldValue.conceptKey,
+        value: fieldValue.value,
+        source: MemorySource.USER_CONFIRMED,
+        now: ports.clock(),
+        expiresAt: horizon?.expiresAt,
+        freshnessRule: horizon?.freshnessRule,
+      });
     }
 
     return performFill(snapshot, fieldId, value.value, ports);
@@ -832,13 +913,22 @@ export const answerQuestion = async (
     : undefined;
 
   if (concept) {
+    const confirmationTime = ports.clock();
+    const horizon = deriveFreshnessHorizon(
+      concept,
+      value,
+      confirmationTime,
+      bundledFreshnessDurationPolicy,
+    );
     await recordAnswer(ports.memory, {
       profileId: ports.profileId,
       key: concept.key,
       value,
       label: field?.label,
       source: MemorySource.USER_PROVIDED,
-      now: ports.clock(),
+      now: confirmationTime,
+      expiresAt: horizon.expiresAt,
+      freshnessRule: horizon.freshnessRule,
     });
   }
 
@@ -848,6 +938,7 @@ export const answerQuestion = async (
         conceptKey: concept.key,
         sensitivity: concept.sensitivity,
         confirmedInRun: true,
+        stale: false,
       })
     : snapshot.values;
 

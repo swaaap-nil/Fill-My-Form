@@ -28,5 +28,35 @@
   },
   "system": {
     "message": "System"
+  },
+  "localDataExport": {
+    "message": "Export"
+  },
+  "localDataImport": {
+    "message": "Import"
+  },
+  "localDataWipe": {
+    "message": "Wipe"
+  },
+  "localDataDelete": {
+    "message": "Delete"
+  },
+  "localDataCancel": {
+    "message": "Cancel"
+  },
+  "localDataWipePrompt": {
+    "message": "Type delete my data to wipe everything on this device"
+  },
+  "localDataExported": {
+    "message": "Exported local data."
+  },
+  "localDataImported": {
+    "message": "Imported local data."
+  },
+  "localDataImportFailed": {
+    "message": "Import failed."
+  },
+  "localDataDeleted": {
+    "message": "Deleted local data."
   }
 }

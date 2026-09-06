@@ -40,7 +40,7 @@ export const DEFAULT_PROFILE_ID: ProfileId = "self";
  * hand-constructed item can never silently skip the check.
  */
 export type MemorySchemaVersion = number;
-export const CURRENT_MEMORY_SCHEMA_VERSION: MemorySchemaVersion = 1;
+export const CURRENT_MEMORY_SCHEMA_VERSION: MemorySchemaVersion = 2;
 
 /** JSON-representable, so a run stays serialisable and resumable. */
 export type MemoryValue =

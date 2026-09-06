@@ -52,6 +52,7 @@ export interface PendingDecision {
   readonly sensitivity: Sensitivity;
   readonly risk: ActionRisk;
   readonly confidence: ConfidenceLevel;
+  readonly stale?: boolean;
 }
 
 export interface PlanFillResult {

@@ -259,6 +259,40 @@ describe("loop: the request_review round trip (defaultPolicy)", () => {
     expect(page.values.f1).toBe("ananya@example.com");
   });
 
+  it("refreshes a stale value's horizon from the approval time", async () => {
+    const page: FakePage = {
+      fields: [makeField({ id: "f1", label: "Current employer" })],
+      values: {},
+    };
+    const ports: LoopPorts = {
+      ...buildPorts(page, defaultPolicy),
+      clock: () => "2026-01-01T00:00:00.000Z",
+    };
+    await recordAnswer(ports.memory, {
+      profileId: DEFAULT_PROFILE_ID,
+      key: "employment.current.company",
+      value: "Kirloskar Systems",
+      source: MemorySource.USER_PROVIDED,
+      now: "2025-01-01T00:00:00.000Z",
+      expiresAt: "2025-07-01T00:00:00.000Z",
+      freshnessRule: "volatile:P6M",
+    });
+
+    let snapshot = createRun(ports, "https://example.com", 1);
+    snapshot = await drive(snapshot, ports);
+    expect(snapshot.run.state.status).toBe(AgentStatus.WAITING_FOR_USER);
+
+    snapshot = confirmReview(snapshot, ports, true);
+    snapshot = await drive(snapshot, ports);
+
+    expect(page.values.f1).toBe("Kirloskar Systems");
+    const stored = await ports.memory.get(
+      DEFAULT_PROFILE_ID,
+      "employment.current.company",
+    );
+    expect(stored?.provenance.expiresAt).toBe("2026-07-01T00:00:00.000Z");
+  });
+
   it("leaves the field empty when declined, and still completes", async () => {
     const { page, ports, snapshot } = await setup();
     let next = confirmReview(snapshot, ports, false);

@@ -35,6 +35,18 @@ bun lint   # fails: "Personal memory is LOCAL-ONLY and must never be given a net
 The whole of `src/core` carries the same restriction; `memory/` carries a
 stricter version.
 
+### Local data is plaintext on disk
+
+Personal memory and the unresolved-field journal are stored locally in
+IndexedDB. IndexedDB stores plaintext; the extension does not add its own
+encryption layer, passphrase prompt, or recovery key. At-rest protection is the
+operating system's job: device login, disk encryption, user accounts, and
+browser profile protection.
+
+This keeps v1 local-first without creating a passphrase UX that users can lose
+or misunderstand. Export and wipe are available from the side panel so the user
+can take their local data with them or delete it from the browser profile.
+
 ### Nothing reads the inside of a file
 
 There is no OCR, no vision model and no document-understanding tool — not in the

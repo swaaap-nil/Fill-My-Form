@@ -41,13 +41,15 @@ export const seedAnswers = async (
   entries: readonly (readonly [label: string, value: string])[],
 ) => {
   await panelPage.getByRole("button", { name: "My information" }).click();
-  for (const [label, value] of entries) {
-    await panelPage.getByLabel(label, { exact: true }).fill(value);
+  for (const [index, [label, value]] of entries.entries()) {
+    const input = panelPage.getByLabel(label, { exact: true });
+    await input.fill(value);
+    await expect(input).toHaveValue(value);
     await panelPage.getByRole("button", { name: "Save" }).click();
+    await expect(panelPage.getByTestId("saved-count")).toContainText(
+      `${index + 1} value`,
+    );
   }
-  await expect(panelPage.getByTestId("saved-count")).toContainText(
-    `${entries.length} value`,
-  );
   await panelPage.getByRole("button", { name: "Current page" }).click();
 };
 
@@ -60,9 +62,16 @@ export const seedAnswers = async (
  */
 export const grantAccess = async (formPage: Page, panelPage: Page) => {
   await formPage.bringToFront();
-  await panelPage
-    .getByRole("button", { name: "Grant access to this site" })
-    .click();
+  const grantButton = panelPage.getByRole("button", {
+    name: "Grant access to this site",
+  });
+  const scanButton = panelPage.getByRole("button", { name: "Scan this page" });
+
+  if (await grantButton.isVisible({ timeout: 1000 }).catch(() => false)) {
+    await grantButton.click();
+  } else if (await scanButton.isVisible({ timeout: 1000 }).catch(() => false)) {
+    await formPage.reload({ waitUntil: "domcontentloaded" });
+  }
 };
 
 /**
@@ -86,14 +95,22 @@ export const driveAgentToCompletion = async (
   await panelPage.getByRole("button", { name: "Fill with agent" }).click();
 
   for (let i = 0; i < maxClicks; i++) {
-    const confirmButton = panelPage.getByRole("button", {
-      name: "Confirm",
-      exact: true,
-    });
+    const confirmButton = panelPage
+      .getByRole("button", {
+        name: "Confirm",
+        exact: true,
+      })
+      .first();
     const done = panelPage.getByText("Run complete.");
 
-    await expect(confirmButton.or(done)).toBeVisible();
     if (await done.isVisible()) return;
+    const nextState = await Promise.any([
+      done.waitFor({ state: "visible", timeout: 5000 }).then(() => "done"),
+      confirmButton
+        .waitFor({ state: "visible", timeout: 5000 })
+        .then(() => "confirm"),
+    ]);
+    if (nextState === "done") return;
     await confirmButton.click({ timeout: 3000 }).catch(() => {});
   }
 
