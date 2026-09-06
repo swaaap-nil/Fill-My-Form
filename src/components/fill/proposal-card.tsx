@@ -22,6 +22,9 @@ interface ProposalCardProps {
   readonly confirmed: boolean;
 }
 
+const fieldName = (proposal: FieldProposal): string =>
+  proposal.fieldLabel ?? proposal.fieldId;
+
 const CardShell = ({
   icon,
   tone,
@@ -45,12 +48,19 @@ const CardShell = ({
   </div>
 );
 
-const UnknownProposal = () => (
+const UnknownProposal = ({
+  proposal,
+}: {
+  readonly proposal: Extract<FieldProposal, { state: "unknown" }>;
+}) => (
   <CardShell
     icon={<HelpCircle className="size-4 text-muted-foreground" />}
     tone="muted"
   >
-    <p className="text-sm">We don't recognise this field.</p>
+    <p className="text-sm">
+      We don't recognise{" "}
+      <span className="font-medium">{fieldName(proposal)}</span>.
+    </p>
   </CardShell>
 );
 
@@ -139,7 +149,7 @@ export const ProposalCard = ({
 }: ProposalCardProps) => {
   switch (proposal.state) {
     case "unknown":
-      return <UnknownProposal />;
+      return <UnknownProposal proposal={proposal} />;
     case "no_value":
       return <NoValueProposal conceptKey={proposal.conceptKey} />;
     case "ambiguous":

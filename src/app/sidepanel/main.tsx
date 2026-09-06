@@ -29,7 +29,7 @@ const SidePanel = () => {
             size="sm"
             onClick={() => setView(View.FILL)}
           >
-            Fill this page
+            Current page
           </Button>
           <Button
             type="button"

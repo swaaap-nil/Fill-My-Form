@@ -28,7 +28,7 @@ export const seedAnswer = async (
   await panelPage.getByLabel(label, { exact: true }).fill(value);
   await panelPage.getByRole("button", { name: "Save" }).click();
   await expect(panelPage.getByTestId("saved-count")).toContainText("1 value");
-  await panelPage.getByRole("button", { name: "Fill this page" }).click();
+  await panelPage.getByRole("button", { name: "Current page" }).click();
 };
 
 /**
@@ -48,7 +48,7 @@ export const seedAnswers = async (
   await expect(panelPage.getByTestId("saved-count")).toContainText(
     `${entries.length} value`,
   );
-  await panelPage.getByRole("button", { name: "Fill this page" }).click();
+  await panelPage.getByRole("button", { name: "Current page" }).click();
 };
 
 /**
@@ -82,6 +82,7 @@ export const driveAgentToCompletion = async (
   panelPage: Page,
   maxClicks = 15,
 ) => {
+  await panelPage.getByRole("button", { name: "Scan this page" }).click();
   await panelPage.getByRole("button", { name: "Fill with agent" }).click();
 
   for (let i = 0; i < maxClicks; i++) {

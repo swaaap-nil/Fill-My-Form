@@ -41,6 +41,9 @@ import type {
  */
 const FILL_RISK: ActionRisk = ActionRisk.MEDIUM;
 
+const fieldLabelOf = (field: FormField): string | undefined =>
+  field.label ?? field.name ?? field.placeholder;
+
 export const planFill = async (
   fields: readonly FormField[],
   index: ConceptIndex,
@@ -54,15 +57,17 @@ export const planFill = async (
 
   for (const field of fields) {
     const match = resolve(field, index);
+    const fieldLabel = fieldLabelOf(field);
 
     if (match.certainty === "unknown") {
-      proposals.push({ fieldId: field.id, state: "unknown" });
+      proposals.push({ fieldId: field.id, fieldLabel, state: "unknown" });
       continue;
     }
 
     if (match.certainty === "ambiguous") {
       proposals.push({
         fieldId: field.id,
+        fieldLabel,
         state: "ambiguous",
         candidates: match.candidates.map((c) => c.conceptKey),
       });
@@ -75,7 +80,7 @@ export const planFill = async (
     if (!candidate || !concept) {
       // Defensive: resolve() promised a concept key that isn't in this
       // index. Treat as unresolved rather than propose a dangling key.
-      proposals.push({ fieldId: field.id, state: "unknown" });
+      proposals.push({ fieldId: field.id, fieldLabel, state: "unknown" });
       continue;
     }
 
@@ -83,6 +88,7 @@ export const planFill = async (
     if (!item) {
       proposals.push({
         fieldId: field.id,
+        fieldLabel,
         state: "no_value",
         conceptKey: concept.key,
       });
@@ -112,6 +118,7 @@ export const planFill = async (
 
     proposals.push({
       fieldId: field.id,
+      fieldLabel,
       state: isRestricted(concept.sensitivity) ? "restricted" : "pending",
       conceptKey: concept.key,
       decisionId,

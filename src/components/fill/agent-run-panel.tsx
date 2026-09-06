@@ -37,7 +37,7 @@ export const AgentRunPanel = ({ tabId }: AgentRunPanelProps) => {
   };
 
   const submitAnswer = async () => {
-    if (tabId === undefined || !answer.trim()) return;
+    if (tabId === undefined || busy || !answer.trim()) return;
     setBusy(true);
     try {
       const result = await sendMessage("answerRunQuestion", {
@@ -116,21 +116,22 @@ export const AgentRunPanel = ({ tabId }: AgentRunPanelProps) => {
         view.pendingQuestion && (
           <div className="flex flex-col gap-2">
             <p className="text-sm">{view.pendingQuestion}</p>
-            <div className="flex gap-2">
+            <form
+              className="flex gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void submitAnswer();
+              }}
+            >
               <Input
                 value={answer}
                 onChange={(e) => setAnswer(e.target.value)}
                 placeholder="Your answer"
               />
-              <Button
-                type="button"
-                size="sm"
-                disabled={busy}
-                onClick={submitAnswer}
-              >
+              <Button type="submit" size="sm" disabled={busy || !answer.trim()}>
                 Answer
               </Button>
-            </div>
+            </form>
           </div>
         )}
 

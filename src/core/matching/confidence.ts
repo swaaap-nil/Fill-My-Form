@@ -27,6 +27,9 @@ export const TIER_CONFIDENCE: Readonly<Record<MatchTier, ConfidenceLevel>> = {
   [MatchTier.PLACEHOLDER]: ConfidenceLevel.MEDIUM,
   // Free-form surrounding text. The weakest tier that still resolves.
   [MatchTier.NEARBY_TEXT]: ConfidenceLevel.LOW,
+  // Last-resort field-to-concept mapping. It names a concept only; value
+  // retrieval and fill policy still go through the same guarded pipeline.
+  [MatchTier.MODEL]: ConfidenceLevel.LOW,
 };
 
 export const tierToConfidence = (tier: MatchTier): ConfidenceLevel =>

@@ -60,7 +60,11 @@ describe("planFill", () => {
     );
 
     expect(result.proposals).toEqual([
-      { fieldId: "0/test/0", state: "unknown" },
+      {
+        fieldId: "0/test/0",
+        fieldLabel: "I accept the terms",
+        state: "unknown",
+      },
     ]);
     expect(result.decisions.size).toBe(0);
   });
@@ -102,7 +106,12 @@ describe("planFill", () => {
     );
 
     expect(result.proposals).toEqual([
-      { fieldId: "0/test/0", state: "no_value", conceptKey: "contact.email" },
+      {
+        fieldId: "0/test/0",
+        fieldLabel: "Email address",
+        state: "no_value",
+        conceptKey: "contact.email",
+      },
     ]);
     expect(result.decisions.size).toBe(0);
   });

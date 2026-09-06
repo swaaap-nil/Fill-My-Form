@@ -23,6 +23,8 @@ export const MatchTier = {
   PLACEHOLDER: "placeholder",
   /** Alias tokens fully covered by the field's label + nearby text. */
   NEARBY_TEXT: "nearby_text",
+  /** A model mapped an otherwise unresolved field to an ontology concept key. */
+  MODEL: "model",
 } as const;
 
 export type MatchTier = (typeof MatchTier)[keyof typeof MatchTier];

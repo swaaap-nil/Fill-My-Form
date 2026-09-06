@@ -61,6 +61,7 @@ const getActiveTab = () =>
 
 export const FillPanel = () => {
   const [scanState, setScanState] = useState<ScanState>({ kind: "idle" });
+  const [scanVersion, setScanVersion] = useState(0);
   const [confirmedIds, setConfirmedIds] = useState<Set<DecisionId>>(new Set());
   const [grantedOrigins, setGrantedOrigins] = useState<readonly string[]>([]);
   const [activeTabId, setActiveTabId] = useState<number | undefined>();
@@ -95,6 +96,8 @@ export const FillPanel = () => {
         setScanState({ kind: "not_granted" });
         return;
       }
+      setConfirmedIds(new Set());
+      setScanVersion((version) => version + 1);
       setScanState({ kind: "proposals", proposals: result.proposals });
     } catch {
       // No content script reachable in this tab — typically because access
@@ -180,7 +183,9 @@ export const FillPanel = () => {
         </div>
       )}
 
-      {activeTabGranted && <AgentRunPanel tabId={activeTabId} />}
+      {activeTabGranted && scanState.kind === "proposals" && (
+        <AgentRunPanel key={scanVersion} tabId={activeTabId} />
+      )}
 
       <Separator />
 

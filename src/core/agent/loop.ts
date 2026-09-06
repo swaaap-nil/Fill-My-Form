@@ -33,8 +33,10 @@
  */
 
 import type { FieldId, Form, FormField } from "../form/types";
+import type { LLMProvider } from "../llm/provider";
 import type { Logger } from "../logging";
 import { tierToConfidence } from "../matching/confidence";
+import { mapFieldWithModel } from "../matching/model-tier";
 import { resolve } from "../matching/resolve";
 import type { MatchResult } from "../matching/types";
 import type { MemoryStore } from "../memory/store";
@@ -73,6 +75,7 @@ export interface RetrievedValue {
   readonly value: string;
   readonly conceptKey: string;
   readonly sensitivity: Sensitivity;
+  readonly confirmedInRun?: boolean;
 }
 
 /**
@@ -111,6 +114,7 @@ export interface LoopPorts {
   readonly policy: PolicyEngine;
   readonly memory: MemoryStore;
   readonly ontology: ConceptIndex;
+  readonly llm?: LLMProvider;
   readonly verifier: Verifier;
   readonly profileId: ProfileId;
   readonly clock: () => string;
@@ -232,13 +236,27 @@ const observeStep = async (
 
 // --- UNDERSTAND ----------------------------------------------------------------
 
-const understandStep = (
+const understandStep = async (
   snapshot: RunSnapshot,
   ports: LoopPorts,
-): RunSnapshot => {
+): Promise<RunSnapshot> => {
   const matches: Record<FieldId, MatchResult> = {};
   for (const field of snapshot.fields) {
-    matches[field.id] = resolve(field, ports.ontology);
+    const deterministic = resolve(field, ports.ontology);
+    if (!ports.llm || deterministic.certainty === Certainty.KNOWN) {
+      matches[field.id] = deterministic;
+      continue;
+    }
+
+    matches[field.id] = await mapFieldWithModel(
+      ports.llm,
+      {
+        fieldSummaries: snapshot.fields,
+        field,
+        concepts: ports.ontology.all,
+      },
+      ports.ontology,
+    );
   }
   return applyEvent({ ...snapshot, matches }, { type: "understood" }, ports);
 };
@@ -269,6 +287,7 @@ const retrieveValuesFor = async (
       value: String(item.value),
       conceptKey: concept.key,
       sensitivity: concept.sensitivity,
+      confirmedInRun: false,
     };
   }
 
@@ -298,6 +317,23 @@ const buildValueQuestion = (field: FormField, conceptLabel: string): string =>
 
 const buildReviewQuestion = (field: FormField, value: string): string =>
   `Fill "${field.label ?? field.name ?? field.id}" with "${value}"?`;
+
+const applyValueToMatchedConcept = (
+  snapshot: RunSnapshot,
+  conceptKey: string,
+  value: RetrievedValue,
+): Readonly<Record<FieldId, RetrievedValue | undefined>> => {
+  const values: Record<FieldId, RetrievedValue | undefined> = {
+    ...snapshot.values,
+  };
+
+  for (const field of snapshot.fields) {
+    const matchedKey = snapshot.matches[field.id]?.candidates[0]?.conceptKey;
+    if (matchedKey === conceptKey) values[field.id] = value;
+  }
+
+  return values;
+};
 
 interface PlanResult {
   readonly decision: AgentDecision;
@@ -370,7 +406,7 @@ const pickNextAction = (
       sensitivity: concept.sensitivity,
       confidence,
       isSubmission: false,
-      userConfirmed: false,
+      userConfirmed: existing.confirmedInRun ?? false,
     });
 
     if (policyDecision.effect === PolicyEffect.DENY) {
@@ -667,8 +703,21 @@ const verifyStep = async (
     });
 
     const newMatches: Record<FieldId, MatchResult> = {};
-    for (const field of newFields)
-      newMatches[field.id] = resolve(field, ports.ontology);
+    for (const field of newFields) {
+      const deterministic = resolve(field, ports.ontology);
+      newMatches[field.id] =
+        ports.llm && deterministic.certainty !== Certainty.KNOWN
+          ? await mapFieldWithModel(
+              ports.llm,
+              {
+                fieldSummaries: freshFields,
+                field,
+                concepts: ports.ontology.all,
+              },
+              ports.ontology,
+            )
+          : deterministic;
+    }
     matches = { ...matches, ...newMatches };
 
     const newValues = await retrieveValuesFor(newFields, newMatches, ports);
@@ -794,14 +843,12 @@ export const answerQuestion = async (
   }
 
   const values = concept
-    ? {
-        ...snapshot.values,
-        [fieldId]: {
-          value,
-          conceptKey: concept.key,
-          sensitivity: concept.sensitivity,
-        },
-      }
+    ? applyValueToMatchedConcept(snapshot, concept.key, {
+        value,
+        conceptKey: concept.key,
+        sensitivity: concept.sensitivity,
+        confirmedInRun: true,
+      })
     : snapshot.values;
 
   return applyEvent({ ...snapshot, values }, { type: "user_responded" }, ports);

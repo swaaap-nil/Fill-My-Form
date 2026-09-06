@@ -289,6 +289,35 @@ describe("loop: ask_user for a known concept with no stored value", () => {
     const stored = await ports.memory.get(DEFAULT_PROFILE_ID, "contact.email");
     expect(stored?.value).toBe("typed@example.com");
   });
+
+  it("reuses one typed answer for same-concept confirmation fields in the same run", async () => {
+    const page: FakePage = {
+      fields: [
+        makeField({ id: "f1", label: "First name" }),
+        makeField({ id: "f2", label: "Confirm first name" }),
+      ],
+      values: {},
+    };
+    const ports = buildPorts(page, defaultPolicy);
+
+    let snapshot = createRun(ports, "https://example.com", 1);
+    snapshot = await drive(snapshot, ports);
+
+    expect(snapshot.run.state.status).toBe(AgentStatus.WAITING_FOR_USER);
+    expect(snapshot.run.state.pendingQuestion).toContain("First name");
+
+    snapshot = await answerQuestion(snapshot, ports, "Ananya");
+    snapshot = await drive(snapshot, ports);
+
+    expect(snapshot.run.state.status).toBe(AgentStatus.COMPLETED);
+    expect(page.values.f1).toBe("Ananya");
+    expect(page.values.f2).toBe("Ananya");
+
+    const askSteps = snapshot.run.steps.filter(
+      (step) => step.decision?.action.type === "ask_user",
+    );
+    expect(askSteps).toHaveLength(1);
+  });
 });
 
 describe("loop: unknown/ambiguous fields are skipped, never asked about", () => {

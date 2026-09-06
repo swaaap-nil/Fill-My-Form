@@ -11,7 +11,9 @@
 
 import type { Certainty } from "../agent/types";
 import type { FormField } from "../form/types";
+import type { LLMProvider } from "../llm/provider";
 import type { ConceptIndex } from "../ontology/types";
+import { mapFieldWithModel } from "./model-tier";
 import { resolve } from "./resolve";
 
 export const MetricBucket = {
@@ -112,6 +114,50 @@ export const runEval = (
       bucket: classify(expectation, result.certainty, actualConceptKey),
     };
   });
+};
+
+export const runEvalWithModel = async (
+  fields: readonly FormField[],
+  expectations: readonly FieldExpectation[],
+  index: ConceptIndex,
+  provider: LLMProvider,
+): Promise<EvalOutcome[]> => {
+  const byId = new Map(fields.map((f) => [f.id, f]));
+
+  const outcomes: EvalOutcome[] = [];
+  for (const expectation of expectations) {
+    const field = byId.get(expectation.fieldId);
+    if (!field) {
+      throw new Error(
+        `Expectation names fieldId "${expectation.fieldId}", which is not in the given fields. ` +
+          "Either the golden regenerated with new ids, or this field was never a candidate.",
+      );
+    }
+
+    const deterministic = resolve(field, index);
+    const result =
+      deterministic.certainty === "known"
+        ? deterministic
+        : await mapFieldWithModel(
+            provider,
+            { fieldSummaries: fields, field, concepts: index.all },
+            index,
+          );
+    const actualConceptKey =
+      result.certainty === "known"
+        ? result.candidates[0]?.conceptKey
+        : undefined;
+
+    outcomes.push({
+      fieldId: expectation.fieldId,
+      expectation,
+      actualCertainty: result.certainty,
+      actualConceptKey,
+      bucket: classify(expectation, result.certainty, actualConceptKey),
+    });
+  }
+
+  return outcomes;
 };
 
 export type MetricTable = Readonly<Record<MetricBucket, number>>;

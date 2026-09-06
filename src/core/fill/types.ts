@@ -13,21 +13,23 @@ import type { ActionRisk, ConfidenceLevel } from "../policy/types";
 /** Opaque, issued only by `planFill`. Never constructed anywhere else. */
 export type DecisionId = string;
 
+interface FieldProposalBase {
+  readonly fieldId: FieldId;
+  readonly fieldLabel?: string;
+}
+
 /** One field's outcome after matching, memory lookup, and policy. */
 export type FieldProposal =
-  | { readonly fieldId: FieldId; readonly state: "unknown" }
-  | {
-      readonly fieldId: FieldId;
+  | (FieldProposalBase & { readonly state: "unknown" })
+  | (FieldProposalBase & {
       readonly state: "ambiguous";
       readonly candidates: readonly string[];
-    }
-  | {
-      readonly fieldId: FieldId;
+    })
+  | (FieldProposalBase & {
       readonly state: "no_value";
       readonly conceptKey: string;
-    }
-  | {
-      readonly fieldId: FieldId;
+    })
+  | (FieldProposalBase & {
       /** `restricted` when the concept's sensitivity demands it always asks. */
       readonly state: "pending" | "restricted";
       readonly conceptKey: string;
@@ -36,7 +38,7 @@ export type FieldProposal =
       readonly value: string;
       readonly source: MemorySource;
       readonly policyReason: string;
-    };
+    });
 
 /**
  * What `planFill` remembers about one decisionId, so `confirmDecision` can
