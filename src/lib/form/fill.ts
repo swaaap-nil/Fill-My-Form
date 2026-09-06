@@ -1,3 +1,4 @@
+import { createBrowserFileUploadAdapter } from "../files/adapters";
 import type { FieldElements } from "./extract";
 
 /**
@@ -78,4 +79,34 @@ export const writeFieldValue = (
   }
 
   return false;
+};
+
+export const uploadFieldFile = (
+  target: FieldElements,
+  input: {
+    readonly name: string;
+    readonly mimeType: string;
+    readonly bytes: readonly number[];
+  },
+): boolean => {
+  if (Array.isArray(target)) return false;
+  const el = target as Element;
+  const blob = new Blob([new Uint8Array(input.bytes)], {
+    type: input.mimeType,
+  });
+  return createBrowserFileUploadAdapter().upload(el, {
+    ref: {
+      kind: "file_ref",
+      id: "message-payload",
+      name: input.name,
+      mimeType: input.mimeType,
+      sizeBytes: blob.size,
+      createdAt: new Date().toISOString(),
+    },
+    blob,
+    name: input.name,
+    mimeType: input.mimeType,
+    transformed: false,
+    originalSizeBytes: blob.size,
+  });
 };

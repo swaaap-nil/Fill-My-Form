@@ -18,12 +18,16 @@
  * `~/core/messaging/fill-instruction` for the other half of that gate.
  */
 
-import type { FormField } from "../form/types";
+import { FieldKind, type FormField } from "../form/types";
 import { tierToConfidence } from "../matching/confidence";
 import { resolve } from "../matching/resolve";
 import { FreshnessStatus, freshness } from "../memory/freshness";
 import type { MemoryStore } from "../memory/store";
-import type { ProfileId } from "../memory/types";
+import {
+  isFileReference,
+  type MemoryValue,
+  type ProfileId,
+} from "../memory/types";
 import type { ConceptIndex, Sensitivity } from "../ontology/types";
 import { Sensitivity as SensitivityValue } from "../ontology/types";
 import {
@@ -49,6 +53,21 @@ const FILL_RISK: ActionRisk = ActionRisk.MEDIUM;
 
 const fieldLabelOf = (field: FormField): string | undefined =>
   field.label ?? field.name ?? field.placeholder;
+
+const payloadFor = (
+  field: FormField,
+  value: MemoryValue,
+): PendingDecision["payload"] | null => {
+  if (field.kind === FieldKind.FILE) {
+    return isFileReference(value) ? { kind: "file", ref: value } : null;
+  }
+  return { kind: "text", value: String(value) };
+};
+
+const displayValueOf = (payload: PendingDecision["payload"]): string =>
+  payload.kind === "file"
+    ? `${payload.ref.name} (${Math.round(payload.ref.sizeBytes / 1024)} KB)`
+    : payload.value;
 
 export const planFill = async (
   fields: readonly FormField[],
@@ -115,12 +134,25 @@ export const planFill = async (
       userConfirmed: false,
     });
 
+    const payload = payloadFor(field, item.value);
+    if (!payload) {
+      proposals.push({
+        fieldId: field.id,
+        fieldLabel,
+        state: "no_value",
+        conceptKey: concept.key,
+      });
+      continue;
+    }
+
     const decisionId = generateDecisionId();
-    const value = String(item.value);
+    const value = displayValueOf(payload);
 
     decisions.set(decisionId, {
       fieldId: field.id,
-      value,
+      payload,
+      constraints:
+        field.kind === FieldKind.FILE ? field.constraints : undefined,
       conceptKey: concept.key,
       sensitivity: concept.sensitivity,
       risk: FILL_RISK,
@@ -135,6 +167,7 @@ export const planFill = async (
       conceptKey: concept.key,
       decisionId,
       value,
+      payload,
       source: item.provenance.source,
       policyReason: decision.reason,
     });
@@ -168,6 +201,6 @@ export const confirmDecision = (
   return {
     ok: result.effect === PolicyEffect.ALLOW,
     fieldId: decision.fieldId,
-    value: decision.value,
+    payload: decision.payload,
   };
 };

@@ -324,6 +324,12 @@ const constraintsOf = (el: Candidate): FieldConstraint[] => {
           .filter(Boolean),
       });
     }
+    if (el.type === "file") {
+      const maxFileSize = Number(el.dataset.maxFileSizeBytes);
+      if (Number.isFinite(maxFileSize) && maxFileSize > 0) {
+        constraints.push({ kind: "maxFileSizeBytes", value: maxFileSize });
+      }
+    }
   }
 
   return constraints;

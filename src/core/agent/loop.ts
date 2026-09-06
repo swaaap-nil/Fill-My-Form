@@ -32,7 +32,14 @@
  * concept of "current field" and isn't the place to add one.
  */
 
-import type { FieldId, Form, FormField } from "../form/types";
+import type { FileComplianceAdapter } from "../files/types";
+import {
+  type FieldConstraint,
+  type FieldId,
+  FieldKind,
+  type Form,
+  type FormField,
+} from "../form/types";
 import type { LLMProvider } from "../llm/provider";
 import type { Logger } from "../logging";
 import { tierToConfidence } from "../matching/confidence";
@@ -46,8 +53,13 @@ import {
 } from "../memory/freshness";
 import { bundledFreshnessDurationPolicy } from "../memory/freshness-policy";
 import type { MemoryStore } from "../memory/store";
-import type { ProfileId } from "../memory/types";
-import { MemorySource } from "../memory/types";
+import {
+  type FileReference,
+  isFileReference,
+  MemorySource,
+  type MemoryValue,
+  type ProfileId,
+} from "../memory/types";
 import { recordAnswer } from "../memory/write-service";
 import type { ConceptIndex, Sensitivity } from "../ontology/types";
 import {
@@ -75,10 +87,12 @@ import {
 /** Tool names the composition root must register for the loop to function. */
 export const INSPECT_FORM_TOOL = "inspect_form";
 export const FILL_FIELD_TOOL = "fill_field";
+export const UPLOAD_FILE_TOOL = "upload_file";
 
 /** A field's resolved value, carried alongside the run so PLAN never re-asks. */
 export interface RetrievedValue {
-  readonly value: string;
+  readonly value: MemoryValue;
+  readonly displayValue: string;
   readonly conceptKey: string;
   readonly sensitivity: Sensitivity;
   readonly confirmedInRun?: boolean;
@@ -123,6 +137,7 @@ export interface LoopPorts {
   readonly ontology: ConceptIndex;
   readonly llm?: LLMProvider;
   readonly verifier: Verifier;
+  readonly files?: FileComplianceAdapter;
   readonly profileId: ProfileId;
   readonly clock: () => string;
   readonly generateId: () => string;
@@ -158,6 +173,22 @@ interface FillFieldInput {
   readonly fieldId: FieldId;
   readonly value: string;
 }
+
+interface UploadFileInput {
+  readonly fieldId: FieldId;
+  readonly ref: FileReference;
+  readonly constraints: readonly FieldConstraint[];
+}
+
+const isTextValue = (value: MemoryValue): value is string | number | boolean =>
+  typeof value === "string" ||
+  typeof value === "number" ||
+  typeof value === "boolean";
+
+const displayValueOf = (value: MemoryValue): string =>
+  isFileReference(value)
+    ? `${value.name} (${Math.round(value.sizeBytes / 1024)} KB)`
+    : String(value);
 
 export const createRun = (
   ports: Pick<LoopPorts, "clock" | "generateId">,
@@ -338,9 +369,12 @@ const retrieveValuesFor = async (
 
     const item = await ports.memory.get(ports.profileId, concept.key);
     if (!item) continue;
+    if (field.kind === FieldKind.FILE && !isFileReference(item.value)) continue;
+    if (field.kind !== FieldKind.FILE && !isTextValue(item.value)) continue;
 
     values[field.id] = {
-      value: String(item.value),
+      value: item.value,
+      displayValue: displayValueOf(item.value),
       conceptKey: concept.key,
       sensitivity: concept.sensitivity,
       confirmedInRun: false,
@@ -475,9 +509,26 @@ const pickNextAction = (
     }
 
     if (policyDecision.effect === PolicyEffect.ALLOW) {
+      if (field.kind === FieldKind.FILE && isFileReference(existing.value)) {
+        const input: UploadFileInput = {
+          fieldId: field.id,
+          ref: existing.value,
+          constraints: field.constraints,
+        };
+        return {
+          decision: {
+            action: { type: "call_tool", tool: UPLOAD_FILE_TOOL, input },
+            rationale: policyDecision.reason,
+            certainty: Certainty.KNOWN,
+          },
+          cursor: field.id,
+          skipped,
+        };
+      }
+
       const input: FillFieldInput = {
         fieldId: field.id,
-        value: existing.value,
+        value: String(existing.value),
       };
       return {
         decision: {
@@ -576,12 +627,67 @@ const performFill = async (
   });
 };
 
+const performFileUpload = async (
+  snapshot: RunSnapshot,
+  field: FormField,
+  ref: FileReference,
+  ports: LoopPorts,
+): Promise<RunSnapshot> => {
+  const prepared = await ports.files?.prepareForUpload(ref, field.constraints);
+  const withWrite: RunSnapshot = {
+    ...snapshot,
+    pendingWrite: { fieldId: field.id, value: ref.name },
+  };
+
+  if (!prepared?.ok) {
+    return applyEvent(withWrite, { type: "acted", ok: false }, ports, {
+      toolName: UPLOAD_FILE_TOOL,
+    });
+  }
+
+  const input: UploadFileInput = {
+    fieldId: field.id,
+    ref: prepared.upload.ref,
+    constraints: field.constraints,
+  };
+  const result = await executeTool(
+    ports.tools,
+    UPLOAD_FILE_TOOL,
+    input,
+    contextFor(snapshot, ports),
+  );
+
+  if (!result.ok) {
+    return applyEvent(withWrite, { type: "acted", ok: false }, ports, {
+      toolName: UPLOAD_FILE_TOOL,
+    });
+  }
+
+  return applyEvent(withWrite, { type: "acted", ok: true }, ports, {
+    toolName: UPLOAD_FILE_TOOL,
+  });
+};
+
 const retryAct = async (
   snapshot: RunSnapshot,
   ports: LoopPorts,
   decision: AgentDecision,
 ): Promise<RunSnapshot> => {
   if (decision.action.type === "call_tool") {
+    if (decision.action.tool === UPLOAD_FILE_TOOL) {
+      const input = decision.action.input as UploadFileInput;
+      const field = snapshot.fields.find((f) => f.id === input.fieldId);
+      const value = field ? snapshot.values[input.fieldId] : undefined;
+      if (!field || !value || !isFileReference(value.value)) {
+        return applyEvent(
+          snapshot,
+          { type: "failed", errorCode: "UPLOAD_FILE_MISSING_REFERENCE" },
+          ports,
+        );
+      }
+      return performFileUpload(snapshot, field, value.value, ports);
+    }
+
     const input = decision.action.input as FillFieldInput;
     return performFill(snapshot, input.fieldId, input.value, ports);
   }
@@ -604,7 +710,7 @@ const retryAct = async (
         ports,
       );
     }
-    return performFill(snapshot, fieldId, answered.value, ports);
+    return performFill(snapshot, fieldId, String(answered.value), ports);
   }
 
   if (decision.action.type === "request_review") {
@@ -622,7 +728,7 @@ const retryAct = async (
       const field = snapshot.fields.find((f) => f.id === fieldId);
       const question =
         field && value
-          ? buildReviewQuestion(field, value.value)
+          ? buildReviewQuestion(field, value.displayValue)
           : "Confirm this fill?";
       return applyEvent(
         snapshot,
@@ -675,14 +781,15 @@ const retryAct = async (
     const fieldValue = snapshot.values[fieldId];
     if (fieldValue) {
       const concept = ports.ontology.byKey(fieldValue.conceptKey);
-      const horizon = concept
-        ? deriveFreshnessHorizon(
-            concept,
-            fieldValue.value,
-            ports.clock(),
-            bundledFreshnessDurationPolicy,
-          )
-        : undefined;
+      const horizon =
+        concept && !isFileReference(fieldValue.value)
+          ? deriveFreshnessHorizon(
+              concept,
+              String(fieldValue.value),
+              ports.clock(),
+              bundledFreshnessDurationPolicy,
+            )
+          : undefined;
       await recordAnswer(ports.memory, {
         profileId: ports.profileId,
         key: fieldValue.conceptKey,
@@ -694,7 +801,16 @@ const retryAct = async (
       });
     }
 
-    return performFill(snapshot, fieldId, value.value, ports);
+    const field = snapshot.fields.find((f) => f.id === fieldId);
+    if (
+      field &&
+      field.kind === FieldKind.FILE &&
+      isFileReference(value.value)
+    ) {
+      return performFileUpload(snapshot, field, value.value, ports);
+    }
+
+    return performFill(snapshot, fieldId, String(value.value), ports);
   }
 
   // "finish" never reaches ACT: `reduce` sends a finish decision straight to
@@ -935,6 +1051,7 @@ export const answerQuestion = async (
   const values = concept
     ? applyValueToMatchedConcept(snapshot, concept.key, {
         value,
+        displayValue: value,
         conceptKey: concept.key,
         sensitivity: concept.sensitivity,
         confirmedInRun: true,
@@ -977,5 +1094,9 @@ export const currentReview = (
   const value = snapshot.values[snapshot.cursor];
   if (!value) return null;
   const field = snapshot.fields.find((f) => f.id === snapshot.cursor);
-  return { fieldId: snapshot.cursor, value: value.value, label: field?.label };
+  return {
+    fieldId: snapshot.cursor,
+    value: value.displayValue,
+    label: field?.label,
+  };
 };

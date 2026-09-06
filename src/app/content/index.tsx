@@ -4,9 +4,13 @@ import { createShadowRootUi, defineContentScript } from "#imports";
 import { Logo } from "@/components/common/logo";
 import type { FieldElements } from "~/lib/form/extract";
 import { extractFullWithElements } from "~/lib/form/extract";
-import { writeFieldValue } from "~/lib/form/fill";
+import { uploadFieldFile, writeFieldValue } from "~/lib/form/fill";
 import { compareFieldValue } from "~/lib/form/verify";
-import { assertValidFillInstruction, onMessage } from "~/lib/messaging";
+import {
+  assertValidFillInstruction,
+  assertValidUploadInstruction,
+  onMessage,
+} from "~/lib/messaging";
 
 import "~/assets/styles/globals.css";
 
@@ -18,6 +22,37 @@ import "~/assets/styles/globals.css";
  * hence caching it here rather than re-extracting inside `fillField`.
  */
 let lastElementsById: ReadonlyMap<string, FieldElements> = new Map();
+
+const readStagedUpload = async (
+  uploadId: string,
+): Promise<{
+  readonly name: string;
+  readonly mimeType: string;
+  readonly bytes: readonly number[];
+} | null> => {
+  const key = `file-upload:${uploadId}`;
+  const record = (await browser.storage.session.get(key))[key];
+  await browser.storage.session.remove(key);
+  if (!record || typeof record !== "object") return null;
+  const upload = record as {
+    readonly name?: unknown;
+    readonly mimeType?: unknown;
+    readonly bytes?: unknown;
+  };
+  if (
+    typeof upload.name !== "string" ||
+    typeof upload.mimeType !== "string" ||
+    !Array.isArray(upload.bytes) ||
+    !upload.bytes.every((byte) => typeof byte === "number")
+  ) {
+    return null;
+  }
+  return {
+    name: upload.name,
+    mimeType: upload.mimeType,
+    bytes: upload.bytes,
+  };
+};
 
 const registerFillHandlers = () => {
   onMessage("extractFullForm", () => {
@@ -35,6 +70,16 @@ const registerFillHandlers = () => {
     if (!target) return { ok: false };
 
     return { ok: writeFieldValue(target, value) };
+  });
+
+  onMessage("uploadFile", async ({ data }) => {
+    const { fieldId, uploadId } = assertValidUploadInstruction(data);
+    const target = lastElementsById.get(fieldId);
+    if (!target) return { ok: false };
+    const upload = await readStagedUpload(uploadId);
+    if (!upload) return { ok: false };
+
+    return { ok: uploadFieldFile(target, upload) };
   });
 
   onMessage("verifyField", ({ data }) => {

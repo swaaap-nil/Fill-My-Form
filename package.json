@@ -20,6 +20,7 @@
     "dev:site": "bun run scripts/serve-test-site.ts",
     "format": "biome format --write",
     "lint": "biome check",
+    "check:forbidden-deps": "bun run scripts/check-forbidden-deps.ts",
     "lint:fix": "biome check --write",
     "test": "bun test ./src ./scripts",
     "eval": "bun run scripts/eval.ts",
@@ -28,7 +29,7 @@
     "test:e2e:ui": "bun run build:chrome && bun run build:chrome:e2e && bun run build:extractor && playwright test --ui",
     "goldens:update": "bun run build:extractor && UPDATE_GOLDENS=1 playwright test e2e/extraction.spec.ts && biome format --write e2e/goldens",
     "typecheck": "tsc --noEmit",
-    "check": "bun lint && bun typecheck && bun run test",
+    "check": "bun lint && bun typecheck && bun run test && bun run check:forbidden-deps",
     "prepare": "husky",
     "postinstall": "wxt prepare"
   },

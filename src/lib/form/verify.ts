@@ -43,11 +43,11 @@ export const isPasswordField = (el: unknown): boolean =>
   (el as { type?: unknown }).type === "password";
 
 const readValue = (el: Element): string => {
-  if (
-    el instanceof HTMLInputElement ||
-    el instanceof HTMLTextAreaElement ||
-    el instanceof HTMLSelectElement
-  ) {
+  if (el instanceof HTMLInputElement) {
+    if (el.type === "file") return el.files?.[0]?.name ?? "";
+    return el.value;
+  }
+  if (el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) {
     return el.value;
   }
   // The controlled.html combobox and other ARIA widgets: not written by

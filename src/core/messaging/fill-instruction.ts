@@ -25,6 +25,18 @@ export const fillFieldPayloadSchema = z.object({
 
 export type FillFieldPayload = z.infer<typeof fillFieldPayloadSchema>;
 
+export const uploadFilePayloadSchema = z.object({
+  decisionId: z.string().min(1, "uploadFile requires a decisionId"),
+  fieldId: z.string().min(1),
+  uploadId: z.string().min(1),
+});
+
+export type UploadFilePayload = z.infer<typeof uploadFilePayloadSchema>;
+
 export const assertValidFillInstruction = (
   payload: unknown,
 ): FillFieldPayload => fillFieldPayloadSchema.parse(payload);
+
+export const assertValidUploadInstruction = (
+  payload: unknown,
+): UploadFilePayload => uploadFilePayloadSchema.parse(payload);

@@ -11,6 +11,7 @@ import {
   INSPECT_FORM_TOOL,
   type LoopPorts,
   type RunSnapshot,
+  UPLOAD_FILE_TOOL,
 } from "~/core/agent/loop";
 import { Certainty, isTerminal } from "~/core/agent/types";
 import { confirmDecision, planFill } from "~/core/fill/driver";
@@ -32,6 +33,11 @@ import {
   loadRunSnapshot,
   saveRunSnapshot,
 } from "~/lib/agent-runs";
+import {
+  createBrowserFileComplianceAdapter,
+  createIndexedDbFileReferenceStore,
+  type FileReferenceStore,
+} from "~/lib/files/adapters";
 import { inspectFormOutputSchema } from "~/lib/form/schema";
 import {
   createDefaultIndexedDbLocalDataStore,
@@ -58,6 +64,31 @@ const getLocalDataStore = (): Promise<PersistentLocalDataStore> => {
   return localDataStore;
 };
 
+let fileStore: Promise<FileReferenceStore> | undefined;
+const getFileStore = (): Promise<FileReferenceStore> => {
+  fileStore ??= createIndexedDbFileReferenceStore();
+  return fileStore;
+};
+
+const bytesOf = async (blob: Blob): Promise<number[]> =>
+  Array.from(new Uint8Array(await blob.arrayBuffer()));
+
+const stageUpload = async (file: {
+  readonly name: string;
+  readonly mimeType: string;
+  readonly blob: Blob;
+}): Promise<string> => {
+  const uploadId = crypto.randomUUID();
+  await browser.storage.session.set({
+    [`file-upload:${uploadId}`]: {
+      name: file.name,
+      mimeType: file.mimeType,
+      bytes: await bytesOf(file.blob),
+    },
+  });
+  return uploadId;
+};
+
 /**
  * decisionId -> what `planFill` decided about one field. Cleared per id
  * once acted on, so a decisionId cannot be replayed. Lives only as long as
@@ -77,6 +108,7 @@ const pendingDecisions = new Map<DecisionId, PendingDecision>();
  */
 const buildLoopPorts = async (tabId: number): Promise<LoopPorts> => {
   const memoryStore = await getLocalDataStore();
+  const files = createBrowserFileComplianceAdapter(await getFileStore());
   const tools = createToolRegistry();
 
   tools.register({
@@ -108,6 +140,43 @@ const buildLoopPorts = async (tabId: number): Promise<LoopPorts> => {
       ),
   });
 
+  tools.register({
+    name: UPLOAD_FILE_TOOL,
+    domain: CapabilityDomain.FILES,
+    description:
+      "Uploads one approved local file reference into one page field.",
+    input: z.object({
+      fieldId: z.string(),
+      ref: z.object({
+        kind: z.literal("file_ref"),
+        id: z.string(),
+        name: z.string(),
+        mimeType: z.string(),
+        sizeBytes: z.number(),
+        createdAt: z.string(),
+      }),
+      constraints: z.array(z.unknown()),
+    }),
+    output: z.object({ ok: z.boolean() }),
+    risk: ActionRisk.MEDIUM,
+    execute: async (input) => {
+      const prepared = await files.prepareLocalFile(
+        input.ref,
+        input.constraints as Parameters<typeof files.prepareLocalFile>[1],
+      );
+      if (!prepared) return { ok: false };
+      return sendMessage(
+        "uploadFile",
+        {
+          decisionId: crypto.randomUUID(),
+          fieldId: input.fieldId,
+          uploadId: await stageUpload(prepared),
+        },
+        tabId,
+      );
+    },
+  });
+
   const verifier: Verifier = {
     verify: (intent) =>
       sendMessage(
@@ -122,6 +191,7 @@ const buildLoopPorts = async (tabId: number): Promise<LoopPorts> => {
     policy: defaultPolicy,
     memory: memoryStore,
     journal: memoryStore,
+    files,
     ontology,
     verifier,
     profileId: DEFAULT_PROFILE_ID,
@@ -154,6 +224,14 @@ const driveAndPersist = async (
 };
 
 const main = () => {
+  browser.storage.session
+    .setAccessLevel?.({ accessLevel: "TRUSTED_AND_UNTRUSTED_CONTEXTS" })
+    .catch((error: unknown) =>
+      logger.warn("could not expose session storage to content scripts", {
+        errorCode: String(error),
+      }),
+    );
+
   // Clicking the toolbar icon opens the side panel. Requires no
   // `action.default_popup` in the manifest, and Chrome only. Firefox has no
   // sidePanel API, so this is feature-detected rather than assumed.
@@ -240,6 +318,7 @@ const main = () => {
 
   onMessage("confirmFill", async ({ data }) => {
     const memoryStore = await getLocalDataStore();
+    const files = createBrowserFileComplianceAdapter(await getFileStore());
     const tabId = data.tabId;
 
     const results = await Promise.all(
@@ -250,11 +329,36 @@ const main = () => {
         const outcome = confirmDecision(decision, defaultPolicy);
         if (!outcome.ok) return { decisionId, ok: false };
 
-        const { ok } = await sendMessage(
-          "fillField",
-          { decisionId, fieldId: outcome.fieldId, value: outcome.value },
-          tabId,
-        );
+        let ok = false;
+        if (outcome.payload.kind === "file") {
+          const prepared = await files.prepareLocalFile(
+            outcome.payload.ref,
+            decision.constraints ?? [],
+          );
+          if (prepared) {
+            const result = await sendMessage(
+              "uploadFile",
+              {
+                decisionId,
+                fieldId: outcome.fieldId,
+                uploadId: await stageUpload(prepared),
+              },
+              tabId,
+            );
+            ok = result.ok;
+          }
+        } else {
+          const result = await sendMessage(
+            "fillField",
+            {
+              decisionId,
+              fieldId: outcome.fieldId,
+              value: outcome.payload.value,
+            },
+            tabId,
+          );
+          ok = result.ok;
+        }
 
         if (ok) {
           const concept = ontology.byKey(decision.conceptKey);
@@ -262,7 +366,7 @@ const main = () => {
           const horizon = concept
             ? deriveFreshnessHorizon(
                 concept,
-                decision.value,
+                outcome.payload.kind === "text" ? outcome.payload.value : "",
                 confirmedAt,
                 bundledFreshnessDurationPolicy,
               )
@@ -270,7 +374,10 @@ const main = () => {
           await recordAnswer(memoryStore, {
             profileId: DEFAULT_PROFILE_ID,
             key: decision.conceptKey,
-            value: decision.value,
+            value:
+              outcome.payload.kind === "text"
+                ? outcome.payload.value
+                : outcome.payload.ref,
             source: MemorySource.USER_CONFIRMED,
             now: confirmedAt,
             expiresAt: horizon?.expiresAt,

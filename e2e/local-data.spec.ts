@@ -42,7 +42,9 @@ test("local data: export, wipe, and import round-trips memory and journal", asyn
   const importPath = join(testInfo.outputDir, "local-data-export.json");
   await mkdir(testInfo.outputDir, { recursive: true });
   await writeFile(importPath, JSON.stringify(exported));
-  await panelPage.locator('input[type="file"]').setInputFiles(importPath);
+  await panelPage
+    .locator('input[type="file"][accept="application/json"]')
+    .setInputFiles(importPath);
 
   await expect(panelPage.getByTestId("saved-count")).toContainText("1 value");
 

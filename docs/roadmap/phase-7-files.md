@@ -2,9 +2,8 @@
 
 **Depends on:** 6. **Unblocks:** 8.
 
-> **Sketch.** Expand substantially before handing over. Deliberately after v1: this is a large
-> surface that raises the store-review bar, and none of it is needed for a form-filling product
-> to be useful.
+> **Implemented.** This phase now has a first browser-backed implementation. File bytes stay
+> behind replaceable adapters; core sees only serialisable references and metadata.
 
 ## Goal
 
@@ -29,6 +28,46 @@ learns which file answers an upload field and never opens it.
 `OffscreenCanvas` plus `canvas.toBlob(quality)`, in-tab, with the original never modified. This
 transforms a file; it never interprets one.
 
+**All file work goes through generic adapters.** The first adapter set is browser-native and
+IndexedDB-backed, but the interfaces are deliberately generic:
+
+- `FileReferenceStore` persists user-tagged files as local Blobs and returns opaque
+  `file_ref` metadata.
+- `FileComplianceAdapter` checks `accept` / `maxFileSizeBytes` and prepares a compliant upload
+  copy. Images may be recompressed; non-image files must already satisfy size constraints.
+- `FileUploadAdapter` owns the browser mechanics for applying a prepared file to
+  `input[type=file]`.
+
+Future open-source compression or storage implementations replace these adapters, not the
+agent loop or matcher.
+
+**Upload transfer is one-use and metadata-addressed.** The background stages prepared bytes in
+`chrome.storage.session` under a generated upload id, then sends the content script only
+`decisionId`, `fieldId` and `uploadId`. The content script consumes and removes that staged
+payload before setting `input.files`. Agent state, proposals, run views and normal messages do
+not carry raw bytes.
+
+**Tagged files are stored as memory references.** A file concept stores a serialisable
+`FileReference` value:
+
+```ts
+{
+  kind: "file_ref",
+  id: string,
+  name: string,
+  mimeType: string,
+  sizeBytes: number,
+  createdAt: string,
+}
+```
+
+The Blob itself lives in the file adapter's IndexedDB database. Local-data import/export
+continues to carry memory metadata only; it does not export the user’s file bytes.
+
+**Declared max-file-size constraints can be fixture-provided.** The extractor now reads
+`data-max-file-size-bytes` on file inputs into the existing `maxFileSizeBytes` constraint. This
+keeps test forms explicit without adding non-standard content reading.
+
 **The line, restated because it will be tested by circumstance:** there is no OCR, no vision
 model, no document understanding — not in the cloud, and not on-device either. A value that
 appears on a document, like a passport number, is typed by the user once and stored as an
@@ -42,8 +81,9 @@ them, but only locally" is a claim they must take on trust.
 |---|---|---|
 | Forbidden-dependency guard | **Yes** — `scripts/check-forbidden-deps.ts` failing on `tesseract.js`, `pdfjs-dist`, `pdf-parse`, `@google-cloud/vision`, and any `*vision*` / `*ocr*` package. Wire into CI. | A dependency check is a stronger guarantee than a paragraph in an ADR, and it is five lines. |
 | File-reference resolution | **Yes, unit.** A file concept resolves through the same matcher tiers as a text concept. | It is the claim that files need no second retrieval path. |
-| Compliance transforms | **Yes, e2e.** An oversized image is transformed to meet a stated `maxFileSizeBytes` and `accept`, and the original is unmodified on disk. | Silent corruption of a user's only copy of a document is unrecoverable. |
-| "Never reads content" | **Yes** — assert no code path passes file bytes to anything but the canvas transform. Consider a sentinel: a fixture file whose contents are a unique string, asserted never to appear in any prompt, log or message. | The phase's central risk, made mechanical. |
+| Adapter orchestration | **Yes, unit.** Fake compliance/upload adapters prove core coordinates file references without Blob or DOM access. | The generic adapter boundary is what lets us replace browser-native pieces later. |
+| Compliance transforms | **Yes, e2e.** An oversized image is transformed to meet a stated `maxFileSizeBytes` and `accept`, and the original is unmodified. | Silent corruption of a user's only copy of a document is unrecoverable. |
+| "Never reads content" | **Yes** — assert no code path passes file bytes to prompts, logs or network calls. Bytes are permitted only inside file adapters and the one-use upload staging path. | The phase's central risk, made mechanical. |
 
 ## Gate
 
@@ -51,6 +91,9 @@ them, but only locally" is a claim they must take on trust.
 - An oversized photograph is transformed to a compliant copy; the original is untouched.
 - The forbidden-dependency check fails when a vision or OCR package is added.
 - No file bytes reach a prompt, a log or a network call.
+- `bun check` includes the forbidden-dependency guard.
+- `bun test:e2e` covers resume upload, image recompression and the local-data import selector
+  after onboarding gained real file inputs.
 
 ## Escalate if
 

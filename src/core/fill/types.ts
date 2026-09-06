@@ -5,13 +5,17 @@
  * testable when Phase 2 replaces the driver that calls it.
  */
 
-import type { FieldId } from "../form/types";
-import type { MemorySource } from "../memory/types";
+import type { FieldConstraint, FieldId } from "../form/types";
+import type { FileReference, MemorySource } from "../memory/types";
 import type { Sensitivity } from "../ontology/types";
 import type { ActionRisk, ConfidenceLevel } from "../policy/types";
 
 /** Opaque, issued only by `planFill`. Never constructed anywhere else. */
 export type DecisionId = string;
+
+export type FillPayload =
+  | { readonly kind: "text"; readonly value: string }
+  | { readonly kind: "file"; readonly ref: FileReference };
 
 interface FieldProposalBase {
   readonly fieldId: FieldId;
@@ -36,6 +40,7 @@ export type FieldProposal =
       readonly decisionId: DecisionId;
       /** Stringified for the wire; nothing downstream needs the raw `MemoryValue`. */
       readonly value: string;
+      readonly payload: FillPayload;
       readonly source: MemorySource;
       readonly policyReason: string;
     });
@@ -47,7 +52,8 @@ export type FieldProposal =
  */
 export interface PendingDecision {
   readonly fieldId: FieldId;
-  readonly value: string;
+  readonly payload: FillPayload;
+  readonly constraints?: readonly FieldConstraint[];
   readonly conceptKey: string;
   readonly sensitivity: Sensitivity;
   readonly risk: ActionRisk;
@@ -63,5 +69,5 @@ export interface PlanFillResult {
 export interface ConfirmDecisionResult {
   readonly ok: boolean;
   readonly fieldId: FieldId;
-  readonly value: string;
+  readonly payload: FillPayload;
 }

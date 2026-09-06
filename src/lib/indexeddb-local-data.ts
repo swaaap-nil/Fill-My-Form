@@ -10,6 +10,7 @@ import {
 import type { MemoryStore } from "~/core/memory/store";
 import {
   CURRENT_MEMORY_SCHEMA_VERSION,
+  isFileReference,
   type MemoryItem,
   type MemoryKey,
   type MemoryQuery,
@@ -101,6 +102,7 @@ const isMemoryValue = (value: unknown): value is MemoryValue => {
   ) {
     return true;
   }
+  if (isFileReference(value)) return true;
   if (Array.isArray(value)) return value.every((v) => typeof v === "string");
   if (!value || typeof value !== "object") return false;
   return Object.values(value).every(isMemoryValue);

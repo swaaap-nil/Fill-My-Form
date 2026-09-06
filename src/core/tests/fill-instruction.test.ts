@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { assertValidFillInstruction } from "~/core/messaging/fill-instruction";
+import {
+  assertValidFillInstruction,
+  assertValidUploadInstruction,
+} from "~/core/messaging/fill-instruction";
 
 /**
  * `docs/agent.md`'s trust pipeline puts policy on the critical path. The
@@ -40,5 +43,30 @@ describe("assertValidFillInstruction", () => {
     expect(() => assertValidFillInstruction({ hello: "world" })).toThrow();
     expect(() => assertValidFillInstruction(null)).toThrow();
     expect(() => assertValidFillInstruction("just a string")).toThrow();
+  });
+});
+
+describe("assertValidUploadInstruction", () => {
+  it("accepts a well-formed upload instruction", () => {
+    expect(
+      assertValidUploadInstruction({
+        decisionId: "decision-1",
+        fieldId: "field-1",
+        uploadId: "upload-1",
+      }),
+    ).toEqual({
+      decisionId: "decision-1",
+      fieldId: "field-1",
+      uploadId: "upload-1",
+    });
+  });
+
+  it("rejects a missing decisionId", () => {
+    expect(() =>
+      assertValidUploadInstruction({
+        fieldId: "field-1",
+        uploadId: "upload-1",
+      }),
+    ).toThrow();
   });
 });

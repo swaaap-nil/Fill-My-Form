@@ -53,6 +53,18 @@ export const seedAnswers = async (
   await panelPage.getByRole("button", { name: "Current page" }).click();
 };
 
+export const seedFile = async (
+  panelPage: Page,
+  label: string,
+  path: string,
+) => {
+  await panelPage.getByRole("button", { name: "My information" }).click();
+  await panelPage.getByLabel(label, { exact: true }).setInputFiles(path);
+  await panelPage.getByRole("button", { name: "Save" }).click();
+  await expect(panelPage.getByTestId("saved-count")).toContainText("1 value");
+  await panelPage.getByRole("button", { name: "Current page" }).click();
+};
+
 /**
  * Spike 2's fix, exercised: `registerContentScripts` only affects future
  * navigations, so a tab that was already open before access was granted

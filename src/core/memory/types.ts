@@ -43,12 +43,39 @@ export type MemorySchemaVersion = number;
 export const CURRENT_MEMORY_SCHEMA_VERSION: MemorySchemaVersion = 2;
 
 /** JSON-representable, so a run stays serialisable and resumable. */
+export interface FileReference {
+  readonly kind: "file_ref";
+  readonly id: string;
+  readonly name: string;
+  readonly mimeType: string;
+  readonly sizeBytes: number;
+  readonly createdAt: string;
+}
+
 export type MemoryValue =
   | string
   | number
   | boolean
   | readonly string[]
+  | FileReference
   | { readonly [key: string]: MemoryValue };
+
+export const isFileReference = (value: unknown): value is FileReference => {
+  if (!value || typeof value !== "object") return false;
+  const ref = value as FileReference;
+  return (
+    ref.kind === "file_ref" &&
+    typeof ref.id === "string" &&
+    ref.id.length > 0 &&
+    typeof ref.name === "string" &&
+    ref.name.length > 0 &&
+    typeof ref.mimeType === "string" &&
+    typeof ref.sizeBytes === "number" &&
+    Number.isFinite(ref.sizeBytes) &&
+    ref.sizeBytes >= 0 &&
+    typeof ref.createdAt === "string"
+  );
+};
 
 /** Where a value came from. Determines how far it can be trusted. */
 export const MemorySource = {

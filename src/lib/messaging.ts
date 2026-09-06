@@ -3,7 +3,10 @@ import type { AgentPhase, AgentStatus } from "~/core/agent/types";
 import type { DecisionId, FieldProposal } from "~/core/fill/types";
 import type { FieldId, Form } from "~/core/form/types";
 import type { MemoryItem, MemoryKey, MemoryValue } from "~/core/memory/types";
-import type { FillFieldPayload } from "~/core/messaging/fill-instruction";
+import type {
+  FillFieldPayload,
+  UploadFilePayload,
+} from "~/core/messaging/fill-instruction";
 import type { VerificationResult } from "~/core/verification/types";
 import type { LocalDataExport } from "./indexeddb-local-data";
 
@@ -33,10 +36,15 @@ import type { LocalDataExport } from "./indexeddb-local-data";
  * `scripting` API access the background has.
  */
 export type { DecisionId, FieldProposal } from "~/core/fill/types";
-export type { FillFieldPayload } from "~/core/messaging/fill-instruction";
+export type {
+  FillFieldPayload,
+  UploadFilePayload,
+} from "~/core/messaging/fill-instruction";
 export {
   assertValidFillInstruction,
+  assertValidUploadInstruction,
   fillFieldPayloadSchema,
+  uploadFilePayloadSchema,
 } from "~/core/messaging/fill-instruction";
 
 export interface RunFillResult {
@@ -107,6 +115,7 @@ interface Messages {
   // Background -> content script (sent with a tabId).
   extractFullForm(): { forms: readonly Form[] };
   fillField(data: FillFieldPayload): { ok: boolean };
+  uploadFile(data: UploadFilePayload): { ok: boolean };
   verifyField(data: {
     fieldId: FieldId;
     expectedValue: string;

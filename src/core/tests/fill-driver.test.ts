@@ -5,6 +5,7 @@ import { createInMemoryMemoryStore } from "~/core/memory/in-memory";
 import {
   CURRENT_MEMORY_SCHEMA_VERSION,
   DEFAULT_PROFILE_ID,
+  type FileReference,
   type MemoryItem,
   MemorySource,
 } from "~/core/memory/types";
@@ -24,7 +25,7 @@ const field = (overrides: Partial<FormField>): FormField => ({
 
 const seedMemory = async (
   key: string,
-  value: string,
+  value: MemoryItem["value"],
   source: MemorySource = MemorySource.USER_PROVIDED,
 ) => {
   const store = createInMemoryMemoryStore();
@@ -138,6 +139,44 @@ describe("planFill", () => {
     }
   });
 
+  it("resolves a file concept through the same matcher and proposes metadata only", async () => {
+    const ref: FileReference = {
+      kind: "file_ref",
+      id: "file-1",
+      name: "resume.pdf",
+      mimeType: "application/pdf",
+      sizeBytes: 2048,
+      createdAt: "2026-01-01T00:00:00.000Z",
+    };
+    const store = await seedMemory("documents.resume", ref);
+    const result = await planFill(
+      [
+        field({
+          label: "Upload resume",
+          kind: FieldKind.FILE,
+          id: "0/resume/0",
+        }),
+      ],
+      ontology,
+      store,
+      DEFAULT_PROFILE_ID,
+      defaultPolicy,
+      fixedIds,
+    );
+
+    const proposal = result.proposals[0];
+    expect(proposal?.state).toBe("pending");
+    if (proposal?.state === "pending" || proposal?.state === "restricted") {
+      expect(proposal.conceptKey).toBe("documents.resume");
+      expect(proposal.value).toBe("resume.pdf (2 KB)");
+      expect(proposal.payload).toEqual({ kind: "file", ref });
+      expect(result.decisions.get(proposal.decisionId)?.payload).toEqual({
+        kind: "file",
+        ref,
+      });
+    }
+  });
+
   it("proposes restricted, not pending, for a restricted concept — even with a stored value", async () => {
     const store = await seedMemory("documents.national_id", "1234 5678 9012");
     const result = await planFill(
@@ -187,7 +226,10 @@ describe("confirmDecision", () => {
 
     const outcome = confirmDecision(decision, defaultPolicy);
     expect(outcome.ok).toBe(true);
-    expect(outcome.value).toBe("ananya@example.com");
+    expect(outcome.payload).toEqual({
+      kind: "text",
+      value: "ananya@example.com",
+    });
   });
 
   it("allows a restricted decision once confirmed, exactly like a normal one", async () => {
