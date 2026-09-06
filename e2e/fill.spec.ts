@@ -1,6 +1,11 @@
 import type { BrowserContext } from "@playwright/test";
 import { expect, test } from "./fill-fixtures";
-import { grantAccess, openPanel, seedAnswer } from "./fill-helpers";
+import {
+  grantAccess,
+  openPanel,
+  seedAnswer,
+  seedAnswers,
+} from "./fill-helpers";
 
 /**
  * The first real fill, end to end, against the `WXT_E2E=1` build
@@ -192,4 +197,46 @@ test("onboarding round trip: a value typed in onboarding appears as a proposal w
 
   await expect(panelPage.getByText("identity.first_name")).toBeVisible();
   await expect(panelPage.getByText(/source: user_provided/i)).toBeVisible();
+});
+
+test("privacy: fixture fills make no outbound network requests", async ({
+  context,
+  extensionId,
+}) => {
+  const formPage = await context.newPage();
+  await formPage.goto("/simple.html");
+
+  const panelPage = await openPanel(context, extensionId);
+  await seedAnswers(panelPage, [
+    ["First name", "Ananya"],
+    ["Last name", "Rao"],
+    ["Email address", "ananya@example.com"],
+  ]);
+  await grantAccess(formPage, panelPage);
+
+  const externalRequests: string[] = [];
+  context.on("request", (request) => {
+    const url = new URL(request.url());
+    const isHttp = url.protocol === "http:" || url.protocol === "https:";
+    const isFixtureServer =
+      (url.hostname === "localhost" || url.hostname === "127.0.0.1") &&
+      url.port === "4173";
+
+    if (isHttp && !isFixtureServer) {
+      externalRequests.push(request.url());
+    }
+  });
+
+  await formPage.bringToFront();
+  await panelPage.getByRole("button", { name: "Scan this page" }).click();
+  const confirmButtons = panelPage.getByRole("button", {
+    name: "Confirm",
+    exact: true,
+  });
+  const count = await confirmButtons.count();
+  for (let i = 0; i < count; i++) {
+    await confirmButtons.nth(i).click();
+  }
+
+  expect(externalRequests).toEqual([]);
 });

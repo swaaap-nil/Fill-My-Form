@@ -1,0 +1,169 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: 24.x
+
+jobs:
+  verify:
+    name: Verify Release Version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup
+        uses: ./.github/workflows/setup
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Check tag and published versions
+        run: bun run scripts/release-version.ts
+
+  tests:
+    name: Tests
+    needs: [verify]
+    uses: ./.github/workflows/tests.yml
+
+  build:
+    name: Build Release Artifacts
+    runs-on: ubuntu-latest
+    needs: [tests]
+    outputs:
+      chrome_zip: ${{ steps.artifacts.outputs.chrome_zip }}
+      firefox_zip: ${{ steps.artifacts.outputs.firefox_zip }}
+      sources_zip: ${{ steps.artifacts.outputs.sources_zip }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup
+        uses: ./.github/workflows/setup
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Build Chrome, Firefox and sources zips
+        run: bun run build
+
+      - name: Assert no secrets were bundled
+        run: bun run scripts/check-bundle-secrets.ts
+
+      - name: Assert release manifests are clean
+        run: bun run scripts/check-release-manifest.ts
+
+      - name: Resolve artifact paths
+        id: artifacts
+        run: bun run scripts/release-artifacts.ts
+
+      - name: Upload Chrome artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: chrome-${{ github.ref_name }}
+          path: ${{ steps.artifacts.outputs.chrome_zip }}
+
+      - name: Upload Firefox artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: firefox-${{ github.ref_name }}
+          path: ${{ steps.artifacts.outputs.firefox_zip }}
+
+      - name: Upload source artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: sources-${{ github.ref_name }}
+          path: ${{ steps.artifacts.outputs.sources_zip }}
+
+  submit-chrome:
+    name: Submit Chrome
+    runs-on: ubuntu-latest
+    needs: [build]
+    environment: Production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup
+        uses: ./.github/workflows/setup
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download Chrome artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: chrome-${{ github.ref_name }}
+          path: build
+
+      - name: Dry-run Chrome submission
+        run: bun wxt submit --dry-run --chrome-zip "${CHROME_ZIP}"
+        env:
+          CHROME_ZIP: ${{ needs.build.outputs.chrome_zip }}
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+
+      - name: Submit Chrome
+        run: bun wxt submit --chrome-zip "${CHROME_ZIP}"
+        env:
+          CHROME_ZIP: ${{ needs.build.outputs.chrome_zip }}
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+
+  submit-firefox:
+    name: Submit Firefox
+    runs-on: ubuntu-latest
+    needs: [build]
+    environment: Production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup
+        uses: ./.github/workflows/setup
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download Firefox artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: firefox-${{ github.ref_name }}
+          path: build
+
+      - name: Download source artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: sources-${{ github.ref_name }}
+          path: build
+
+      - name: Dry-run Firefox submission
+        run: >
+          bun wxt submit --dry-run
+          --firefox-zip "${FIREFOX_ZIP}"
+          --firefox-sources-zip "${SOURCES_ZIP}"
+        env:
+          FIREFOX_ZIP: ${{ needs.build.outputs.firefox_zip }}
+          SOURCES_ZIP: ${{ needs.build.outputs.sources_zip }}
+          FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
+          FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
+          FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
+
+      - name: Submit Firefox
+        run: >
+          bun wxt submit
+          --firefox-zip "${FIREFOX_ZIP}"
+          --firefox-sources-zip "${SOURCES_ZIP}"
+        env:
+          FIREFOX_ZIP: ${{ needs.build.outputs.firefox_zip }}
+          SOURCES_ZIP: ${{ needs.build.outputs.sources_zip }}
+          FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
+          FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
+          FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
