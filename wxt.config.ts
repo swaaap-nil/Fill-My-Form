@@ -17,6 +17,7 @@ if (!USE_FRESH_PROFILE) {
 }
 
 export default defineConfig({
+  manifestVersion: 3,
   manifest: (env) => ({
     name: "__MSG_extensionName__",
     description: "__MSG_extensionDescription__",
@@ -53,6 +54,7 @@ export default defineConfig({
       browser_specific_settings: {
         gecko: {
           id: "ff@swapnilsuman.me",
+          strict_min_version: "109.0",
           data_collection_permissions: { required: ["none"] },
         },
       },
@@ -68,7 +70,12 @@ export default defineConfig({
      * make that grant invisible to the user and is the wrong default for a
      * privacy-first product. See docs/privacy.md.
      */
-    permissions: ["storage", "sidePanel", "activeTab", "scripting"],
+    permissions: [
+      "storage",
+      ...(env.browser === "firefox" ? [] : ["sidePanel"]),
+      "activeTab",
+      "scripting",
+    ],
     optional_host_permissions: ["https://*/*", "http://*/*"],
 
     /**

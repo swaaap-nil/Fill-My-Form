@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   evaluateManifest,
+  evaluateTargetManifest,
   type ManifestLike,
   scanBuildDirectory,
 } from "../check-release-manifest";
@@ -14,11 +15,31 @@ const VENDORED_ICON_FIXTURE = join(
 );
 
 const CLEAN_MANIFEST: ManifestLike = {
+  manifest_version: 3,
   permissions: ["storage", "sidePanel", "activeTab", "scripting"],
+  optional_host_permissions: ["https://*/*", "http://*/*"],
   content_scripts: [],
   content_security_policy: {
     extension_pages: "script-src 'self'; object-src 'self'",
   },
+};
+
+const CLEAN_CHROME_MANIFEST: ManifestLike = {
+  ...CLEAN_MANIFEST,
+  action: { default_popup: undefined },
+  side_panel: { default_path: "sidepanel.html" },
+};
+
+const CLEAN_FIREFOX_MANIFEST: ManifestLike = {
+  ...CLEAN_MANIFEST,
+  permissions: ["storage", "activeTab", "scripting"],
+  browser_specific_settings: {
+    gecko: {
+      id: "ff@swapnilsuman.me",
+      strict_min_version: "109.0",
+    },
+  },
+  sidebar_action: { default_panel: "sidepanel.html" },
 };
 
 describe("evaluateManifest", () => {
@@ -94,6 +115,87 @@ describe("evaluateManifest", () => {
       },
     });
     expect(findings.some((f) => f.includes("localhost"))).toBe(true);
+  });
+});
+
+describe("evaluateTargetManifest", () => {
+  it("passes a clean Chrome manifest", () => {
+    expect(evaluateTargetManifest("chrome", CLEAN_CHROME_MANIFEST)).toEqual([]);
+  });
+
+  it("passes a clean Firefox MV3 manifest", () => {
+    expect(evaluateTargetManifest("firefox", CLEAN_FIREFOX_MANIFEST)).toEqual(
+      [],
+    );
+  });
+
+  it("fails when the Firefox manifest is not MV3", () => {
+    const findings = evaluateTargetManifest("firefox", {
+      ...CLEAN_FIREFOX_MANIFEST,
+      manifest_version: 2,
+    });
+
+    expect(findings.some((f) => f.includes("manifest_version"))).toBe(true);
+  });
+
+  it("fails when Firefox optional host permissions are missing", () => {
+    const findings = evaluateTargetManifest("firefox", {
+      ...CLEAN_FIREFOX_MANIFEST,
+      optional_host_permissions: ["https://*/*"],
+    });
+
+    expect(findings.some((f) => f.includes("optional_host_permissions"))).toBe(
+      true,
+    );
+  });
+
+  it("fails when Firefox contains Chrome's sidePanel permission", () => {
+    const findings = evaluateTargetManifest("firefox", {
+      ...CLEAN_FIREFOX_MANIFEST,
+      permissions: ["storage", "sidePanel", "activeTab", "scripting"],
+    });
+
+    expect(findings.some((f) => f.includes("sidePanel"))).toBe(true);
+  });
+
+  it("fails when Firefox has no Gecko id", () => {
+    const findings = evaluateTargetManifest("firefox", {
+      ...CLEAN_FIREFOX_MANIFEST,
+      browser_specific_settings: {
+        gecko: { strict_min_version: "109.0" },
+      },
+    });
+
+    expect(findings.some((f) => f.includes("gecko.id"))).toBe(true);
+  });
+
+  it("fails when Firefox has no strict minimum Gecko version", () => {
+    const findings = evaluateTargetManifest("firefox", {
+      ...CLEAN_FIREFOX_MANIFEST,
+      browser_specific_settings: {
+        gecko: { id: "ff@swapnilsuman.me" },
+      },
+    });
+
+    expect(findings.some((f) => f.includes("strict_min_version"))).toBe(true);
+  });
+
+  it("fails when Firefox browser_action points at a popup", () => {
+    const findings = evaluateTargetManifest("firefox", {
+      ...CLEAN_FIREFOX_MANIFEST,
+      browser_action: { default_popup: "popup.html" },
+    });
+
+    expect(findings.some((f) => f.includes("default_popup"))).toBe(true);
+  });
+
+  it("fails when Firefox sidebar_action does not point at the side panel", () => {
+    const findings = evaluateTargetManifest("firefox", {
+      ...CLEAN_FIREFOX_MANIFEST,
+      sidebar_action: { default_panel: "wrong.html" },
+    });
+
+    expect(findings.some((f) => f.includes("sidebar_action"))).toBe(true);
   });
 });
 

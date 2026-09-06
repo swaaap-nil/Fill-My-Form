@@ -11,7 +11,7 @@
     "build": "bun run build:chrome && bun run build:firefox",
     "build:chrome": "wxt zip",
     "build:chrome:e2e": "WXT_E2E=1 wxt zip",
-    "build:firefox": "wxt -b firefox zip",
+    "build:firefox": "wxt -b firefox --mv3 zip",
     "build:extractor": "bun build --target=browser --format=iife src/lib/form/browser-entry.ts --outfile=build/extractor/extractor.js",
     "dev": "bun dev:chrome",
     "dev:chrome": "bun run scripts/dev-preflight.ts && wxt",

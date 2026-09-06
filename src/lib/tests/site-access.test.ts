@@ -218,3 +218,41 @@ describe("listGrantedOrigins", () => {
     expect(await siteAccess.listGrantedOrigins()).toEqual([]);
   });
 });
+
+describe("Firefox MV3-shaped browser", () => {
+  it("uses the same optional-origin grant and scripting registration path", async () => {
+    const fake = createFakeBrowser();
+    const siteAccess = createSiteAccess(fake);
+
+    const granted = await siteAccess.requestSiteAccess(
+      "https://firefox.example/apply",
+      109,
+    );
+
+    expect(granted).toBe(true);
+    expect(fake.grantedOrigins.has("https://firefox.example/*")).toBe(true);
+    expect(
+      fake.registered.has("form-agent-content:https___firefox_example__"),
+    ).toBe(true);
+    expect(fake.executedScripts).toEqual([
+      { tabId: 109, files: ["content-scripts/content.js"] },
+    ]);
+  });
+
+  it("restores and revokes Firefox MV3 runtime registrations by origin id", async () => {
+    const fake = createFakeBrowser({
+      grantedOrigins: new Set(["https://firefox.example/*"]),
+    });
+    const siteAccess = createSiteAccess(fake);
+
+    await expect(siteAccess.restoreGrantedSites()).resolves.toBe(1);
+    expect(
+      fake.registered.has("form-agent-content:https___firefox_example__"),
+    ).toBe(true);
+
+    await siteAccess.revokeSiteAccess("https://firefox.example/apply");
+
+    expect(fake.grantedOrigins.size).toBe(0);
+    expect(fake.registered.size).toBe(0);
+  });
+});

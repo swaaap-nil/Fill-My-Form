@@ -12,7 +12,12 @@ import { join } from "node:path";
  */
 
 const BUILD_DIR = "build";
-const MANIFEST_PATH = `${BUILD_DIR}/chrome-mv3/manifest.json`;
+const TARGET_MANIFESTS = [
+  { target: "chrome", path: `${BUILD_DIR}/chrome-mv3/manifest.json` },
+  { target: "firefox", path: `${BUILD_DIR}/firefox-mv3/manifest.json` },
+] as const;
+
+type TargetBrowser = (typeof TARGET_MANIFESTS)[number]["target"];
 
 /** The vendored `turbostarter/extro` icon this repo shipped with at import. */
 export const VENDORED_EXTRO_ICON_SHA256 =
@@ -31,11 +36,31 @@ const TEXT_EXTENSIONS = [
 ];
 
 export interface ManifestLike {
+  readonly manifest_version?: unknown;
   readonly host_permissions?: unknown;
+  readonly optional_host_permissions?: readonly unknown[];
   readonly chrome_url_overrides?: unknown;
   readonly devtools_page?: unknown;
   readonly content_scripts?: unknown;
   readonly permissions?: readonly unknown[];
+  readonly action?: {
+    readonly default_popup?: unknown;
+  };
+  readonly browser_action?: {
+    readonly default_popup?: unknown;
+  };
+  readonly side_panel?: {
+    readonly default_path?: unknown;
+  };
+  readonly sidebar_action?: {
+    readonly default_panel?: unknown;
+  };
+  readonly browser_specific_settings?: {
+    readonly gecko?: {
+      readonly id?: unknown;
+      readonly strict_min_version?: unknown;
+    };
+  };
   readonly content_security_policy?: {
     readonly extension_pages?: string;
   };
@@ -100,6 +125,86 @@ export const evaluateManifest = (manifest: ManifestLike): string[] => {
   return findings;
 };
 
+const includesAll = (
+  values: readonly unknown[] | undefined,
+  expected: readonly string[],
+): boolean => expected.every((value) => values?.includes(value));
+
+export const evaluateTargetManifest = (
+  target: TargetBrowser,
+  manifest: ManifestLike,
+): string[] => {
+  const findings = evaluateManifest(manifest);
+
+  if (target === "firefox") {
+    if (manifest.manifest_version !== 3) {
+      findings.push("Firefox manifest_version must be 3.");
+    }
+
+    if (
+      !includesAll(manifest.optional_host_permissions, [
+        "https://*/*",
+        "http://*/*",
+      ])
+    ) {
+      findings.push(
+        "Firefox optional_host_permissions must include https://*/* and http://*/*.",
+      );
+    }
+
+    if (manifest.permissions?.includes("sidePanel")) {
+      findings.push(
+        "Firefox permissions contains sidePanel — Firefox uses sidebar_action and AMO flags sidePanel as invalid.",
+      );
+    }
+
+    const gecko = manifest.browser_specific_settings?.gecko;
+    if (typeof gecko?.id !== "string" || gecko.id.length === 0) {
+      findings.push("Firefox browser_specific_settings.gecko.id is missing.");
+    }
+    if (
+      typeof gecko?.strict_min_version !== "string" ||
+      gecko.strict_min_version.length === 0
+    ) {
+      findings.push(
+        "Firefox browser_specific_settings.gecko.strict_min_version is missing.",
+      );
+    }
+
+    if (manifest.browser_action?.default_popup !== undefined) {
+      findings.push(
+        "Firefox browser_action.default_popup is present — the deleted popup must not come back.",
+      );
+    }
+
+    if (manifest.sidebar_action?.default_panel !== "sidepanel.html") {
+      findings.push(
+        "Firefox sidebar_action.default_panel must point at sidepanel.html.",
+      );
+    }
+  }
+
+  if (target === "chrome") {
+    if (manifest.manifest_version !== 3) {
+      findings.push("Chrome manifest_version must be 3.");
+    }
+
+    if (manifest.action?.default_popup !== undefined) {
+      findings.push(
+        "Chrome action.default_popup is present — the toolbar icon must open the side panel, not a popup.",
+      );
+    }
+
+    if (manifest.side_panel?.default_path !== "sidepanel.html") {
+      findings.push(
+        "Chrome side_panel.default_path must point at sidepanel.html.",
+      );
+    }
+  }
+
+  return findings;
+};
+
 const walk = async (dir: string): Promise<string[]> => {
   const entries = await readdir(dir, { withFileTypes: true });
   const files = await Promise.all(
@@ -146,17 +251,24 @@ export const scanBuildDirectory = async (
 };
 
 if (import.meta.main) {
-  const manifestFile = Bun.file(MANIFEST_PATH);
-  if (!(await manifestFile.exists())) {
-    console.error(`No ${MANIFEST_PATH}. Run \`bun run build:chrome\` first.`);
-    process.exit(1);
+  const findings: string[] = [];
+
+  for (const { target, path } of TARGET_MANIFESTS) {
+    const manifestFile = Bun.file(path);
+    if (!(await manifestFile.exists())) {
+      console.error(`No ${path}. Run \`bun run build\` first.`);
+      process.exit(1);
+    }
+
+    const manifest = (await manifestFile.json()) as ManifestLike;
+    findings.push(
+      ...evaluateTargetManifest(target, manifest).map(
+        (finding) => `${path}: ${finding}`,
+      ),
+    );
   }
 
-  const manifest = (await manifestFile.json()) as ManifestLike;
-  const findings = [
-    ...evaluateManifest(manifest),
-    ...(await scanBuildDirectory(BUILD_DIR)),
-  ];
+  findings.push(...(await scanBuildDirectory(BUILD_DIR)));
 
   if (findings.length > 0) {
     console.error("Release manifest check failed:");
