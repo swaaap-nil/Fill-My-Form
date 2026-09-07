@@ -12,6 +12,11 @@ discover general browser/form patterns, then implement the general pattern in
 `src/`. Do not special-case a fixture, website, URL, application name, employer
 name, page title, copied field id/name/class, or copied fixture filename.
 
+Before touching extraction, matching, fill, or verification behavior for a
+copied page, read `docs/generalizing-from-fixtures.md` and follow its workflow:
+copied fixture, synthetic generalized test, copied-page regression, reusable
+implementation.
+
 Good fixes look like:
 
 - Recognize generic DOM patterns, such as file picker labels that say
