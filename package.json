@@ -18,6 +18,7 @@
     "dev:firefox": "wxt -b firefox",
     "dev:fresh": "WXT_DEV_FRESH_PROFILE=1 wxt",
     "dev:site": "bun run scripts/serve-test-site.ts",
+    "landing": "cd landing-page && npm run dev",
     "format": "biome format --write",
     "lint": "biome check",
     "check:forbidden-deps": "bun run scripts/check-forbidden-deps.ts",
