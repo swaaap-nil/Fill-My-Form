@@ -32,8 +32,8 @@ Chrome will not let an extension open its own side panel without a user
 gesture, so the first click is always yours.
 
 Only one browser can use a profile at a time. If a dev browser is already
-open, `bun dev` says so and tells you what to do rather than failing with a
-CDP error; `bun dev:fresh` skips the shared profile entirely.
+open, repeating `bun dev` keeps that existing session; `bun dev:fresh` skips
+the shared profile entirely.
 
 Requires [Bun](https://bun.sh/) and Node 24+.
 

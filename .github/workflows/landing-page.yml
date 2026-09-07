@@ -1,10 +1,7 @@
 name: Landing page
 on:
-  pull_request:
-    paths: ['landing-page/**', '.github/workflows/landing-page.yml']
-  push:
-    branches: [main]
-    paths: ['landing-page/**', '.github/workflows/landing-page.yml']
+  # Disabled for now: Cloudflare handles automatic landing-page builds/deploys.
+  # Keep manual dispatch available for verification or an explicit deploy.
   workflow_dispatch:
     inputs:
       deploy:

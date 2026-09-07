@@ -11,8 +11,8 @@ import { join, resolve } from "node:path";
  *
  *   CDP connection closed before response to Extensions.loadUnpacked
  *
- * which says nothing about the actual cause. This turns that into a sentence
- * you can act on, and cleans up the common case automatically.
+ * which says nothing about the actual cause. This keeps repeated dev starts
+ * idempotent and cleans up stale locks automatically.
  */
 
 const PROFILE = resolve(".chrome-profile");
@@ -55,21 +55,16 @@ if (pid === null) {
 }
 
 if (isRunning(pid)) {
-  console.error(
+  console.log(
     [
       "",
-      `A browser is already using the dev profile at ${PROFILE} (pid ${pid}).`,
+      `The dev browser is already running with the profile at ${PROFILE} (pid ${pid}).`,
       "",
-      "Chrome allows one instance per profile, so this run would fail with a",
-      "confusing CDP error. Either:",
-      "",
-      "  • quit that browser window and run `bun dev` again, or",
-      "  • run `bun dev:fresh` to use a throwaway profile (you will re-pin), or",
-      `  • kill it: kill ${pid}`,
+      "Keeping the existing development session.",
       "",
     ].join("\n"),
   );
-  process.exit(1);
+  process.exit(2);
 }
 
 // The owning process is gone — a crash or a hard kill left the lock behind.

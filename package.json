@@ -14,7 +14,7 @@
     "build:firefox": "wxt -b firefox --mv3 zip",
     "build:extractor": "bun build --target=browser --format=iife src/lib/form/browser-entry.ts --outfile=build/extractor/extractor.js",
     "dev": "bun dev:chrome",
-    "dev:chrome": "bun run scripts/dev-preflight.ts && wxt",
+    "dev:chrome": "bun run scripts/dev-preflight.ts; code=$?; if [ $code -eq 2 ]; then exit 0; elif [ $code -ne 0 ]; then exit $code; fi; wxt",
     "dev:firefox": "wxt -b firefox",
     "dev:fresh": "WXT_DEV_FRESH_PROFILE=1 wxt",
     "dev:site": "bun run scripts/serve-test-site.ts",
