@@ -127,3 +127,50 @@ test("controlled.html keeps its four hard-to-fill controls", async ({
   await dateInput.blur();
   await expect(dateInput).toHaveValue("15/06/1990");
 });
+
+test("supabase.html exposes an ATS application form with generated field names", async ({
+  page,
+}) => {
+  await page.route("**/*", (route) => {
+    const url = new URL(route.request().url());
+    return url.hostname === "localhost"
+      ? route.continue()
+      : route.abort("blockedbyclient");
+  });
+  await page.goto("/supabase.html", { waitUntil: "domcontentloaded" });
+
+  const labelledControls = page.locator("#form label[for]");
+  await expect(labelledControls).toHaveCount(12);
+
+  await expect(page.getByLabel("Name")).toBeVisible();
+  await expect(page.getByLabel("Email")).toBeVisible();
+  await expect(page.locator("#_systemfield_resume")).toHaveAttribute(
+    "type",
+    "file",
+  );
+  await expect(page.getByLabel("Passport Country")).toBeVisible();
+  await expect(page.getByLabel("Country of Residence")).toBeVisible();
+  await expect(page.getByLabel("Github Profile")).toBeVisible();
+  await expect(page.getByLabel("Linkedin")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Upload File", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Submit Application" }),
+  ).toBeVisible();
+
+  const generatedNames = await labelledControls.evaluateAll((labels) =>
+    labels
+      .map((label) =>
+        label.ownerDocument
+          .getElementById(label.getAttribute("for") ?? "")
+          ?.getAttribute("name"),
+      )
+      .filter((name): name is string => !!name),
+  );
+  expect(generatedNames).toContain("_systemfield_name");
+  expect(generatedNames).toContain("_systemfield_email");
+  expect(generatedNames.some((name) => /^[0-9a-f-]{36}$/.test(name))).toBe(
+    true,
+  );
+});

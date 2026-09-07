@@ -312,6 +312,51 @@ test("aai-more.html recognises common personal, address and bank fields", async 
   expect(conceptsByName.get("type_of_account")).toBe("bank.account_type");
 });
 
+test("supabase.html extracts a form-like ATS application container", async ({
+  page,
+}) => {
+  await page.route("**/*", (route) => {
+    const url = new URL(route.request().url());
+    return url.hostname === "localhost"
+      ? route.continue()
+      : route.abort("blockedbyclient");
+  });
+  await page.goto("/supabase.html", { waitUntil: "domcontentloaded" });
+  await injectExtractor(page);
+
+  const full = await observeFull(page);
+  const fields = full[0]?.fields ?? [];
+  const fieldByLabel = new Map(fields.map((field) => [field.label, field]));
+  const conceptByLabel = new Map(
+    fields.map((field) => [
+      field.label,
+      resolveMatch(field, ontology).candidates[0]?.conceptKey,
+    ]),
+  );
+
+  expect(full).toHaveLength(1);
+  expect(full[0]?.submitLabel).toBe("Submit Application");
+  expect(fields).toHaveLength(12);
+
+  expect(fieldByLabel.get("Name")?.kind).toBe("text");
+  expect(conceptByLabel.get("Name")).toBe("identity.full_name");
+  expect(fieldByLabel.get("Email")?.kind).toBe("email");
+  expect(conceptByLabel.get("Email")).toBe("contact.email");
+
+  const resume = fieldByLabel.get("Resume");
+  expect(resume?.kind).toBe("file");
+  expect(resume?.required).toBe(true);
+  expect(resume?.name).toBeUndefined();
+  expect(resume?.constraints).toContainEqual({
+    kind: "accept",
+    value: expect.arrayContaining([".pdf", ".docx"]),
+  });
+  expect(conceptByLabel.get("Resume")).toBe("documents.resume");
+
+  expect(conceptByLabel.get("Github Profile")).toBe("contact.github_url");
+  expect(conceptByLabel.get("Linkedin")).toBe("contact.linkedin_url");
+});
+
 test("extracting a 500-field page stays within budget", async ({ page }) => {
   const inputs = Array.from(
     { length: 500 },

@@ -117,6 +117,16 @@ const isSkipped = (el: Candidate): boolean => {
   ) {
     return true;
   }
+  if (
+    type === "file" &&
+    !el.id &&
+    !el.name &&
+    !el.getAttribute("aria-label") &&
+    !el.getAttribute("aria-labelledby") &&
+    !el.closest("label")
+  ) {
+    return true;
+  }
   if (el.disabled) return true;
   if ("readOnly" in el && el.readOnly) return true;
   return isInvisible(el);
@@ -584,10 +594,20 @@ const widgetOptionsOf = (
   }));
 };
 
-const submitLabelOf = (form: HTMLFormElement): string | undefined => {
-  const submit = form.querySelector<HTMLElement>(
-    'button[type="submit"], input[type="submit"], button:not([type])',
+const submitLabelOf = (container: Element): string | undefined => {
+  const explicitSubmit = container.querySelector<HTMLElement>(
+    'button[type="submit"], input[type="submit"]',
   );
+  const implicitButtons = Array.from(
+    container.querySelectorAll<HTMLElement>("button:not([type])"),
+  ).filter((button) => {
+    if (button.getAttribute("aria-pressed") !== null) return false;
+    const text = textOf(button);
+    return text
+      ? /\b(apply|continue|next|save|send|submit)\b/i.test(text)
+      : false;
+  });
+  const submit = explicitSubmit ?? implicitButtons.at(-1);
   if (!submit) return undefined;
   if (submit instanceof HTMLInputElement) return submit.value || undefined;
   return textOf(submit);
@@ -603,7 +623,7 @@ export type FieldElements = Element | readonly Element[];
 
 const extractForm = (
   doc: Document,
-  form: HTMLFormElement,
+  form: Element,
   formIndex: number,
   elementsById?: Map<string, FieldElements>,
 ): Form => {
@@ -722,17 +742,74 @@ const extractForm = (
   return {
     id: String(formIndex),
     name: form.getAttribute("name") || undefined,
-    method: form.method === "get" ? "get" : "post",
+    method:
+      form instanceof HTMLFormElement && form.method === "get" ? "get" : "post",
     submitLabel: submitLabelOf(form),
     fields,
   };
 };
 
+const fallbackFormContainers = (doc: Document): Element[] => {
+  const candidates = new Set<HTMLElement>(
+    Array.from(doc.querySelectorAll<HTMLElement>('[role="form"]')),
+  );
+  const submitActions = Array.from(
+    doc.querySelectorAll<HTMLElement>(
+      'button, input[type="submit"], input[type="button"]',
+    ),
+  ).filter((el) => !isInvisible(el) && !!textOf(el));
+
+  for (const action of submitActions) {
+    let candidate = action.parentElement;
+    while (
+      candidate &&
+      candidate.tagName !== "BODY" &&
+      candidate.tagName !== "HTML"
+    ) {
+      candidates.add(candidate);
+      candidate = candidate.parentElement;
+    }
+  }
+
+  const controlCount = (el: Element): number =>
+    Array.from(el.querySelectorAll<Element>("input, select, textarea")).filter(
+      (control) => isFormControl(control) && !isSkipped(control),
+    ).length;
+
+  const viable = Array.from(candidates).filter((el) => {
+    const controls = Array.from(
+      el.querySelectorAll<Element>("input, select, textarea"),
+    ).filter((control) => isFormControl(control) && !isSkipped(control));
+    return controls.length > 0 && !!submitLabelOf(el);
+  });
+
+  return viable.filter((candidate) => {
+    const candidateControls = controlCount(candidate);
+    const hasLargerAncestor = viable.some(
+      (other) =>
+        other !== candidate &&
+        other.contains(candidate) &&
+        controlCount(other) > candidateControls,
+    );
+    const hasEquivalentDescendant = viable.some(
+      (other) =>
+        other !== candidate &&
+        candidate.contains(other) &&
+        controlCount(other) === candidateControls,
+    );
+
+    return !hasLargerAncestor && !hasEquivalentDescendant;
+  });
+};
+
+const extractableFormContainers = (doc: Document): Element[] => {
+  const forms = Array.from(doc.querySelectorAll("form"));
+  return forms.length > 0 ? forms : fallbackFormContainers(doc);
+};
+
 /** The richer extraction: full `FormField` detail per field. */
 export const extractFull = (doc: Document = document): Form[] =>
-  Array.from(doc.querySelectorAll("form")).map((form, i) =>
-    extractForm(doc, form, i),
-  );
+  extractableFormContainers(doc).map((form, i) => extractForm(doc, form, i));
 
 export interface ExtractionWithElements {
   readonly forms: readonly Form[];
@@ -756,7 +833,7 @@ export const extractFullWithElements = (
   doc: Document = document,
 ): ExtractionWithElements => {
   const elements = new Map<string, FieldElements>();
-  const forms = Array.from(doc.querySelectorAll("form")).map((form, i) =>
+  const forms = extractableFormContainers(doc).map((form, i) =>
     extractForm(doc, form, i, elements),
   );
   return { forms, elements };

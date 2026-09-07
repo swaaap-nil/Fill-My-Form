@@ -20,7 +20,7 @@ const { locale, page = '', title, noindex = false } = Astro.props;
 const t = content[locale];
 const metaTitle = title
   ? `${title} | Fill My Form`
-  : `Fill My Form — ${t.tagline}`;
+  : `Fill My Form — ${t.tagline} ${t.taglineAuthor}`;
 const canonical = new URL(localizedPath(locale, page), siteConfig.site).href;
 ---
 
