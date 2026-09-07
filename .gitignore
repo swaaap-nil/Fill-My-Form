@@ -35,3 +35,8 @@ playwright-report/
 
 # dev browser profile (webExt.keepProfileChanges)
 .chrome-profile/
+
+# Local licensed Tailwind documentation snapshot (do not redistribute)
+.agents/skills/tailwind-4-docs/references/docs/
+.agents/skills/tailwind-4-docs/references/docs-index.tsx
+.agents/skills/tailwind-4-docs/references/docs-source.txt

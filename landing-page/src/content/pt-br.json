@@ -1,0 +1,116 @@
+{
+  "tagline": "Menos digitação. Mais vida.",
+  "navHow": "Como funciona",
+  "navUses": "Feito para você",
+  "navPrivacy": "Privacidade",
+  "install": "Instalar no Chrome",
+  "hero1": "A vida é curta demais",
+  "hero2": "para preencher tudo de novo.",
+  "description": "Seus dados, lembrados. O Fill My Form leva suas respostas salvas aos formulários que você encontra, para sobrar tempo para o que importa.",
+  "secondary": "Veja como funciona",
+  "trustLine": "Salvo no seu dispositivo. Enviado só por você.",
+  "previewLabel": "Um pouco menos de déjà vu.",
+  "profile": "Seus dados salvos",
+  "profileNote": "No seu dispositivo",
+  "application": "Sua próxima oportunidade",
+  "name": "Nome completo",
+  "email": "E-mail",
+  "location": "Cidade",
+  "experience": "Sobre você",
+  "experienceValue": "Design, criação e curiosidade.",
+  "fillDemo": "Experimente preencher este formulário",
+  "filled": "Pronto para sua revisão",
+  "reset": "Tentar de novo",
+  "illustrative": "Ilustração interativa · dados fictícios",
+  "saved": "Salvo",
+  "empty": "Aguardando seus dados",
+  "howLabel": "UMA LISTA DE TAREFAS MENOR",
+  "howTitle": "Uma vez é suficiente.",
+  "steps": [
+    [
+      "Do seu jeito",
+      "Guarde os dados que você usa sempre na sua memória pessoal."
+    ],
+    [
+      "Leve suas respostas",
+      "Abra um formulário, permita acesso ao site e reutilize o que já salvou."
+    ],
+    [
+      "A palavra final é sua",
+      "Confira suas respostas, faça ajustes e clique em enviar você mesmo."
+    ]
+  ],
+  "usesLabel": "PARA OS FORMULÁRIOS DA VIDA",
+  "usesTitle": "Novas possibilidades.\nPerguntas conhecidas.",
+  "uses": [
+    [
+      "O próximo passo na carreira",
+      "Dedique sua energia à próxima etapa, em vez de redigitar seu histórico."
+    ],
+    [
+      "As tarefas do dia a dia",
+      "Use seus dados habituais em cadastros, inscrições e pequenas tarefas que se acumulam."
+    ],
+    [
+      "Seu próximo grande passo",
+      "Tenha respostas recorrentes à mão para solicitações e portais. Confira sempre os requisitos de cada formulário."
+    ]
+  ],
+  "privacyLabel": "PESSOAL É PESSOAL",
+  "privacyTitle": "Suas informações.\nDo seu lado da tela.",
+  "privacyBody": "Seus dados pessoais salvos ficam no perfil do navegador. Você escolhe os sites que a extensão pode acessar. E o botão de enviar? É sempre seu.",
+  "privacyLink": "Veja todos os detalhes de privacidade",
+  "faqsTitle": "Talvez você esteja se perguntando…",
+  "faqs": [
+    [
+      "Qual é a diferença para o preenchimento do navegador?",
+      "O Fill My Form usa respostas pessoais reutilizáveis, além dos campos comuns de nome e endereço. Os resultados dependem do formulário; confira antes de enviar."
+    ],
+    [
+      "Ele envia formulários por mim?",
+      "Não. Você controla o envio. Confira as respostas preenchidas e envie o formulário você mesmo."
+    ],
+    [
+      "A extensão funciona em todos os idiomas e sites?",
+      "Não prometemos compatibilidade universal. Este site está disponível em dez idiomas; o suporte da extensão a idiomas e sites pode variar."
+    ]
+  ],
+  "closingTitle": "Mais vida. Menos repetição.",
+  "closingBody": "Abra um espaço para o que você gostaria de estar fazendo.",
+  "language": "Idioma",
+  "automatic": "Automático",
+  "skip": "Ir para o conteúdo",
+  "footerTag": "Uma ajudinha em um mundo cheio de formulários.",
+  "settings": "Preferências de cookies",
+  "consentTitle": "Um pouco de informação. Você escolhe.",
+  "consentBody": "O Google Analytics opcional nos ajuda a entender visitas e cliques de instalação. Ele fica desligado até você aceitar. Nunca enviamos suas respostas. Altere sua escolha a qualquer momento nas preferências de cookies.",
+  "accept": "Aceitar análise",
+  "reject": "Recusar análise",
+  "close": "Fechar",
+  "helpTitle": "Seu novo parceiro de formulários.",
+  "helpIntro": "Instale o Fill My Form no Chrome para computador e tenha suas respostas salvas por perto.",
+  "unavailable": "A página publicada na loja do Chrome ainda não está conectada. A instalação estará disponível aqui quando estiver pronta.",
+  "mobile": "A extensão precisa do Chrome para computador. Abra esta página no computador para instalar.",
+  "helpSteps": [
+    "Instale pelo link oficial da loja nesta página.",
+    "Fixe a extensão e salve os dados que deseja reutilizar.",
+    "Abra um formulário, permita acesso ao site, revise as respostas e envie você mesmo."
+  ],
+  "privacyPageIntro": "O que fica com você e o que este site mede.",
+  "privacyDetails": [
+    [
+      "Seus dados na extensão",
+      "A memória pessoal fica localmente no IndexedDB do navegador. A extensão não a criptografa; a proteção depende do dispositivo e do perfil do navegador. Você pode exportar ou apagar os dados na extensão."
+    ],
+    [
+      "Suas preferências no site",
+      "Salvamos seu idioma e sua escolha de análise no navegador. O Google Analytics opcional recebe visitas e cliques de instalação só após consentimento, sem respostas ou parâmetros de URL. Retire o consentimento nas preferências de cookies."
+    ],
+    [
+      "Seu controle",
+      "O acesso é concedido por site. O envio de formulários continua sendo sua ação. Integrações opcionais da extensão têm controles próprios, separados da análise do site."
+    ]
+  ],
+  "notFound": "Esta página se perdeu.",
+  "home": "Voltar ao início"
+}

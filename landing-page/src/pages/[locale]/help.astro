@@ -1,0 +1,45 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Install from '../../components/Install.astro';
+import { content } from '../../lib/content';
+import { localeKeys } from '../../lib/locales';
+import { siteConfig } from '../../lib/config';
+export const prerender = true;
+export function getStaticPaths() {
+  return localeKeys.map((locale) => ({
+    params: { locale },
+    props: { locale },
+  }));
+}
+const { locale } = Astro.props;
+const t = content[locale];
+---
+
+<Layout locale={locale} page="help" title={t.navHow}
+  ><section class="document-page shell">
+    <p class="eyebrow">Fill My Form</p><h1>{t.helpTitle}</h1><p
+      class="document-lead"
+    >
+      {t.helpIntro}
+    </p><p class="notice mobile-notice">{t.mobile}</p>{
+      siteConfig.chrome ? (
+        <Install locale={locale} placement="help" />
+      ) : (
+        <p class="notice">{t.unavailable}</p>
+      )
+    }{
+      siteConfig.firefox && (
+        <a
+          class="button button-secondary"
+          href={siteConfig.firefox}
+          data-install="firefox"
+          data-placement="help"
+        >
+          Firefox <span aria-hidden="true">↗</span>
+        </a>
+      )
+    }<ol class="help-steps">{t.helpSteps.map((step) => <li>{step}</li>)}</ol><p>
+      {t.faqs[2]?.[1]}
+    </p>
+  </section></Layout
+>

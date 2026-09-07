@@ -107,7 +107,7 @@ be mechanical rather than remembered.
   auth strings; add the strings the remaining UI needs.
 - **Route all UI copy through `browser.i18n`.** Not just the strings that already are. The
   product targets forms worldwide; retrofitting i18n later costs a store-listing revision.
-- **Content script badge copy:** currently "Form Agent is watching this page". Replace it.
+- **Content script badge copy:** currently "Fill My Form is watching this page". Replace it.
   For a privacy product this is the worst available sentence.
 
 **Tests:** an e2e assertion that no rendered page contains a hardcoded English string that

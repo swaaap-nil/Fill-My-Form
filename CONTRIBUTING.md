@@ -1,6 +1,7 @@
 # Contributing
 
 See [docs/contributing.md](./docs/contributing.md).
+Agents should also read [AGENTS.md](./AGENTS.md).
 
 Quick version:
 

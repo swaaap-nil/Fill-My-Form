@@ -1,0 +1,116 @@
+{
+  "tagline": "Weniger tippen. Mehr leben.",
+  "navHow": "So funktioniert’s",
+  "navUses": "Für dich",
+  "navPrivacy": "Datenschutz",
+  "install": "Für Chrome installieren",
+  "hero1": "Das Leben ist zu kurz,",
+  "hero2": "um alles zweimal auszufüllen.",
+  "description": "Deine Angaben. Gut gemerkt. Fill My Form bringt deine gespeicherten Antworten in neue Formulare. Damit du Zeit für das Wesentliche hast.",
+  "secondary": "So funktioniert es",
+  "trustLine": "Auf deinem Gerät gespeichert. Nur von dir abgeschickt.",
+  "previewLabel": "Ein bisschen weniger Déjà-vu.",
+  "profile": "Deine gespeicherten Angaben",
+  "profileNote": "Auf deinem Gerät",
+  "application": "Deine nächste Chance",
+  "name": "Vollständiger Name",
+  "email": "E-Mail-Adresse",
+  "location": "Stadt",
+  "experience": "Über dich",
+  "experienceValue": "Design, Gestaltung und Neugier.",
+  "fillDemo": "Dieses Formular probeweise ausfüllen",
+  "filled": "Bereit zum Prüfen",
+  "reset": "Noch einmal",
+  "illustrative": "Interaktive Darstellung · erfundene Angaben",
+  "saved": "Gespeichert",
+  "empty": "Wartet auf deine Angaben",
+  "howLabel": "EINE KÜRZERE AUFGABENLISTE",
+  "howTitle": "Einmal reicht.",
+  "steps": [
+    [
+      "Ganz persönlich",
+      "Speichere häufig benötigte Angaben in deinem persönlichen Speicher."
+    ],
+    [
+      "Antworten mitnehmen",
+      "Öffne ein Formular, erlaube den Zugriff auf diese Website und verwende gespeicherte Angaben erneut."
+    ],
+    [
+      "Du hast das letzte Wort",
+      "Prüfe deine Antworten, passe sie an und klicke selbst auf Absenden."
+    ]
+  ],
+  "usesLabel": "FÜR DIE FORMULARE DES LEBENS",
+  "usesTitle": "Neue Möglichkeiten.\nVertraute Fragen.",
+  "uses": [
+    [
+      "Der nächste Karriereschritt",
+      "Stecke deine Energie in deinen nächsten Abschnitt, statt deinen Werdegang erneut einzutippen."
+    ],
+    [
+      "Der tägliche Papierkram",
+      "Nutze deine üblichen Angaben für Anmeldungen, Registrierungen und die vielen kleinen Aufgaben."
+    ],
+    [
+      "Dein nächster großer Schritt",
+      "Halte wiederkehrende Antworten für Anträge und Portale bereit. Prüfe immer die Anforderungen des jeweiligen Formulars."
+    ]
+  ],
+  "privacyLabel": "PERSÖNLICH BLEIBT PERSÖNLICH",
+  "privacyTitle": "Deine Informationen.\nAuf deiner Seite des Bildschirms.",
+  "privacyBody": "Deine gespeicherten persönlichen Angaben bleiben in deinem Browserprofil. Du bestimmst, auf welche Websites die Erweiterung zugreifen darf. Und Absenden bleibt immer deine Entscheidung.",
+  "privacyLink": "Alle Details zum Datenschutz",
+  "faqsTitle": "Vielleicht fragst du dich …",
+  "faqs": [
+    [
+      "Was ist anders als beim Browser-Autofill?",
+      "Fill My Form arbeitet mit wiederverwendbaren persönlichen Antworten, auch über Name und Adresse hinaus. Ergebnisse hängen vom Formular ab. Prüfe sie vor dem Absenden."
+    ],
+    [
+      "Schickt die Erweiterung Formulare für mich ab?",
+      "Nein. Du behältst die Kontrolle. Prüfe die ausgefüllten Antworten und sende das Formular selbst ab."
+    ],
+    [
+      "Unterstützt die Erweiterung jede Sprache und Website?",
+      "Universelle Kompatibilität wird nicht versprochen. Diese Website ist in zehn Sprachen verfügbar; die Sprach- und Website-Unterstützung der Erweiterung kann abweichen."
+    ]
+  ],
+  "closingTitle": "Mehr leben. Weniger wiederholen.",
+  "closingBody": "Schaffe etwas Platz für die Dinge, die du lieber tun würdest.",
+  "language": "Sprache",
+  "automatic": "Automatisch",
+  "skip": "Zum Inhalt springen",
+  "footerTag": "Eine kleine Hilfe in einer Welt voller Formulare.",
+  "settings": "Cookie-Einstellungen",
+  "consentTitle": "Ein bisschen Einblick. Deine Wahl.",
+  "consentBody": "Optionales Google Analytics hilft uns, Seitenbesuche und Installationsklicks zu verstehen. Es bleibt ohne Zustimmung aus. Formularantworten senden wir nie. Du kannst deine Wahl jederzeit in den Cookie-Einstellungen ändern.",
+  "accept": "Analyse akzeptieren",
+  "reject": "Analyse ablehnen",
+  "close": "Schließen",
+  "helpTitle": "Dein neuer Formularbegleiter.",
+  "helpIntro": "Hol dir Fill My Form für Chrome auf dem Computer und halte deine gespeicherten Antworten bereit.",
+  "unavailable": "Der veröffentlichte Chrome-Eintrag ist noch nicht verbunden. Sobald er bereit ist, kannst du hier installieren.",
+  "mobile": "Die Erweiterung benötigt Chrome auf dem Computer. Öffne diese Seite dort, um sie zu installieren.",
+  "helpSteps": [
+    "Installiere über den offiziellen Store-Link auf dieser Seite.",
+    "Hefte die Erweiterung an und speichere Angaben, die du wiederverwenden möchtest.",
+    "Öffne ein Formular, erlaube den Website-Zugriff, prüfe die Antworten und sende selbst ab."
+  ],
+  "privacyPageIntro": "Was bei dir bleibt und was diese Website misst.",
+  "privacyDetails": [
+    [
+      "Deine Erweiterungsdaten",
+      "Persönliche Angaben werden lokal in der IndexedDB des Browsers gespeichert. Die Erweiterung verschlüsselt sie nicht; der Schutz hängt von Gerät und Browserprofil ab. In der Erweiterung kannst du Daten exportieren oder löschen."
+    ],
+    [
+      "Deine Website-Einstellungen",
+      "Wir speichern Sprache und Analyseentscheidung im Browser. Optionales Google Analytics erhält Besuche und Installationsklicks erst nach Zustimmung, ohne Formularantworten oder URL-Parameter. Die Zustimmung ist in den Cookie-Einstellungen widerrufbar."
+    ],
+    [
+      "Deine Kontrolle",
+      "Zugriff wird für jede Website einzeln erteilt. Formulare sendest du selbst ab. Optionale Integrationen der Erweiterung haben eigene Einstellungen und sind von der Website-Analyse getrennt."
+    ]
+  ],
+  "notFound": "Diese Seite ist nicht zu finden.",
+  "home": "Zur Startseite"
+}

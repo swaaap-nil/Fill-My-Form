@@ -1,0 +1,35 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { content } from '../../lib/content';
+import { localeKeys } from '../../lib/locales';
+export const prerender = true;
+export function getStaticPaths() {
+  return localeKeys.map((locale) => ({
+    params: { locale },
+    props: { locale },
+  }));
+}
+const { locale } = Astro.props;
+const t = content[locale];
+---
+
+<Layout locale={locale} page="privacy" title={t.navPrivacy}
+  ><section class="document-page shell">
+    <p class="eyebrow">Fill My Form</p><h1>{t.navPrivacy}</h1><p
+      class="document-lead"
+    >
+      {t.privacyPageIntro}
+    </p>{
+      t.privacyDetails.map(([title, text]) => (
+        <article>
+          <>
+            <h2>{title}</h2>
+            <p>{text}</p>
+          </>
+        </article>
+      ))
+    }<button type="button" class="button button-primary" data-cookie-settings
+      >{t.settings}</button
+    >
+  </section></Layout
+>

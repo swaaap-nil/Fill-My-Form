@@ -7,7 +7,15 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": ["**", "!build", "!.wxt", "!test-site"]
+    "includes": [
+      "**",
+      "!build",
+      "!.wxt",
+      "!test-site",
+      "!landing-page",
+      "!.agents",
+      "!skills-lock.json"
+    ]
   },
   "formatter": {
     "enabled": true,

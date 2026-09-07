@@ -1,7 +1,7 @@
 {
   "extensionName": {
     "description": "Name of the extension.",
-    "message": "AI Form Agent"
+    "message": "Fill My Form"
   },
   "extensionDescription": {
     "description": "Description of the extension.",
@@ -11,7 +11,7 @@
     "message": "Your personal information stays on this device."
   },
   "logoAlt": {
-    "message": "Form Agent logo"
+    "message": "Fill My Form logo"
   },
   "toggleTheme": {
     "message": "Toggle theme"

@@ -1,4 +1,4 @@
-# AI Form Agent
+# Fill My Form
 
 A privacy-first browser extension that understands web forms and helps you fill
 them from a persistent personal memory.

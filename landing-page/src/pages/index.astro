@@ -1,0 +1,55 @@
+---
+import {
+  fromHeader,
+  isLocale,
+  localizedPath,
+  locales,
+  localeKeys,
+} from '../lib/locales';
+import { content } from '../lib/content';
+export const prerender = false;
+const saved = Astro.cookies.get('fmf-language')?.value;
+const locale = isLocale(saved)
+  ? saved
+  : fromHeader(Astro.request.headers.get('accept-language') || '');
+Astro.response.headers.set('Cache-Control', 'private, no-store');
+Astro.response.headers.set('Vary', 'Accept-Language, Cookie');
+---
+
+<!doctype html>
+<html lang={locales[locale].tag} dir={locales[locale].dir}>
+  <head
+    ><meta charset="utf-8" /><meta
+      name="viewport"
+      content="width=device-width"
+    /><title>Fill My Form</title><meta
+      name="robots"
+      content="noindex, follow"
+    /><noscript
+      ><meta
+        http-equiv="refresh"
+        content={`0;url=${localizedPath(locale)}`}
+      /></noscript
+    ></head
+  ><body
+    ><a href={localizedPath(locale)}>{content[locale].home}</a><nav>
+      {
+        localeKeys.map((key) => (
+          <a href={localizedPath(key)} lang={locales[key].tag}>
+            {locales[key].name}{' '}
+          </a>
+        ))
+      }
+    </nav><script>
+      import { isLocale, matchLocale, localizedPath } from '../lib/locales';
+      const cookie = document.cookie
+        .split('; ')
+        .find((value) => value.startsWith('fmf-language='))
+        ?.slice(13);
+      const locale = isLocale(cookie)
+        ? cookie
+        : matchLocale(navigator.languages);
+      location.replace(localizedPath(locale));
+    </script></body
+  >
+</html>

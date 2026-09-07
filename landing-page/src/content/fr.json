@@ -1,0 +1,116 @@
+{
+  "tagline": "Moins de saisie. Plus de vie.",
+  "navHow": "Comment ça marche",
+  "navUses": "Pour vous",
+  "navPrivacy": "Confidentialité",
+  "install": "Installer sur Chrome",
+  "hero1": "La vie est trop courte",
+  "hero2": "pour tout ressaisir.",
+  "description": "Vos informations, mémorisées. Fill My Form retrouve vos réponses enregistrées pour les formulaires du quotidien. Gardez du temps pour l’essentiel.",
+  "secondary": "Découvrir le fonctionnement",
+  "trustLine": "Enregistré sur votre appareil. Envoyé par vous seul.",
+  "previewLabel": "Un peu moins de déjà-vu.",
+  "profile": "Vos informations enregistrées",
+  "profileNote": "Sur votre appareil",
+  "application": "Votre prochaine opportunité",
+  "name": "Nom complet",
+  "email": "Adresse e-mail",
+  "location": "Ville",
+  "experience": "À propos de vous",
+  "experienceValue": "Design, création et curiosité.",
+  "fillDemo": "Essayer de remplir ce formulaire",
+  "filled": "Prêt pour votre vérification",
+  "reset": "Réessayer",
+  "illustrative": "Illustration interactive · données fictives",
+  "saved": "Enregistré",
+  "empty": "En attente de vos informations",
+  "howLabel": "UNE LISTE DE TÂCHES PLUS COURTE",
+  "howTitle": "Une fois suffit.",
+  "steps": [
+    [
+      "À votre image",
+      "Enregistrez les informations que vous utilisez souvent dans votre mémoire personnelle."
+    ],
+    [
+      "Retrouvez vos réponses",
+      "Ouvrez un formulaire, autorisez l’accès à ce site et réutilisez vos informations enregistrées."
+    ],
+    [
+      "Gardez le dernier mot",
+      "Vérifiez vos réponses, apportez vos corrections et envoyez le formulaire vous-même."
+    ]
+  ],
+  "usesLabel": "POUR LES FORMULAIRES DE LA VIE",
+  "usesTitle": "De nouvelles possibilités.\nLes mêmes questions.",
+  "uses": [
+    [
+      "Votre prochain poste",
+      "Consacrez votre énergie à la suite de votre parcours, pas à le ressaisir."
+    ],
+    [
+      "Les démarches du quotidien",
+      "Retrouvez vos informations habituelles pour les inscriptions et les petites tâches qui s’accumulent."
+    ],
+    [
+      "Votre prochaine étape",
+      "Gardez vos réponses récurrentes à portée de main pour les candidatures et les portails. Vérifiez toujours les exigences du formulaire."
+    ]
+  ],
+  "privacyLabel": "PERSONNEL, TOUT SIMPLEMENT",
+  "privacyTitle": "Vos informations.\nDe votre côté de l’écran.",
+  "privacyBody": "Vos informations personnelles enregistrées restent dans votre profil de navigateur. Vous choisissez les sites accessibles à l’extension. Et le bouton d’envoi reste toujours entre vos mains.",
+  "privacyLink": "Tout savoir sur la confidentialité",
+  "faqsTitle": "Quelques questions, peut-être.",
+  "faqs": [
+    [
+      "Quelle différence avec le remplissage du navigateur ?",
+      "Fill My Form repose sur des réponses personnelles réutilisables, au-delà des champs classiques de nom et d’adresse. Les résultats dépendent du formulaire : vérifiez-les avant l’envoi."
+    ],
+    [
+      "L’extension envoie-t-elle les formulaires à ma place ?",
+      "Non. Vous gardez le contrôle. Vérifiez les réponses remplies et envoyez vous-même le formulaire."
+    ],
+    [
+      "L’extension prend-elle en charge toutes les langues et tous les sites ?",
+      "La compatibilité universelle n’est pas garantie. Ce site est disponible en dix langues ; celles de l’extension et les sites pris en charge peuvent différer."
+    ]
+  ],
+  "closingTitle": "Plus de vie. Moins de répétition.",
+  "closingBody": "Faites un peu de place à ce que vous aimeriez vraiment faire.",
+  "language": "Langue",
+  "automatic": "Automatique",
+  "skip": "Aller au contenu",
+  "footerTag": "Un coup de main dans un monde de formulaires.",
+  "settings": "Préférences des cookies",
+  "consentTitle": "Un peu de recul. À vous de choisir.",
+  "consentBody": "Google Analytics, facultatif, nous aide à comprendre les visites et les clics d’installation. Il reste désactivé sans votre accord. Vos réponses ne sont jamais envoyées. Modifiez votre choix à tout moment dans les préférences des cookies.",
+  "accept": "Accepter les statistiques",
+  "reject": "Refuser les statistiques",
+  "close": "Fermer",
+  "helpTitle": "Votre nouvel allié des formulaires.",
+  "helpIntro": "Installez Fill My Form pour Chrome sur ordinateur et gardez vos réponses à portée de main.",
+  "unavailable": "La fiche Chrome publiée n’est pas encore connectée. L’installation sera disponible ici dès qu’elle sera prête.",
+  "mobile": "L’extension nécessite Chrome sur ordinateur. Ouvrez cette page sur votre ordinateur pour l’installer.",
+  "helpSteps": [
+    "Installez depuis le lien officiel de la boutique sur cette page.",
+    "Épinglez l’extension et enregistrez les informations à réutiliser.",
+    "Ouvrez un formulaire, autorisez l’accès au site, vérifiez vos réponses et envoyez-le vous-même."
+  ],
+  "privacyPageIntro": "Ce qui reste chez vous et ce que mesure ce site.",
+  "privacyDetails": [
+    [
+      "Vos données dans l’extension",
+      "La mémoire personnelle est stockée localement dans IndexedDB du navigateur. L’extension ne la chiffre pas ; sa protection dépend de l’appareil et du profil de navigateur. Vous pouvez exporter ou supprimer les données dans l’extension."
+    ],
+    [
+      "Vos préférences sur le site",
+      "Nous enregistrons votre langue et votre choix de statistiques dans le navigateur. Google Analytics reçoit visites et clics d’installation uniquement après consentement, sans réponses ni paramètres d’URL. Retirez votre accord dans les préférences des cookies."
+    ],
+    [
+      "Votre contrôle",
+      "L’accès est accordé site par site. L’envoi reste votre action. Les intégrations facultatives de l’extension ont leurs propres réglages, distincts des statistiques du site."
+    ]
+  ],
+  "notFound": "Cette page s’est égarée.",
+  "home": "Retour à l’accueil"
+}

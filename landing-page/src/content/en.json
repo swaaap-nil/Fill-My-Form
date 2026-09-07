@@ -1,0 +1,116 @@
+{
+  "tagline": "Less typing. More living.",
+  "navHow": "How it works",
+  "navUses": "Made for you",
+  "navPrivacy": "Privacy",
+  "install": "Install for Chrome",
+  "hero1": "Life’s too short",
+  "hero2": "to fill it twice.",
+  "description": "Your details. Remembered. Fill My Form brings your saved answers to the forms you meet, so you can get on with what matters.",
+  "secondary": "See how it works",
+  "trustLine": "Saved on your device. Submitted only by you.",
+  "previewLabel": "A little less déjà vu.",
+  "profile": "Your saved details",
+  "profileNote": "On your device",
+  "application": "Your next opportunity",
+  "name": "Full name",
+  "email": "Email address",
+  "location": "City",
+  "experience": "About you",
+  "experienceValue": "Designer, maker, and curious human.",
+  "fillDemo": "Try filling this form",
+  "filled": "Ready for your review",
+  "reset": "Try again",
+  "illustrative": "Interactive illustration · fictional details",
+  "saved": "Saved",
+  "empty": "Waiting for your details",
+  "howLabel": "A SMALLER TASK LIST",
+  "howTitle": "Once is enough.",
+  "steps": [
+    [
+      "Make it yours",
+      "Save the details you reach for again and again in your personal memory."
+    ],
+    [
+      "Bring your answers",
+      "Open a form, allow access to that site, and reuse what you’ve already saved."
+    ],
+    [
+      "Keep the final say",
+      "Check your answers, make your edits, and press submit yourself."
+    ]
+  ],
+  "usesLabel": "FOR THE FORMS LIFE SENDS YOU",
+  "usesTitle": "New possibilities.\nFamiliar questions.",
+  "uses": [
+    [
+      "The next career move",
+      "Spend your energy on your next chapter, instead of retyping your background."
+    ],
+    [
+      "The everyday admin",
+      "Bring your usual details to signups, registrations, and the little tasks that add up."
+    ],
+    [
+      "Your next big step",
+      "Keep repeat answers handy for applications and portals. Always check each form’s requirements."
+    ]
+  ],
+  "privacyLabel": "PERSONAL MEANS PERSONAL",
+  "privacyTitle": "Your information.\nYour side of the screen.",
+  "privacyBody": "Your saved personal information stays in your browser profile. You choose which sites the extension can access. And the final submit button? That’s always yours.",
+  "privacyLink": "Get the full privacy picture",
+  "faqsTitle": "A few things you might wonder.",
+  "faqs": [
+    [
+      "How is this different from browser autofill?",
+      "Fill My Form is built around reusable personal answers, including details beyond the usual name and address fields. Results depend on the form; review them before submitting."
+    ],
+    [
+      "Will it submit a form for me?",
+      "No. You stay in control of submission. Check the filled answers and submit the form yourself."
+    ],
+    [
+      "Does the extension support every language and website?",
+      "No universal compatibility is promised. This website is available in ten languages; extension language and website support may differ."
+    ]
+  ],
+  "closingTitle": "More life. Less repeat.",
+  "closingBody": "Make a little room for the things you’d rather be doing.",
+  "language": "Language",
+  "automatic": "Automatic",
+  "skip": "Skip to content",
+  "footerTag": "A little help for a form-filled world.",
+  "settings": "Cookie settings",
+  "consentTitle": "A little insight. Your choice.",
+  "consentBody": "Optional Google Analytics helps us understand page visits and install-link clicks. It stays off unless you accept. We never send your form answers. Change your choice anytime in cookie settings.",
+  "accept": "Accept analytics",
+  "reject": "Reject analytics",
+  "close": "Close",
+  "helpTitle": "Meet your new form companion.",
+  "helpIntro": "Get Fill My Form for desktop Chrome, then keep your saved answers close at hand.",
+  "unavailable": "The published Chrome listing is not connected yet. Installation will be available here when it is ready.",
+  "mobile": "The extension needs desktop Chrome. Open this page on your computer to install it.",
+  "helpSteps": [
+    "Install from the official browser-store link on this page.",
+    "Pin the extension and save the information you want to reuse.",
+    "Open a form, grant access to that site, review your answers, then submit yourself."
+  ],
+  "privacyPageIntro": "A clear view of what stays with you and what this website measures.",
+  "privacyDetails": [
+    [
+      "Your extension data",
+      "Personal memory is stored locally in your browser’s IndexedDB. It is not encrypted by the extension; protection at rest depends on your device and browser profile. You can export or delete saved data in the extension."
+    ],
+    [
+      "Your website preferences",
+      "We save your selected language and analytics choice in your browser. Optional Google Analytics receives page visits and install-link clicks only after consent, without form answers or URL query strings. You can withdraw consent in cookie settings."
+    ],
+    [
+      "Your control",
+      "Site access is granted individually. Form submission remains your action. Optional extension integrations have their own controls and are separate from website analytics."
+    ]
+  ],
+  "notFound": "This page wandered off.",
+  "home": "Back to home"
+}

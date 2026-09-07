@@ -1,5 +1,8 @@
 # Contributing
 
+Agents should read the repo-level [AGENTS.md](../AGENTS.md) before changing
+code. Its hard design rules apply to every contribution.
+
 ## Before you push
 
 ```bash

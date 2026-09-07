@@ -1,0 +1,116 @@
+{
+  "tagline": "Kurangi mengetik. Nikmati hidup.",
+  "navHow": "Cara kerja",
+  "navUses": "Untuk Anda",
+  "navPrivacy": "Privasi",
+  "install": "Pasang untuk Chrome",
+  "hero1": "Hidup terlalu singkat",
+  "hero2": "untuk mengisi dua kali.",
+  "description": "Data Anda, diingat. Fill My Form membawa jawaban tersimpan ke formulir yang Anda temui, agar Anda bisa fokus pada hal yang berarti.",
+  "secondary": "Lihat cara kerjanya",
+  "trustLine": "Disimpan di perangkat Anda. Hanya Anda yang mengirim.",
+  "previewLabel": "Sedikit lebih sedikit pengulangan.",
+  "profile": "Data tersimpan Anda",
+  "profileNote": "Di perangkat Anda",
+  "application": "Peluang Anda berikutnya",
+  "name": "Nama lengkap",
+  "email": "Alamat email",
+  "location": "Kota",
+  "experience": "Tentang Anda",
+  "experienceValue": "Desainer, kreator, dan pribadi yang ingin tahu.",
+  "fillDemo": "Coba isi formulir ini",
+  "filled": "Siap untuk Anda periksa",
+  "reset": "Coba lagi",
+  "illustrative": "Ilustrasi interaktif · data fiktif",
+  "saved": "Tersimpan",
+  "empty": "Menunggu data Anda",
+  "howLabel": "DAFTAR TUGAS LEBIH RINGKAS",
+  "howTitle": "Sekali saja cukup.",
+  "steps": [
+    [
+      "Sesuaikan dengan Anda",
+      "Simpan data yang sering digunakan dalam memori pribadi Anda."
+    ],
+    [
+      "Bawa jawaban Anda",
+      "Buka formulir, izinkan akses ke situs tersebut, lalu gunakan kembali data tersimpan."
+    ],
+    [
+      "Keputusan akhir di tangan Anda",
+      "Periksa jawaban, lakukan perubahan, dan tekan kirim sendiri."
+    ]
+  ],
+  "usesLabel": "UNTUK FORMULIR DALAM HIDUP ANDA",
+  "usesTitle": "Kemungkinan baru.\nPertanyaan yang akrab.",
+  "uses": [
+    [
+      "Langkah karier berikutnya",
+      "Fokuskan energi pada babak selanjutnya, bukan mengetik ulang riwayat Anda."
+    ],
+    [
+      "Urusan sehari-hari",
+      "Gunakan data biasa Anda untuk pendaftaran dan tugas kecil yang terus bertambah."
+    ],
+    [
+      "Langkah besar berikutnya",
+      "Siapkan jawaban berulang untuk permohonan dan portal. Selalu periksa persyaratan setiap formulir."
+    ]
+  ],
+  "privacyLabel": "DATA PRIBADI TETAP PRIBADI",
+  "privacyTitle": "Informasi Anda.\nDi sisi layar Anda.",
+  "privacyBody": "Informasi pribadi tersimpan tetap berada di profil browser Anda. Anda memilih situs yang boleh diakses ekstensi. Dan tombol kirim? Selalu milik Anda.",
+  "privacyLink": "Baca selengkapnya tentang privasi",
+  "faqsTitle": "Beberapa hal yang mungkin Anda tanyakan.",
+  "faqs": [
+    [
+      "Apa bedanya dengan isi otomatis browser?",
+      "Fill My Form menggunakan jawaban pribadi yang dapat dipakai ulang, termasuk data di luar nama dan alamat biasa. Hasil bergantung pada formulir; periksa sebelum mengirim."
+    ],
+    [
+      "Apakah ekstensi mengirim formulir untuk saya?",
+      "Tidak. Anda tetap mengendalikan pengiriman. Periksa jawaban yang diisi dan kirim formulir sendiri."
+    ],
+    [
+      "Apakah semua bahasa dan situs didukung?",
+      "Kompatibilitas universal tidak dijanjikan. Situs ini tersedia dalam sepuluh bahasa; dukungan bahasa dan situs pada ekstensi dapat berbeda."
+    ]
+  ],
+  "closingTitle": "Lebih banyak hidup. Lebih sedikit pengulangan.",
+  "closingBody": "Luangkan ruang untuk hal yang lebih ingin Anda lakukan.",
+  "language": "Bahasa",
+  "automatic": "Otomatis",
+  "skip": "Langsung ke konten",
+  "footerTag": "Bantuan kecil untuk dunia penuh formulir.",
+  "settings": "Pengaturan cookie",
+  "consentTitle": "Sedikit wawasan. Pilihan Anda.",
+  "consentBody": "Google Analytics opsional membantu memahami kunjungan dan klik pemasangan. Fitur ini mati sampai Anda setuju. Kami tidak pernah mengirim jawaban formulir. Ubah pilihan kapan saja di pengaturan cookie.",
+  "accept": "Terima analitik",
+  "reject": "Tolak analitik",
+  "close": "Tutup",
+  "helpTitle": "Teman baru untuk formulir Anda.",
+  "helpIntro": "Pasang Fill My Form untuk Chrome desktop dan simpan jawaban Anda agar mudah digunakan.",
+  "unavailable": "Halaman Chrome yang dipublikasikan belum terhubung. Pemasangan akan tersedia di sini saat siap.",
+  "mobile": "Ekstensi memerlukan Chrome desktop. Buka halaman ini di komputer untuk memasangnya.",
+  "helpSteps": [
+    "Pasang dari tautan toko resmi di halaman ini.",
+    "Sematkan ekstensi dan simpan informasi yang ingin digunakan kembali.",
+    "Buka formulir, izinkan akses situs, periksa jawaban, lalu kirim sendiri."
+  ],
+  "privacyPageIntro": "Apa yang tetap bersama Anda dan apa yang diukur situs ini.",
+  "privacyDetails": [
+    [
+      "Data ekstensi Anda",
+      "Memori pribadi disimpan secara lokal di IndexedDB browser. Ekstensi tidak mengenkripsinya; perlindungan bergantung pada perangkat dan profil browser. Anda dapat mengekspor atau menghapus data di ekstensi."
+    ],
+    [
+      "Preferensi situs Anda",
+      "Kami menyimpan bahasa dan pilihan analitik di browser. Google Analytics opsional hanya menerima kunjungan dan klik pemasangan setelah persetujuan, tanpa jawaban formulir atau parameter URL. Tarik persetujuan di pengaturan cookie."
+    ],
+    [
+      "Kendali Anda",
+      "Akses diberikan untuk setiap situs secara terpisah. Pengiriman formulir tetap dilakukan oleh Anda. Integrasi opsional ekstensi memiliki kontrol tersendiri, terpisah dari analitik situs."
+    ]
+  ],
+  "notFound": "Halaman ini tidak ditemukan.",
+  "home": "Kembali ke beranda"
+}

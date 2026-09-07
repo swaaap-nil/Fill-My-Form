@@ -1,0 +1,33 @@
+---
+import { siteConfig } from '../lib/config';
+import { content } from '../lib/content';
+import { localizedPath, type Locale } from '../lib/locales';
+interface Props {
+  locale: Locale;
+  placement: 'nav' | 'hero' | 'closing' | 'help';
+  small?: boolean;
+}
+const { locale, placement, small = false } = Astro.props;
+const href = siteConfig.chrome || localizedPath(locale, 'help');
+---
+
+<a
+  class:list={['button', 'button-primary', { 'button-small': small }]}
+  href={href}
+  data-install={siteConfig.chrome ? 'chrome' : undefined}
+  data-placement={placement}
+>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"
+    ><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"
+    ></circle><circle
+      cx="12"
+      cy="12"
+      r="4"
+      stroke="currentColor"
+      stroke-width="1.5"></circle><path
+      d="M12 8h8M8.5 14 4.5 7M14 15.5 10 21"
+      stroke="currentColor"
+      stroke-width="1.5"></path></svg
+  >
+  {content[locale].install}<span class="arrow" aria-hidden="true">↗</span>
+</a>

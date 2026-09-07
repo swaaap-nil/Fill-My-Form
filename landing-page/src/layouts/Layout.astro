@@ -1,0 +1,172 @@
+---
+import '../styles/global.css';
+import Mark from '../components/Mark.astro';
+import Install from '../components/Install.astro';
+import { content } from '../lib/content';
+import {
+  locales,
+  localeKeys,
+  localizedPath,
+  type Locale,
+} from '../lib/locales';
+import { siteConfig } from '../lib/config';
+interface Props {
+  locale: Locale;
+  page?: string;
+  title?: string;
+  noindex?: boolean;
+}
+const { locale, page = '', title, noindex = false } = Astro.props;
+const t = content[locale];
+const metaTitle = title
+  ? `${title} | Fill My Form`
+  : `Fill My Form — ${t.tagline}`;
+const canonical = new URL(localizedPath(locale, page), siteConfig.site).href;
+---
+
+<!doctype html>
+<html lang={locales[locale].tag} dir={locales[locale].dir}>
+  <head>
+    <meta charset="UTF-8" /><meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    />
+    <meta name="theme-color" content="#171920" />
+    <title>{metaTitle}</title><meta
+      name="description"
+      content={t.description}
+    />
+    <meta
+      name="robots"
+      content={!siteConfig.production || noindex
+        ? 'noindex, nofollow'
+        : 'index, follow'}
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="canonical" href={canonical} />
+    {
+      localeKeys.map((key) => (
+        <link
+          rel="alternate"
+          hreflang={locales[key].tag}
+          href={new URL(localizedPath(key, page), siteConfig.site).href}
+        />
+      ))
+    }
+    <link
+      rel="alternate"
+      hreflang="x-default"
+      href={new URL(page ? localizedPath('en', page) : '/', siteConfig.site)
+        .href}
+    />
+    <meta property="og:type" content="website" /><meta
+      property="og:site_name"
+      content="Fill My Form"
+    />
+    <meta property="og:title" content={metaTitle} /><meta
+      property="og:description"
+      content={t.description}
+    /><meta property="og:url" content={canonical} />
+    <meta
+      property="og:locale"
+      content={locales[locale].tag.replace('-', '_')}
+    /><meta name="twitter:card" content="summary" />
+    <script
+      is:inline
+      type="application/ld+json"
+      set:html={JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'SoftwareApplication',
+        name: 'Fill My Form',
+        applicationCategory: 'BrowserApplication',
+        operatingSystem: 'Chrome desktop',
+        inLanguage: locales[locale].tag,
+        url: canonical,
+        description: t.description,
+      }).replace(/</g, '\\u003c')}
+    />
+  </head>
+  <body data-locale={locale} data-page={page} data-ga={siteConfig.ga}>
+    <a class="skip-link" href="#main">{t.skip}</a>
+    <header class="site-header shell">
+      <a class="brand" href={localizedPath(locale)} aria-label="Fill My Form"
+        ><Mark /><span>Fill My Form<span class="brand-period">.</span></span></a
+      >
+      <nav aria-label={t.navHow} class="desktop-nav">
+        <a href={`${localizedPath(locale)}#how`}>{t.navHow}</a><a
+          href={`${localizedPath(locale)}#uses`}>{t.navUses}</a
+        ><a href={localizedPath(locale, 'privacy')}>{t.navPrivacy}</a>
+      </nav>
+      <div class="header-actions">
+        <div class="language-control">
+          <span aria-hidden="true">◎</span><label for="language" class="sr-only"
+            >{t.language}</label
+          ><select id="language" data-language>
+            <option value="auto">{t.automatic}</option>{
+              localeKeys.map((key) => (
+                <option
+                  value={key}
+                  selected={key === locale}
+                  lang={locales[key].tag}
+                >
+                  {locales[key].name}
+                </option>
+              ))
+            }
+          </select>
+        </div>
+        <div class="nav-install">
+          <Install locale={locale} placement="nav" small />
+        </div>
+      </div>
+    </header>
+    <noscript
+      ><nav class="shell" aria-label={t.language}>
+        {
+          localeKeys.map((key) => (
+            <a
+              class="button button-quiet"
+              href={localizedPath(key, page)}
+              lang={locales[key].tag}
+            >
+              {locales[key].name}
+            </a>
+          ))
+        }
+      </nav></noscript
+    >
+    <main id="main"><slot /></main>
+    <footer class="site-footer shell">
+      <div>
+        <a class="brand" href={localizedPath(locale)}
+          ><Mark /><span>Fill My Form.</span></a
+        ><p>{t.footerTag}</p>
+      </div>
+      <div class="footer-links">
+        <a href={localizedPath(locale, 'help')}>{t.navHow}</a><a
+          href={localizedPath(locale, 'privacy')}>{t.navPrivacy}</a
+        ><button type="button" data-cookie-settings>{t.settings}</button>
+      </div>
+      <small>© {new Date().getFullYear()} Fill My Form</small>
+    </footer>
+    <dialog
+      id="consent"
+      aria-labelledby="consent-title"
+      aria-describedby="consent-body"
+    >
+      <h2 id="consent-title">{t.consentTitle}</h2><p id="consent-body">
+        {t.consentBody}
+      </p>
+      <div class="consent-actions">
+        <button class="button button-primary" data-consent="accepted"
+          >{t.accept}</button
+        ><button class="button button-secondary" data-consent="rejected"
+          >{t.reject}</button
+        ><button class="text-link" data-consent-close>{t.close}</button>
+      </div>
+    </dialog>
+    <script>
+      import '../lib/client';
+    </script>
+  </body>
+</html>

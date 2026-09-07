@@ -1,0 +1,22 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { content } from '../lib/content';
+import { isLocale, fromHeader, localizedPath } from '../lib/locales';
+export const prerender = false;
+const candidate = Astro.url.pathname.split('/')[1];
+const locale = isLocale(candidate)
+  ? candidate
+  : fromHeader(Astro.request.headers.get('accept-language') || '');
+Astro.response.status = 404;
+Astro.response.headers.set('Cache-Control', 'private, no-store');
+const t = content[locale];
+---
+
+<Layout locale={locale} title={t.notFound} noindex
+  ><section class="document-page shell">
+    <p class="eyebrow">404</p><h1>{t.notFound}</h1><a
+      class="button button-primary"
+      href={localizedPath(locale)}>{t.home}</a
+    >
+  </section></Layout
+>

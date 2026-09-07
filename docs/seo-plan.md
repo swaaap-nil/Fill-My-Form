@@ -1,6 +1,6 @@
 # SEO plan
 
-Working name: **Fill my Form**.
+Working name: **Fill My Form**.
 
 This plan is based on early customer language from the Google Form, live Google
 SERP sampling, Google autocomplete suggestions, Chrome Web Store result patterns,
@@ -8,13 +8,13 @@ and competitor positioning reviewed on 2026-09-06.
 
 The evidence gathered so far is English-first. It should guide the first launch
 copy, but it must not define the product architecture, information model, or
-long-term SEO surface. Fill my Form is a world-level product: the codebase,
+long-term SEO surface. Fill My Form is a world-level product: the codebase,
 content model, form-understanding layer, and SEO system should be language
 agnostic from the beginning.
 
 ## Positioning
 
-Fill my Form should be positioned as:
+Fill My Form should be positioned as:
 
 > A privacy-first form filler that saves your information once and fills repeated
 > forms across websites, especially job applications, signups, surveys, and
@@ -149,7 +149,7 @@ Implementation rules for language-agnostic SEO:
 - Use `hreflang` when localized pages exist.
 - Use country/language-specific sitemaps once more than one locale ships.
 - Allow translated slugs where useful, but keep canonical page intent stable.
-- Keep the product name **Fill my Form** globally unless a market requires a
+- Keep the product name **Fill My Form** globally unless a market requires a
   localized descriptor around it.
 - Avoid building core concepts around English-only words like "job",
   "resume", "address", or "state". Use concept IDs internally and localize labels.
@@ -177,11 +177,11 @@ Build these pages first.
 
 Title:
 
-> Fill my Form | Private Form Filler Extension for Chrome
+> Fill My Form | Private Form Filler Extension for Chrome
 
 H1:
 
-> Fill my Form
+> Fill My Form
 
 Primary keyword:
 
@@ -214,7 +214,7 @@ Meta description:
 
 Title:
 
-> Autofill Forms in Chrome | Fill my Form Extension
+> Autofill Forms in Chrome | Fill My Form Extension
 
 Primary keyword:
 
@@ -224,18 +224,18 @@ Angle:
 
 > Better than basic Chrome autofill for repeated custom fields.
 
-Include a section comparing Chrome's built-in autofill with Fill my Form:
+Include a section comparing Chrome's built-in autofill with Fill My Form:
 
 - Chrome handles standard saved info well.
-- Fill my Form handles repeated custom answers across different websites.
-- Fill my Form requires review before filling.
-- Fill my Form never submits forms for the user.
+- Fill My Form handles repeated custom answers across different websites.
+- Fill My Form requires review before filling.
+- Fill My Form never submits forms for the user.
 
 ### `/job-application-autofill`
 
 Title:
 
-> Job Application Autofill Extension | Fill my Form
+> Job Application Autofill Extension | Fill My Form
 
 Primary keyword:
 
@@ -262,7 +262,7 @@ who are tired of retyping the same fields.
 
 Title:
 
-> Private and Secure Form Autofill | Fill my Form
+> Private and Secure Form Autofill | Fill My Form
 
 Primary keyword:
 
@@ -284,7 +284,7 @@ Repeat these messages:
 
 Title:
 
-> Google Form Filler Extension | Fill my Form
+> Google Form Filler Extension | Fill My Form
 
 Primary keyword:
 
@@ -302,7 +302,7 @@ Use cases:
 
 Title:
 
-> Chrome Autofill vs Fill my Form: What Is the Difference?
+> Chrome Autofill vs Fill My Form: What Is the Difference?
 
 Primary keyword:
 
@@ -315,7 +315,7 @@ for conversion and sales education.
 
 Suggested listing name:
 
-> Fill my Form - Private Autofill Form Filler
+> Fill My Form - Private Autofill Form Filler
 
 Suggested short description:
 
@@ -352,7 +352,7 @@ Target keyword:
 
 > best autofill extension for Chrome
 
-Use this to compete for comparison intent. Include Fill my Form, Chrome Autofill,
+Use this to compete for comparison intent. Include Fill My Form, Chrome Autofill,
 Simplify, Easy Autofill, Filler, and password-manager autofill tools only where
 relevant.
 
