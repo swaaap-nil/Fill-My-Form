@@ -49,6 +49,28 @@ for (const locale of localeKeys) {
         fullPage: true,
       });
     }
+    await expect(
+      page.locator('[data-install-options][data-placement="hero"]'),
+    ).toBeVisible();
+    await expect(
+      page.locator(
+        '[data-install][data-placement="hero"][data-install="chrome"]',
+      ),
+    ).toBeVisible();
+    await expect(
+      page.locator(
+        '[data-install][data-placement="hero"][data-install="firefox"]',
+      ),
+    ).toBeVisible();
+    const heroOptions = page.locator(
+      '[data-install-options][data-placement="hero"]',
+    );
+    await expect(
+      heroOptions.locator('[data-browser-icon="chrome"]'),
+    ).toBeVisible();
+    await expect(
+      heroOptions.locator('[data-browser-icon="firefox"]'),
+    ).toBeVisible();
     await page.locator('[data-fill]').click();
     await expect(page.locator('[data-demo]')).toHaveClass(/is-filled/);
     await expect(page.locator('[data-demo-value]').first()).toHaveCSS(
@@ -133,11 +155,13 @@ test('analytics requires consent, strips URL data, records clicks and stops afte
   );
   // Prevent navigation only in the test; exercise the actual click listener.
   await page
-    .locator('[data-install][data-placement="hero"]')
+    .locator('[data-install][data-placement="hero"][data-install="chrome"]')
     .evaluate((el) =>
       el.addEventListener('click', (event) => event.preventDefault()),
     );
-  await page.locator('[data-install][data-placement="hero"]').click();
+  await page
+    .locator('[data-install][data-placement="hero"][data-install="chrome"]')
+    .click();
   const events = await page.evaluate(() =>
     (window.dataLayer || []).map((item) =>
       Array.from(item as ArrayLike<unknown>),
@@ -151,6 +175,40 @@ test('analytics requires consent, strips URL data, records clicks and stops afte
   await page.waitForLoadState();
   await expect(page.locator('#ga-tag')).toHaveCount(0);
   expect(vendorRequests.length).toBe(count);
+});
+test('Firefox visitors get the Firefox install option emphasized', async ({
+  browser,
+}) => {
+  const context = await browser.newContext({
+    userAgent:
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:129.0) Gecko/20100101 Firefox/129.0',
+  });
+  await context.addInitScript(() =>
+    localStorage.setItem('fmf-consent', 'rejected'),
+  );
+  const page = await context.newPage();
+  await page.goto('/en/');
+  const heroOptions = page.locator(
+    '[data-install-options][data-placement="hero"]',
+  );
+  const chrome = heroOptions.locator('[data-install="chrome"]');
+  const firefox = heroOptions.locator('[data-install="firefox"]');
+  await expect(chrome).toBeVisible();
+  await expect(firefox).toBeVisible();
+  await expect(firefox).toHaveAttribute('data-current-browser', 'true');
+  await expect(chrome).not.toHaveAttribute('data-current-browser', 'true');
+  await expect(heroOptions.locator('[data-browser-icon="chrome"]')).toHaveCount(
+    1,
+  );
+  await expect(
+    heroOptions.locator('[data-browser-icon="firefox"]'),
+  ).toHaveCount(1);
+  const [chromeBox, firefoxBox] = await Promise.all([
+    chrome.boundingBox(),
+    firefox.boundingBox(),
+  ]);
+  expect(firefoxBox?.width || 0).toBeGreaterThan(chromeBox?.width || 0);
+  await context.close();
 });
 test('keyboard, reduced motion and localized 404', async ({ page }) => {
   await page.addInitScript(() =>

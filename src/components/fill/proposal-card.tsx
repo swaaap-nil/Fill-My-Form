@@ -37,10 +37,10 @@ const CardShell = ({
   <div
     className={
       tone === "warning"
-        ? "flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3"
+        ? "flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3"
         : tone === "muted"
-          ? "flex items-start gap-2 rounded-md border border-border bg-muted/30 p-3"
-          : "flex items-start gap-2 rounded-md border border-border p-3"
+          ? "flex items-start gap-3 rounded-lg border border-border bg-muted/60 p-3"
+          : "flex items-start gap-3 rounded-lg border border-primary/25 bg-card p-3 shadow-sm shadow-black/5 dark:shadow-black/20"
     }
   >
     <span className="mt-0.5 shrink-0">{icon}</span>

@@ -124,6 +124,32 @@ describe("tier 3: exact alias", () => {
     );
     expect(result.candidates[0]?.tier).toBe(MatchTier.ALIAS);
   });
+
+  it("resolves IBPS-style scanned photograph labels to the photo file concept", () => {
+    const result = resolve(
+      field({
+        kind: FieldKind.FILE,
+        label: "Scanned Photograph of the Candidate:",
+      }),
+      ontology,
+    );
+    expect(result.certainty).toBe(Certainty.KNOWN);
+    expect(result.candidates[0]?.conceptKey).toBe("documents.photo");
+    expect(result.candidates[0]?.tier).toBe(MatchTier.ALIAS);
+  });
+
+  it("resolves IBPS-style scanned signature labels to the signature file concept", () => {
+    const result = resolve(
+      field({
+        kind: FieldKind.FILE,
+        label: "Scanned Signature of the Candidate:",
+      }),
+      ontology,
+    );
+    expect(result.certainty).toBe(Certainty.KNOWN);
+    expect(result.candidates[0]?.conceptKey).toBe("documents.signature");
+    expect(result.candidates[0]?.tier).toBe(MatchTier.ALIAS);
+  });
 });
 
 describe("tier 4: placeholder containment", () => {

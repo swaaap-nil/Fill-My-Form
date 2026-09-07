@@ -51,6 +51,50 @@ fill?.addEventListener('click', () => {
       (active ? status.dataset.filled : status.dataset.empty) || '';
 });
 
+type BrowserTarget = 'chrome' | 'firefox';
+function detectBrowser(): BrowserTarget {
+  const ua = navigator.userAgent.toLowerCase();
+  if (ua.includes('firefox/')) return 'firefox';
+  if (
+    ua.includes('chrome/') ||
+    ua.includes('chromium/') ||
+    ua.includes('crios/') ||
+    ua.includes('edg/') ||
+    ua.includes('opr/')
+  )
+    return 'chrome';
+  const brands =
+    (
+      navigator as Navigator & {
+        userAgentData?: { brands?: { brand: string }[] };
+      }
+    ).userAgentData?.brands || [];
+  return brands.some((brand) => /chrome|chromium/i.test(brand.brand))
+    ? 'chrome'
+    : 'chrome';
+}
+function markCurrentBrowser() {
+  const detected = detectBrowser();
+  document
+    .querySelectorAll<HTMLElement>('[data-install-options]')
+    .forEach((group) => {
+      const links = Array.from(
+        group.querySelectorAll<HTMLAnchorElement>('[data-install]'),
+      );
+      const current =
+        links.find((link) => link.dataset.install === detected) || links[0];
+      for (const link of links) {
+        const isCurrent = link === current;
+        link.classList.toggle('install-option-current', isCurrent);
+        link.classList.toggle('button-primary', isCurrent);
+        link.classList.toggle('button-secondary', !isCurrent);
+        if (isCurrent) link.dataset.currentBrowser = 'true';
+        else delete link.dataset.currentBrowser;
+      }
+    });
+}
+markCurrentBrowser();
+
 const dialog = document.querySelector<HTMLDialogElement>('#consent');
 const ga = document.body.dataset.ga || '';
 let consent = read('fmf-consent');

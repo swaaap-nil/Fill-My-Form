@@ -6,7 +6,7 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "dev": "npm run build && wrangler dev --ip 127.0.0.1 --port 4321",
+    "dev": "astro dev --host 127.0.0.1 --port 4321",
     "build": "astro build && node scripts/postbuild.mjs",
     "preview": "wrangler dev",
     "astro": "astro",

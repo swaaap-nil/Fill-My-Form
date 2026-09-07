@@ -48,7 +48,7 @@ const LayoutContent = ({
     <div
       data-testid="panel-root"
       className={cn(
-        "flex min-h-screen bg-background text-foreground w-full min-w-[23rem] flex-col items-center justify-center font-sans text-base",
+        "flex min-h-screen w-full min-w-[23rem] flex-col items-center justify-center bg-background text-base text-foreground font-sans",
         {
           dark:
             theme === Theme.DARK ||
@@ -59,7 +59,7 @@ const LayoutContent = ({
     >
       <div
         className={cn(
-          "flex w-full max-w-[80rem] grow flex-col items-center justify-between gap-12 p-5",
+          "flex w-full max-w-[80rem] grow flex-col items-center justify-between gap-5 bg-background p-5",
           className,
         )}
       >

@@ -186,7 +186,7 @@ p {
   min-height: 44px;
   font-size: 12px;
 }
-.button-small svg {
+.button-small:not(.install-option) svg {
   display: none;
 }
 .button-quiet {
@@ -204,6 +204,61 @@ p {
 }
 .arrow {
   margin-inline-start: 4px;
+}
+.install-options {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.install-option {
+  min-width: 122px;
+  transform-origin: center;
+}
+.install-option:not(.install-option-current) {
+  min-height: 46px;
+  padding: 10px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.82;
+}
+.install-option-current {
+  min-width: 210px;
+}
+.install-options-small {
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+.install-options-small .install-option {
+  min-width: 0;
+  white-space: nowrap;
+}
+.install-options-small .install-option-current {
+  padding-inline: 15px;
+}
+.install-options-small .install-option:not(.install-option-current) {
+  width: 44px;
+  min-height: 44px;
+  padding-inline: 0;
+  gap: 0;
+  color: #d5cced;
+}
+.install-options-small .install-option:not(.install-option-current) svg {
+  margin-inline: 12px;
+}
+.install-options-small
+  .install-option:not(.install-option-current)
+  .install-option-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+.install-options-small .install-option:not(.install-option-current) .arrow {
+  display: none;
 }
 .hero {
   position: relative;

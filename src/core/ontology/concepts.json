@@ -100,7 +100,7 @@
     "volatility": "stable",
     "expects": "text",
     "aliases": {
-      "en": ["nationality", "citizenship"],
+      "en": ["nationality", "citizenship", "indian national"],
       "hi": ["राष्ट्रीयता", "नागरिकता"]
     }
   },
@@ -146,6 +146,17 @@
     "aliases": {
       "en": ["mother's name", "mothers name", "mother name"],
       "hi": ["माता का नाम"]
+    }
+  },
+  {
+    "key": "identity.spouse_name",
+    "label": "Spouse's name",
+    "sensitivity": "sensitive",
+    "volatility": "stable",
+    "expects": "text",
+    "aliases": {
+      "en": ["spouse's name", "spouses name", "spouse name"],
+      "hi": ["पति/पत्नी का नाम"]
     }
   },
   {
@@ -332,6 +343,18 @@
     }
   },
   {
+    "key": "contact.address.line3",
+    "label": "Address line 3",
+    "sensitivity": "sensitive",
+    "volatility": "slow",
+    "expects": "text",
+    "autocomplete": ["address-line3"],
+    "aliases": {
+      "en": ["address line 3", "address 3"],
+      "hi": ["पता पंक्ति 3"]
+    }
+  },
+  {
     "key": "contact.address.city",
     "label": "City",
     "sensitivity": "sensitive",
@@ -341,6 +364,17 @@
     "aliases": {
       "en": ["city", "town", "city/town"],
       "hi": ["शहर", "नगर"]
+    }
+  },
+  {
+    "key": "contact.address.district",
+    "label": "District",
+    "sensitivity": "sensitive",
+    "volatility": "slow",
+    "expects": "text",
+    "aliases": {
+      "en": ["district"],
+      "hi": ["जिला"]
     }
   },
   {
@@ -890,8 +924,33 @@
     "expects": "file",
     "autocomplete": ["photo"],
     "aliases": {
-      "en": ["photo", "photograph", "passport size photo", "upload photo"],
+      "en": [
+        "photo",
+        "photograph",
+        "passport size photo",
+        "upload photo",
+        "candidate photograph",
+        "scanned photograph",
+        "scanned photograph of the candidate"
+      ],
       "hi": ["फोटो", "फोटोग्राफ"]
+    }
+  },
+  {
+    "key": "documents.signature",
+    "label": "Signature",
+    "sensitivity": "sensitive",
+    "volatility": "stable",
+    "expects": "file",
+    "aliases": {
+      "en": [
+        "signature",
+        "upload signature",
+        "candidate signature",
+        "scanned signature",
+        "scanned signature of the candidate"
+      ],
+      "hi": ["हस्ताक्षर"]
     }
   },
   {
@@ -983,8 +1042,48 @@
     "volatility": "stable",
     "expects": "text",
     "aliases": {
-      "en": ["bank account number", "account number", "confirm account number"],
+      "en": [
+        "bank account number",
+        "bank account no",
+        "account number",
+        "account no",
+        "confirm account number",
+        "confirm bank account no"
+      ],
       "hi": ["बैंक खाता संख्या", "खाता संख्या", "खाता संख्या की पुष्टि करें"]
+    }
+  },
+  {
+    "key": "bank.account_holder_name",
+    "label": "Bank account holder name",
+    "sensitivity": "restricted",
+    "volatility": "stable",
+    "expects": "text",
+    "aliases": {
+      "en": ["account holder name", "bank account holder name"],
+      "hi": ["खाता धारक का नाम"]
+    }
+  },
+  {
+    "key": "bank.branch_name",
+    "label": "Bank and branch name",
+    "sensitivity": "restricted",
+    "volatility": "stable",
+    "expects": "text",
+    "aliases": {
+      "en": ["bank branch name", "bank and branch name", "bank & branch name"],
+      "hi": ["बैंक और शाखा का नाम"]
+    }
+  },
+  {
+    "key": "bank.account_type",
+    "label": "Bank account type",
+    "sensitivity": "restricted",
+    "volatility": "stable",
+    "expects": "select",
+    "aliases": {
+      "en": ["type of account", "account type", "bank account type"],
+      "hi": ["खाते का प्रकार"]
     }
   },
   {

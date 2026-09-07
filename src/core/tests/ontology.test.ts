@@ -49,6 +49,15 @@ describe("alias lookup", () => {
     );
   });
 
+  it("resolves IBPS upload aliases", () => {
+    expect(ontology.byAlias("Scanned Photograph of the Candidate:")?.key).toBe(
+      "documents.photo",
+    );
+    expect(ontology.byAlias("Scanned Signature of the Candidate:")?.key).toBe(
+      "documents.signature",
+    );
+  });
+
   it("returns undefined rather than a best guess", () => {
     expect(ontology.byAlias("favourite colour")).toBeUndefined();
   });

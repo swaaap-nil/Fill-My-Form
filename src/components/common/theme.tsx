@@ -27,7 +27,7 @@ export const ThemeSwitch = memo<ThemeSwitchProps>(({ className }) => {
           <Button
             variant="outline"
             size="icon"
-            className={cn("rounded-full", className)}
+            className={cn("rounded-md", className)}
           >
             <Sun className="size-5 scale-100 dark:scale-0" />
             <Moon className="absolute size-5 scale-0 dark:scale-100" />

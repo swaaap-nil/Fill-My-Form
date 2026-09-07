@@ -1,0 +1,4924 @@
+<html lang="en"><head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<noscript>
+		<meta http-equiv="Refresh" content="1; URL=note1.php">
+	</noscript>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+
+    <link rel="stylesheet" href="/hub/application/css/bootstrap_rwd.min.css">
+    <link rel="stylesheet" href="/hub/application/css/style.css"> 
+    <link rel="stylesheet" href="/hub/application/css/bootstrap-icons.css"> 
+
+    <title>Recruitment of Managers and Junior Executives in Various Disciplines</title> 
+
+			<!--<link href="images/jquery-ui.css" rel="stylesheet" type="text/css" />-->
+		<link href="/hub/application/css/jquery-ui.min.css" rel="stylesheet" type="text/css">
+		<style type="text/css">
+.col1 {
+    float: left;
+    width: 350px;
+    margin: 2px 5px 5px 2px
+}
+
+.col2 {
+    float: left;
+    width: 400px;
+    margin: 2px 5px 5px 2px
+}
+
+.scan_hlp_txt {
+    float: left;
+    margin-top: 10px;
+}
+
+.stat_cnt #outerContainer #mainContainer div.toolbar {
+    display: none !important;
+    /* hide PDF viewer toolbar */
+}
+
+#outerContainer #mainContainer #viewerContainer {
+    top: 0 !important;
+    /* move doc up into empty bar space */
+}
+
+
+.blur {
+    -webkit-filter: blur(5px);
+    -moz-filter: blur(5px);
+    -o-filter: blur(5px);
+    -ms-filter: blur(5px);
+    filter: blur(5px);
+}
+
+/* a.btn {
+    width: 150px;
+    display: block;
+    margin: 5px;
+    padding: 1em 0;
+    font: 1.125em 'Arial', sans-serif;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+    color: #fff;
+    border-radius: 5px;
+    background: rgb(1 126 211);
+} */
+
+a.btn:not(.sbtn1) {
+    width: 150px;
+    display: block;
+    margin: 5px;
+    padding: 1em 0;
+    font: 1.125em 'Arial', sans-serif;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+    color: #fff;
+    border-radius: 5px;
+    background: rgb(1 126 211);
+}
+
+.modal-wrapper {
+    width: 100%;
+    height: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 999;
+    visibility: hidden;
+    opacity: 0;
+    -webkit-transition: all 0.25s ease-in-out;
+    -moz-transition: all 0.25s ease-in-out;
+    -o-transition: all 0.25s ease-in-out;
+    transition: all 0.25s ease-in-out;
+}
+
+.modal-wrapper.open {
+    opacity: 1;
+    /*  background-color: #e4e4e4;*/
+    visibility: visible;
+}
+
+.modal_capture {
+    width: 500px;
+    height: auto;
+    display: block;
+    margin: 0% 0 0 -300px;
+    background-color: #e2e2e2 !important;
+    position: relative;
+    top: 40%;
+    left: 50%;
+    background: #fff;
+    opacity: 0;
+    -webkit-transition: all 0.5s ease-in-out;
+    -moz-transition: all 0.5s ease-in-out;
+    -o-transition: all 0.5s ease-in-out;
+    transition: all 0.5s ease-in-out;
+    border-radius: 10px;
+}
+
+.modal-wrapper.open .modal {
+    margin-top: -200px;
+    opacity: 1;
+}
+
+.head {
+    padding: 0.5em 5%;
+    overflow: hidden;
+    background: #098fea;
+    border-radius: 10px 10px 0px 0px;
+}
+
+.btn-close {
+    width: 32px;
+    height: 32px;
+    display: block;
+    float: right;
+}
+
+.btn-close::before,
+.btn-close::after {
+    content: '';
+    width: 32px;
+    height: 6px;
+    display: block;
+    background: #fff;
+}
+
+.btn-close::before {
+    margin-top: 12px;
+    -webkit-transform: rotate(45deg);
+    -moz-transform: rotate(45deg);
+    -o-transform: rotate(45deg);
+    transform: rotate(45deg);
+}
+
+.btn-close::after {
+    margin-top: -6px;
+    -webkit-transform: rotate(-45deg);
+    -moz-transform: rotate(-45deg);
+    -o-transform: rotate(-45deg);
+    transform: rotate(-45deg);
+}
+
+.btn-color {
+    color: white !important;
+}
+
+.take-photo {
+    width: 150px;
+    display: block;
+    margin: 10px;
+    padding: 1em 0;
+    left: 36%;
+    position: sticky;
+    font: 1.125em 'Arial', sans-serif;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+    color: #fff;
+    border-radius: 5px;
+    background: rgb(1 126 211);
+}
+
+.btn-amount {
+    height: 50px;
+    vertical-align: middle !important;
+    margin-top: 4%;
+    width: 200px;
+    margin-left: 30%;
+    display: block;
+}
+
+video {
+    -webkit-transform: scaleX(-1);
+    transform: scaleX(-1);
+}
+
+.btn-alignment {
+    display: block ! !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    width: 40% !important;
+}
+
+/*.vertical-center {
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  -ms-transform: translateY(-50%);
+  transform: translateY(-50%);
+}*/
+
+#outer {
+    width: 100%;
+    text-align: center;
+}
+
+.inner {
+    display: inline-block;
+}
+
+.preview_image_tag {
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
+}
+
+#videoCanvas {
+    -moz-transform: scaleX(-1);
+    -o-transform: scaleX(-1);
+    -webkit-transform: scaleX(-1);
+    transform: scaleX(-1);
+    filter: FlipH;
+    -ms-filter: "FlipH";
+}
+
+#canvas {
+    -moz-transform: scaleX(-1);
+    -o-transform: scaleX(-1);
+    -webkit-transform: scaleX(-1);
+    transform: scaleX(-1);
+    filter: FlipH;
+    -ms-filter: "FlipH";
+}
+
+#photo {
+    -moz-transform: scaleX(-1);
+    -o-transform: scaleX(-1);
+    -webkit-transform: scaleX(-1);
+    transform: scaleX(-1);
+    filter: FlipH;
+    -ms-filter: "FlipH";
+}
+
+.webcam-msg {
+    text-align: center;
+    font-size: 18px;
+    padding: 10px;
+    color: red;
+    text-transform: uppercase;
+}
+
+.qr_label {
+    justify-content: center !important;
+    align-items: center !important;
+    text-align: center !important;
+    min-height: 10vh !important;
+}
+
+.blur {
+    filter: blur(5px);
+    /* Change the value to adjust the blur amount */
+}
+
+.hide {
+    display: none;
+}
+
+.or_class {
+    float: left;
+    font-size: 15px;
+    font-weight: 800;
+    padding-top: 150px;
+}
+
+.img-heading {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 68%;
+    /*	text-decoration: underline;*/    
+}
+
+.img-heading1 {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 67%;
+    /*	text-decoration: underline;*/
+}
+
+#qr_picture_preview
+{
+    margin-top:20% !important;
+}
+
+#picture_preview
+{
+ 
+}
+
+#picture_preview svg
+{
+    width: auto;
+    height: auto;    
+    margin-left:30% !important;
+}
+
+#qr_picture_preview svg
+{
+    width: auto;
+    height: auto;    
+    margin-left:30% !important;
+}
+
+
+#box {
+    fill: transparent;
+    stroke: black;
+}
+
+#qr_preview_picture_tag {
+    border: 1px solid;
+}
+
+#preview_picture_tag {
+    border: 1px solid;
+}
+
+#showQRButton {
+    color: #fff;
+    border-radius: 5px;
+    background-color: #ef5350;
+    border-color: #ef5350 !important;
+    position: absolute;
+    z-index: 99;
+    top: 42%;
+    padding: 8px 15px;
+    left: 27%;
+}
+
+.float-container {
+    border: 3px solid #fff;
+    padding: 20px;
+}
+
+.float-child {
+    width: 20%;
+    float: left;
+    padding: 20px;
+}
+
+.float-child-qr {
+    width: 20%;
+    float: left;
+    padding-top: 20px;
+}
+
+.float-container_sign {
+    border: 3px solid #fff;
+    padding: 20px;
+}
+
+.float-child_sign {
+    width: 20%;
+    float: left;
+    padding: 20px;
+}
+
+.refresher {
+    left: 130px;
+    bottom: 30px;
+    position: relative;
+    align-self: center;
+}
+
+.refresher svg {
+    position: absolute;
+    width: 20px;
+    height: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: transform 200ms cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+.refresher svg path,
+.refresher svg polyline {
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.refresher.loading .icon-refresh {
+    -webkit-animation: refresh 1s infinite linear;
+    animation: refresh 1s infinite linear;
+}
+
+.refresher .icon-success circle {
+    fill: #008000;
+    transform-origin: 50% 50%;
+    transform: scale(0);
+    transition: transform 200ms cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+.refresher .icon-success path {
+    stroke-dasharray: 56.0029;
+    stroke-dashoffset: 56.0029;
+    opacity: 0;
+    transition: stroke-dashoffset 350ms 100ms ease;
+}
+
+.success {
+    border: none !important;
+}
+
+.refresher.success .icon-refresh {
+    transform: scale(0);
+}
+
+.refresher.success .icon-success circle {
+    transform: scale(1);
+}
+
+.refresher.success .icon-success path {
+    stroke-dashoffset: 0;
+    opacity: 1;
+    transition: opacity 0s, stroke-dashoffset 0.4s;
+}
+
+.refresher .icon-error {
+    transform-origin: 50% 50%;
+    transform: scale(0);
+    transition: transform 200ms cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+.refresher .icon-error circle {
+    fill: #ff6347;
+}
+
+.refresher .icon-error polyline {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 3;
+    stroke-dashoffset: 185;
+    stroke-dasharray: 100;
+    opacity: 0;
+}
+
+.refresher.error .icon-refresh {
+    transform: scale(0);
+}
+
+.refresher.error .icon-error {
+    transform: scale(1);
+}
+
+.refresher.error .icon-error polyline {
+    opacity: 1;
+    stroke-dashoffset: 200;
+    transition: opacity 0s, stroke-dashoffset 0.4s;
+}
+
+.refresher.error .icon-error polyline:nth-child(3) {
+    transition-delay: 0.25s;
+}
+.otp-inputbox{
+  flex: 1; font-weight: bold; height: auto;
+}
+.otp-buttonsection{
+    white-space: nowrap; margin-left: 10px;
+}
+.otp-verifysection{
+    color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; padding: 5px 12px; border-radius: 4px; display: inline-block; font-weight: 500;
+}
+
+@-webkit-keyframes refresh {
+    from {
+        transform: rotate(0);
+    }
+
+    to {
+        transform: rotate(359deg);
+    }
+}
+
+@keyframes refresh {
+    from {
+        transform: rotate(0);
+    }
+
+    to {
+        transform: rotate(359deg);
+    }
+}
+</style>
+<script>
+var TAB_DEVICE = '1';
+var q = "?q=MGY1MTVjZTRjOTE2ZTMxZDAyZWE1YjA4Yzc0Y2Y1ZmR8NzQyMjU5MDE2";
+var qval = "MGY1MTVjZTRjOTE2ZTMxZDAyZWE1YjA4Yzc0Y2Y1ZmR8NzQyMjU5MDE2";
+var SMSOTPVERIFY = "1";
+var EMAILOTPVERIFY = "1";
+var aimlUrl = '{"picture":"https:\/\/aiml4.ibps.in\/detect_faces","signature":"https:\/\/aiml4.ibps.in\/detect_sign"}';
+</script>
+<script>
+var imagebase64 = "";
+
+var mode = "";
+
+function encodeImageFileAsURL(element) {
+    var file = element.files[0];
+    var reader = new FileReader();
+    reader.onloadend = function() {
+        imagebase64 = reader.result;
+        $("#imageshowtext").val(imagebase64);
+    }
+    reader.readAsDataURL(file);
+}
+
+function ajaxvalidationcall(upload_field) {
+    $("#picture").prop('disabled', true);
+    $("#signature").prop('disabled', true);
+    var resAiml = JSON.parse(aimlUrl);
+    $.ajax({
+        type: "POST",
+        url: resAiml[upload_field.name],
+        contentType: "application/json",
+        dataType: "json",
+        // data: JSON.stringify({
+        //     img1: $("#imageshowtext").val(),
+        //     filename: "742259016"
+        // }),
+        data: JSON.stringify({
+            [upload_field.name === 'picture' ? 'image_base64' : 'sign_base64'] : $("#imageshowtext").val().replace(/^data:image\/jpeg;base64,/, ''),
+            mode: mode,
+            registration_no: "742259016",
+            appl_identifer: "aaioct25"
+        }),
+        success: function(data) {
+            $("#imageshowtext").val('');
+            $("#output").val(data['output']);
+            $("#errorcode").val(data['error_code']);
+            $("#reason").val(data['reason']);
+            upload_field.form.action = 'upload-picture.php';
+            upload_field.form.target = 'upload_iframe';
+            upload_field.form.submit();
+            upload_field.form.action = '';
+            upload_field.form.target = '';
+            upload_field.value = '';
+            return true;
+        },
+        error: function(ts, status, error) {
+            if (upload_field.name == 'picture') {
+                //$("#photock_error").html('<font color="red">Corrupted image,please try again.</font>');
+                if ($("#uploadmode").val() != '1') {
+                    $("#photock_error").html('<font color="red">Corrupted image,please try again.</font>');
+                } else {
+                    $("#qr_photock_error").html(
+                        '<font color="red">Corrupted image,please try again.</font>');
+                }
+                document.getElementById('picture_preview').innerHTML = '';
+            } else {
+                $("#signck_error").html('<font color="red">Corrupted image,please try again.</font>');
+                document.getElementById('signature_preview').innerHTML = '';
+            }
+
+            updateAimlErrorLog(status, upload_field.name);
+            upload_field.value = '';
+            return false;
+        }
+    });
+    $("#picture").prop('disabled', false);
+    $("#signature").prop('disabled', false);
+    var uploadmode = $("#uploadmode").val();
+    if (upload_field.name == 'picture' && uploadmode == '2') {
+        // $('.modal-wrapper').toggleClass('open');
+        closeCamModule();
+    }
+}
+
+function ajaxWebCamUpload(upload_field) {
+
+    $("#uploadmode").val('2');
+    var photoname = 'picture';
+     mode = "1";
+    upload_field.name = 'picture';
+    $.ajax({
+        type: "POST",
+        //dataType: "json",
+        url: "chk_reg_user_status.php?q=MGY1MTVjZTRjOTE2ZTMxZDAyZWE1YjA4Yzc0Y2Y1ZmR8NzQyMjU5MDE2",
+        success: function(data) {
+            if ($.trim(data) == 'IC') {
+
+                var status = document.getElementById('status').value;
+                var q_value = document.getElementById('q').value;
+
+                document.getElementById('uploadtype').value = photoname;
+
+                if (photoname == 'picture') {
+                    document.getElementById('qr_picture_preview').innerHTML =
+                        '<div><img src="/hub/application/images/progressbar.gif" border="0" style="width:100%"/></div>';
+                }
+                ajaxvalidationcall(upload_field);
+
+            } else if (data == 'C') {
+                window.location = 'registration_print.php?q=MGY1MTVjZTRjOTE2ZTMxZDAyZWE1YjA4Yzc0Y2Y1ZmR8NzQyMjU5MDE2&t=OGUyYzQ2YTJkZDM1ODc1NWJjYzZkNWQ5ZGIyNjY5NmJ8MTc4ODcwODQ4MQ==';
+            } else if (data == 'Error1') {
+                alert("Problem in uploading the image.");
+                var error = data;
+                updateErrorLog(error, photoname);
+                upload_field.value = '';
+                return false;
+            } else {
+                window.location = 'index.php';
+            }
+        },
+        error: function(ts, status, error) {
+            alert("Problem in uploading the image. Please try again later.");
+            updateErrorLog(error, photoname);
+            upload_field.value = '';
+            return false;
+        }
+    });
+
+}
+
+function ajaxFileUpload(upload_field) {
+    var photoname = upload_field.name;
+    mode = "0";
+    $("#imageshowtext").val('');
+    $("#errorcode").val('');
+    $("#output").val('');
+    $("#reason").val('');
+    $("#uploadmode").val('1');
+    encodeImageFileAsURL(upload_field);
+    var filename = upload_field.value;
+    const size = parseFloat(upload_field.files[0].size / 1024).toFixed(2);
+    if ((size > 50 || size < 20) && upload_field.name ==
+        'picture') {
+        $("#photock_error").html('<font color="red">Photograph Size should be between 20 KB and 50 KB.</font>');
+        upload_field.value = '';
+        return false;
+    }
+    if ((size > 20 || size < 10) && upload_field.name !=
+        'picture') {
+        $("#signck_error").html('<font color="red">Signature Size should be between 10 KB and 20 KB.</font>');
+        upload_field.value = '';
+        return false;
+    }
+    if (((filename.indexOf(' ') >= 0) == true) && upload_field.name == 'picture') {
+        $("#photock_error").html(
+            '<font color="red">Photograph File Name space not allowed or invalid image format or Invalid extension should not allow to upload.</font>'
+        );
+        upload_field.value = '';
+        return false;
+    }
+    if (((filename.indexOf(' ') >= 0) == true) && upload_field.name != 'picture') {
+        $("#signck_error").html(
+            '<font color="red">Signature File Name space not allowed or invalid image format or Invalid extension should not allow to upload.</font>'
+        );
+        upload_field.value = '';
+        return false;
+    }
+    $.ajax({
+        type: "POST",
+        //dataType: "json",
+        url: "chk_reg_user_status.php?q=MGY1MTVjZTRjOTE2ZTMxZDAyZWE1YjA4Yzc0Y2Y1ZmR8NzQyMjU5MDE2",
+        success: function(data) {
+            if ($.trim(data) == 'IC') {
+
+                // Checking file type
+                var re_text = /\.jpg|\.gif|\.jpeg/i;
+                var filename = upload_field.value;
+
+
+                var status = document.getElementById('status').value;
+                var q_value = document.getElementById('q').value;
+
+
+                document.getElementById('uploadtype').value = photoname;
+                var extarray = filename.split(".");
+                var ext = extarray[extarray.length - 1].toLowerCase();
+                if (ext != 'jpg' && ext != 'jpeg') {
+                    alert("File should be either jpg or jpeg");
+                    upload_field.value = '';
+                    return false;
+                }
+                if (photoname == 'picture') {
+                    document.getElementById('picture_preview').innerHTML =
+                        '<div><img src="/hub/application/images/progressbar.gif" border="0" style="width:100%" /></div>';
+                } else {
+                    document.getElementById('signature_preview').innerHTML =
+                        '<div><img src="/hub/application/images/progressbar.gif" border="0" /></div>';
+                }
+                //var timeDelay = 1000; 
+                //setTimeout(ajaxvalidationcall(upload_field), timeDelay);
+                ajaxvalidationcall(upload_field);
+
+            } else if (data == 'C') {
+                window.location = 'registration_print.php?q=MGY1MTVjZTRjOTE2ZTMxZDAyZWE1YjA4Yzc0Y2Y1ZmR8NzQyMjU5MDE2&t=NDRjZWMyNTI4ODBmNTczMmNlZmUzZDdlMzA2NTQ0NWZ8MTc4ODcwODQ4MQ==';
+            } else if (data == 'Error1') {
+                alert("Problem in uploading the image.");
+                var error = data;
+                updateErrorLog(error, photoname);
+                upload_field.value = '';
+                return false;
+            } else {
+                window.location = 'index.php';
+            }
+        },
+        error: function(ts, status, error) {
+            alert("Problem in uploading the image. Please try again later.");
+            updateErrorLog(error, photoname);
+            upload_field.value = '';
+            return false;
+        }
+    });
+}
+
+var ajaxImageValidation = function() {
+    var serializedData = $('#pictureForm').serialize();
+    $.ajax({
+        type: "POST",
+        dataType: "json",
+        data: serializedData,
+        url: "image_validations.php?q=MGY1MTVjZTRjOTE2ZTMxZDAyZWE1YjA4Yzc0Y2Y1ZmR8NzQyMjU5MDE2",
+        success: function(response) {
+            //console.log(response['response']);
+            if (response['response'] == 'Done') {
+                $('#pictureForm').attr('action',
+                    'reg_details.php?q=MGY1MTVjZTRjOTE2ZTMxZDAyZWE1YjA4Yzc0Y2Y1ZmR8NzQyMjU5MDE2');
+                var red = $("#photock_error").html();
+                var red1 = $("#signck_error").html();
+                var red2 = $("#confirmChk_preview").html('');
+                var red3 =  $(".er_alert1").html('');
+                
+                if(SMSOTPVERIFY=='1'){
+                    var red4 = $("#sms_otp_validate").html();
+                }
+
+                 if(EMAILOTPVERIFY=='1'){
+                 var red5 = $("#email_otp_validate").html();
+                 }
+
+                if (red.search('<font color') != 0 && red1.search('<font color') != 0 ) {
+                    $("#pictureForm").submit();
+                }
+            } else {
+                // 	console.log(response['confirmPhoto']);
+                // console.log(response['confirmSign']);
+                $("#photock_error").html(response['photo']);
+                $("#qr_photock_error").html(response['qr_photo']);
+                $("#signck_error").html(response['signature']);
+
+                if (response['confirmPhoto'] != undefined && response['confirmPhoto'] != '') {
+                    $("#confirmPhoto_preview").html(response['confirmPhoto']).show();
+                }
+
+                if (response['confirmSign'] != undefined && response['confirmSign'] != '') {
+                    $("#confirmSign_preview").html(response['confirmSign']).show();
+                }
+
+                if(SMSOTPVERIFY=='1'){
+                if (response['sms_otp_validate'] != undefined && response['sms_otp_validate'] != '') {
+                    //console.log(response['sms_otp_validate']);
+                    $("#sms_otp_validate").html(response['sms_otp_validate']).show();
+                }
+                }
+                if(EMAILOTPVERIFY=='1'){
+                if (response['email_otp_validate'] != undefined && response['email_otp_validate'] != '') {
+                    $("#email_otp_validate").html(response['email_otp_validate']).show();
+                }
+                }
+                
+                $(".er_alert1").html('<font color="red">One or more error(s) found in page<font>');
+
+            }
+        }
+    });
+}
+
+function updateErrorLog(errMsg, photoname) {
+    $.ajax({
+        type: "POST",
+        dataType: "json",
+        url: "update_err_log.php?q=MGY1MTVjZTRjOTE2ZTMxZDAyZWE1YjA4Yzc0Y2Y1ZmR8NzQyMjU5MDE2&errMsg=" + errMsg + "&photoname=" + photoname,
+        success: function(response) {
+            // console.log(response);
+        }
+    });
+}
+
+function updateAimlErrorLog(errMsg, photoname) {
+    $.ajax({
+        type: "POST",
+        dataType: "json",
+        url: "update_aimlerr_log.php?q=MGY1MTVjZTRjOTE2ZTMxZDAyZWE1YjA4Yzc0Y2Y1ZmR8NzQyMjU5MDE2&errMsg=" + errMsg + "&photoname=" + photoname,
+        success: function(response) {
+            // console.log(response);
+        }
+    });
+}
+
+function mypopup(url, width, height) {
+    width = window.screen.width;
+    height = window.screen.height;
+    mywindow = window.open(url, "mywindow",
+        "location=0,status=1,scrollbars=1,resizable=1,menubar=0,toolbar=yes,width=" + width + ",height=" + height);
+    mywindow.focus();
+}
+
+
+function errorDecl() {
+    var confirmPhoto = $('input[name=confirmPhoto]:checked').val();
+    if (confirmPhoto == 1) {
+        $("#confirmPhoto_preview").html('');
+    }
+    var confirmSign = $('input[name=confirmSign]:checked').val();
+    if (confirmSign == 1) {
+        $("#confirmSign_preview").html('');
+    }
+}
+</script>
+<style wxt-shadow-root-document-styles="1syyydgr5m1">@font-face {
+    font-family: Geist;
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("/fonts/Geist-Regular.woff2") format("woff2");
+  }
+
+  @font-face {
+    font-family: Geist;
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url("/fonts/Geist-Bold.woff2") format("woff2");
+  }
+
+  @font-face {
+    font-family: Geist Mono;
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("/fonts/GeistMono-Regular.woff2") format("woff2");
+  }
+
+  @font-face {
+    font-family: Geist Mono;
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url("/fonts/GeistMono-Bold.woff2") format("woff2");
+  }
+
+@property --tw-animation-delay {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0s;
+}
+
+@property --tw-animation-direction {
+  syntax: "*";
+  inherits: false;
+  initial-value: normal;
+}
+
+@property --tw-animation-duration {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-animation-fill-mode {
+  syntax: "*";
+  inherits: false;
+  initial-value: none;
+}
+
+@property --tw-animation-iteration-count {
+  syntax: "*";
+  inherits: false;
+  initial-value: 1;
+}
+
+@property --tw-enter-blur {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --tw-enter-opacity {
+  syntax: "*";
+  inherits: false;
+  initial-value: 1;
+}
+
+@property --tw-enter-rotate {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --tw-enter-scale {
+  syntax: "*";
+  inherits: false;
+  initial-value: 1;
+}
+
+@property --tw-enter-translate-x {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --tw-enter-translate-y {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --tw-exit-blur {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --tw-exit-opacity {
+  syntax: "*";
+  inherits: false;
+  initial-value: 1;
+}
+
+@property --tw-exit-rotate {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --tw-exit-scale {
+  syntax: "*";
+  inherits: false;
+  initial-value: 1;
+}
+
+@property --tw-exit-translate-x {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --tw-exit-translate-y {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --tw-scale-x {
+  syntax: "*";
+  inherits: false;
+  initial-value: 1;
+}
+
+@property --tw-scale-y {
+  syntax: "*";
+  inherits: false;
+  initial-value: 1;
+}
+
+@property --tw-scale-z {
+  syntax: "*";
+  inherits: false;
+  initial-value: 1;
+}
+
+@property --tw-space-y-reverse {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --tw-space-x-reverse {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --tw-border-style {
+  syntax: "*";
+  inherits: false;
+  initial-value: solid;
+}
+
+@property --tw-leading {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-font-weight {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-tracking {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+
+@property --tw-shadow-color {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-shadow-alpha {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+
+@property --tw-inset-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+
+@property --tw-inset-shadow-color {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-inset-shadow-alpha {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+
+@property --tw-ring-color {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-ring-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+
+@property --tw-inset-ring-color {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-inset-ring-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+
+@property --tw-ring-inset {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-ring-offset-width {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --tw-ring-offset-color {
+  syntax: "*";
+  inherits: false;
+  initial-value: #fff;
+}
+
+@property --tw-ring-offset-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+
+@property --tw-outline-style {
+  syntax: "*";
+  inherits: false;
+  initial-value: solid;
+}
+
+@property --tw-blur {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-brightness {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-contrast {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-grayscale {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-hue-rotate {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-invert {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-opacity {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-saturate {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-sepia {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-drop-shadow {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-drop-shadow-color {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-drop-shadow-alpha {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+
+@property --tw-drop-shadow-size {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-duration {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-content {
+  syntax: "*";
+  inherits: false;
+  initial-value: "";
+}
+
+@property --tw-translate-x {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --tw-translate-y {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --tw-translate-z {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}</style></head>
+
+
+
+<body class="bg-light" onpageshow="if (event.persisted) noBack();">
+    <script async="" src="https://www.googletagmanager.com/gtag/js?id=G-VFEG5KZ6VC"></script> 
+<script>   
+window.dataLayer = window.dataLayer || [];   
+function gtag(){dataLayer.push(arguments);}   
+gtag('js', new Date());   
+gtag('config', 'G-VFEG5KZ6VC'); 
+</script>
+<script>
+//if(TAB_DEVICE == 0){
+	window.history.forward(1);
+//}else if(TAB_DEVICE > 0){
+//	 if (event.persisted) {
+ //       window.history.forward();
+//    }
+//}
+
+</script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="format-detection" content="telephone=no">
+<link href="/hub/application/images/inb.css" rel="stylesheet" type="text/css">
+
+<header class="loginheader regheader" id="myHeader">
+	<nav class="navbar navbar-light shadow">
+		<a class="navbar-brand"><img src="https://ibpsreg.ibps.in/aaioct25/logo.jpg" width="130px" height="90px"></a>
+		 
+		<div class="mr-5 pt-3 pt-sm-0 usertxt ml-auto">
+			<div>Welcome<b> Swapnil</b></div>
+			<div> Your Registration No: <b>742259016</b></div>
+		</div>
+		<a href="logout.php" class="logout"></a> 
+			</nav>
+</header>
+
+ 
+ 
+  
+  	<div id="menu_container" class="p-3">
+		
+				<!--  <a href="basic_details.php?q=">Registration</a> -->
+				
+				 
+	</div> 
+	  
+  
+  
+
+
+    <div class="container mt-3 mb-5 logincontent">
+        	  <div class="pri_down_sec_div text-right">
+        <ul>
+								
+					        </ul>
+      </div> 
+
+ 
+		<div class="reg_container">
+			 
+			<div class="container-lg p-0" id="menu">
+				<!-- progressbar -->
+				<ul class="progressbar mt-5 mb-5">
+					<li class="first unactive"><a href="basic_details.php?q=MGY1MTVjZTRjOTE2ZTMxZDAyZWE1YjA4Yzc0Y2Y1ZmR8NzQyMjU5MDE2"><i class="bi bi-ui-checks"></i><span>Basic Information</span></a></li>
+					<li class="active"><a href="image.php?q=MGY1MTVjZTRjOTE2ZTMxZDAyZWE1YjA4Yzc0Y2Y1ZmR8NzQyMjU5MDE2"><i class="bi bi-images"></i><span>Photo &amp; Signature</span></a></li>
+					<li class=""><a href="javascript:void(0);"><i class="bi bi-file-earmark-text-fill"></i><span>Details</span></a></li>
+					<li class=""><a href="javascript:void(0);"><i class="bi bi-eye-fill"></i><span>Preview</span></a></li>
+										<li class=""><a href="javascript:void(0);"><i class="bi bi-file-earmark-arrow-up-fill"></i><span>Uploads</span></a></li>
+																				<li class=""><a href="javascript:void(0);"><i class="bi bi-currency-rupee"></i><span>Payment</span></a></li>
+									</ul> 
+			</div> 
+					</div>
+				 				
+<script>
+		var menuName =  'image';
+		var redirect_printcount =  'https://ibpsreg.ibps.in/aaioct25/ajax_print_count.php';
+		var registrationno =  'MGY1MTVjZTRjOTE2ZTMxZDAyZWE1YjA4Yzc0Y2Y1ZmR8NzQyMjU5MDE2';
+		var ENABLE_PRINT_COUNT =  '1';
+</script>
+        <form class="image_form" id="pictureForm" name="pictureForm" method="post" autocomplete="off" enctype="multipart/form-data">
+               
+        <h1>Photo &amp; Signature</h1>
+            <!-- <div class="man_field">*Mandatory Field</div> -->
+                        
+            <div id="result" class="alert-box error" style="display:none"></div>
+
+
+
+
+
+            <div class="row">
+                <div class="col-md-12">
+                    <input type="hidden" name="uploadtype" id="uploadtype" value="" autocomplete="off">
+                    <small class="form-text text-note-small font-weight-bold" colspan="3">NOTE: A <u>recent, CLEARLY recognizable passport size</u> photograph (4.5cm x 3.5cm) should be uploaded by the candidate in the online application form and the signature uploaded should be clear and legible. Candidates are also advised not to change their appearance till the process is completed. Any doubt about photograph or signature at any stage of the process could lead to disqualification.</small>
+                    <small class="form-text text-note-small font-weight-bold" colspan="3">NOTE: Candidates are required to capture and upload their photograph either by using webcam or mobile phone.</small>
+                                    </div>
+                <div class="col-md-10 offset-md-1">
+                    <div class="row justify-content-center mt-5 imgbox_can">
+                        
+
+                    <div class="col-12 mb-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    
+                                       <div style="text-align: right">
+                                        <button type="button" class="guide-btn" data-toggle="modal" data-target="#photoModal" style="background-color: #4c56c0;border-radius: 5px">
+                                          <svg style="fill:none" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="7" cy="7" r="5.5"></circle><line x1="7" y1="5" x2="7" y2="5.1" stroke-width="2.5"></line><line x1="7" y1="7.5" x2="7" y2="10"></line></svg>
+                                          Photo Guidelines
+                                        </button>
+                                    </div>
+                                    
+
+
+                                    <!-- <input type="file" class="form-control mb-3" name="signature" id="signature" onchange="return ajaxFileUpload(this);" /> -->
+
+
+                                    <h5 class="card-title">Scanned Photograph of the Candidate:</h5>
+                                    
+                                    <div>
+                                        <div>
+
+                                           <div class="row">
+                                                <div class="col">
+                                                <div class="col px-0">
+                                                <div class="custom-file ">
+                                                                                                <input type="file" class="custom-file-input pic" name="picture" id="picture" onchange="return ajaxFileUpload(this);" autocomplete="off">
+                                                <label class="custom-file-label" for="picture">Choose file</label>
+                                                <input type="hidden" name="uploadmode" id="uploadmode" autocomplete="off">
+                                                                                                </div>
+                                            </div>
+                                            <p id="photock_error"></p>
+                                            <p id="qr_photock_error"></p>
+
+
+
+
+
+                                            
+
+<div class="col pt-2">
+    <div class="text_style_bd link left" style="cursor:pointer;">
+        <small>
+        <a target="_blank" href="https://ibpsreg.ibps.in/aaioct25/uploads/loadpdf.php?file=k7m5p+fQ15epu9TixN2Xn5jWzst9tN/FppyXow==&amp;t=1LHArOLA2di0yczXwNDa083LmNWypw==#toolbar=0&amp;navpanes=0" class="text_style_bd link left guidelink">
+                                                        
+                                                        <div class="blob blue"></div> <u>Guidelines for scanning the
+                                                            Photograph
+                                                            &amp; Signature</u>
+                                                    </a>
+        </small>
+    </div>
+</div>
+
+
+<input type="hidden" name="imageshowtext" id="imageshowtext" autocomplete="off">
+<input type="hidden" name="errorcode" id="errorcode" autocomplete="off">
+<input type="hidden" name="output" id="output" autocomplete="off">
+<input type="hidden" name="reason" id="reason" autocomplete="off">
+<input type="hidden" name="qr_error_disp" id="qr_error_disp" autocomplete="off">
+<input type="hidden" name="photo_error_disp" id="photo_error_disp" autocomplete="off">
+
+<h6 class="card-subtitle p-4">Photo should be clearly visible in the adjacent box</h6>
+
+
+ <!-- QR / WEBCAM BASED PHOTO UPLOAD PHOTO UPLOAD SECTION -->
+                                         <div>
+                                            <div class="col1 image_wdth qr_label">
+                                                <p style="padding-left: 20px;font-weight: 800;font-size: 15px;padding: 10px;text-align: center;">
+                                                (AND)</p>
+                                                <b>Capture Photo using Webcamera</b>
+                                                <br><br>
+                                                <!-- POPUP For Photo Capture -->
+                                                <a class="btn trigger btn-color btn-alignment" href="javascript:void(0);"><img alt="" src="images/camera.svg">
+                                                    <span>Capture Photo</span></a>
+
+                                                <div class="modal-wrapper">
+                                                    <div class="modal modal_capture">
+                                                        <div class="head">
+                                                            <a class="btn-close trigger" href="javascript:;"></a>
+                                                        </div>
+                                                        <div class="content">
+                                                            <div id="cameraSection" style="display: block;">
+                                                                <video id="webCamera" style="display: none;">Video
+                                                                    stream not available.</video>
+                                                                <canvas id="videoCanvas" style="width: 500px !important;"></canvas>
+                                                                <div class="vertical-center"><button id="startbutton" class=" btn-amount take-photo">Capture</button>
+                                                                </div>
+                                                                <br>
+                                                            </div>
+                                                            <div id="photoSection" style="display:none;">
+                                                                <canvas id="canvas" style="display:none"></canvas>
+                                                                <img id="photo" class="preview_image_tag" alt="The screen capture will appear in this box.">
+                                                                <div id="outer">
+                                                                    <div class="inner"><button id="captureAgainBtn" type="button" class="take-photo" onclick="captureAgainMode()">Capture
+                                                                            Again</button></div>
+                                                                    <div class="inner"><button id="saveCapturedImage" type="button" class="take-photo" onclick="ajaxWebCamUpload(this)">Save</button>
+                                                                    </div>
+                                                                </div>
+                                                                <br>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <!-- POPUP For Photo Capture -->
+                                                <p style="padding-left: 20px;font-weight: 800;font-size: 15px;padding: 10px;text-align: center;">
+                                                    (OR)</p>
+                                                <b>Scan QR to capture the Photo via Mobile</b>
+                                                
+                                                <div style="margin-bottom: 5px; text-align: center; padding: 10px 0 0 0px;position: relative;">
+                                                    <button id="showQRButton" type="button" class="btn" onclick="showQrCode()">Click here to scan</button>
+                                                    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0AQMAAAAHA5RxAAAABlBMVEX///8AAABVwtN+AAAACXBIWXMAAA7EAAAOxAGVKw4bAAABpklEQVRYhdWX0W3EMAxDtQH335IbsCKVHNp/9uOM9pA+F1AkkbJv5tuXJGpIcQTiQJHvL/03pQF3i2E9Lj/NBkzUD6hyzX4yu//BXS2n5Nh17rptSth+KPxXPQvcbf6zfumhwdOKjZqmb/tf1uJWEt7Gb2afvEo83U7UcVzsKyR0i+/j9nwjbnLjuJgqt6yg6Msfk70iT2oWle29Kx0q8u22dyym0y/U5bTnDF28LDb5uOmPYLNPdjkTOlXz7L7h1+RW6qMp4fpT5DlznNoyc4du8jP0RsVJ9yZfj4vxnAfePP649ynxjZRjwdPDqkXMV+RyxTJYoWy/cuvw9QGOnkWAz7lT4cA5b6mL5/mKKXJmS6erx9tNftXylSu5RV8scuej5yyzCW2UKXKk88zp73/IOxS5cMnFGL4VPdeKHrfPmBMhlyOCrHLltJ87klO3Lp+YzXcKWlzP5G7x87Cd7di4HIv8KhU3IyfoO05KPJIV8kOdsqrcg5vhvNkn9LnLRWSCZIh3+fO9I3ckPH2pcU8OR/NM9SPAJs/31quVw+ptTIt/9/oBjFH2i1LSDOkAAAAASUVORK5CYII=" id="QRimg" class="blur">                                                </div>
+                                            </div>
+
+                                        </div>
+                                        
+
+                                                </div>
+                                                <div class="col">
+
+
+
+                                                <div id="picture_preview" class="text-center photo_sign_error">
+                                                                                        <svg>
+                                                <rect id="box" x="0" y="0" width="150" height="150"></rect>
+                                            </svg>
+                                                                                                                                    <p class="img-heading"><b>Uploaded Image</b>                                            </p>
+                                                                                    </div>
+
+
+
+                                           <!-- QR / WEBCAM BASED PHOTO UPLOAD PHOTO SHOWING DIV -->
+                                                                                   <div id="qr_picture_preview" class="text-center photo_sign_error">
+
+                                                                                                                                    <svg>
+                                                <rect id="box" x="0" y="0" width="150" height="150"></rect>
+                                            </svg>
+                                                                                        <p class="img-heading1"><b>Live Captured Image</b>                                            </p>
+                                        </div>
+                                        
+                                                                                <div id="valid_sample_photo" class="float-child valid_sample_photo" style="margin-left: 160px;padding: 0px;">
+
+
+
+                                            <!--<span style="color:green;font-size: 15px;">
+                                                <b>Valid Sample Photo</b>
+                                                <img src='images/sample_2.jpg' width='180' height='210'
+                                                    id='uploadsample_img_tag' name='uploadsample_img_tag' />
+                                            </span> -->
+                                        </div>
+
+                                    </div>
+                                    <span id="picture_error"></span>
+                                    										<div class="form-group col-md-12">
+										<p id="rejectPhoto" style="text-transform:uppercase;padding-top:10px;color:#ef050a;font-size:13px;font-weight:bold;">
+                                                                                            </p>
+
+                                            
+                                            <p id="qr_rejectPhoto" style="text-transform:uppercase;padding-top:10px;color:#ef050a;font-size:13px;font-weight:bold;">
+                                                                                            </p>
+                                            											
+										</div>		
+                                    <div class="form-group col-md-12">
+                                        <div class="custom-control custom-checkbox">
+                                            <input type="checkbox" class="custom-control-input" name="confirmPhoto" id="confirmPhoto" value="1" onclick="errorDecl();" autocomplete="off">
+                                            <label class="custom-control-label" for="confirmPhoto">I confirm that this is my valid photo and also agree to above mentioned Note.</label>
+                                            <div class="invalid-feedback" id="confirmPhoto_preview" style="right:20px">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+
+                                                </div>
+                                           </div>
+
+                                        </div>
+                                    </div>
+
+                                    
+                                    
+
+                                    <div>
+
+                                
+
+                                       
+
+
+
+
+                                        
+                                        
+                                     
+                                    
+                                    
+
+                                    
+
+                                    
+
+                                    
+
+                                </div>
+                            </div>
+                        </div>
+
+                    
+                        
+
+                        
+
+
+                        <div class="col-12 mb-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">Scanned Signature of the Candidate:</h5>
+
+
+                                    <!-- <input type="file" class="form-control mb-3" name="signature" id="signature" onchange="return ajaxFileUpload(this);" /> -->
+
+                                    <div class="col-6 custom-file mb-3">
+                                        <input type="file" class="custom-file-input sig" id="signature" name="signature" onchange="return ajaxFileUpload(this);" autocomplete="off">
+                                        <label class="custom-file-label" for="signature">Choose file</label>
+                                    </div>
+                                    <p id="signck_error"></p>
+
+                                                                                                            <div class="text_style_bd link left" style="cursor:pointer;">
+                                        <small>
+                                            <a target="_blank" href="https://ibpsreg.ibps.in/aaioct25/uploads/loadpdf.php?file=k7m5p+fQ15epu9TixN2Xn5jWzst9tN/FppyXow==&amp;t=1LHArOLA2di0yczXwNDa083LmNWypw==#toolbar=0&amp;navpanes=0" class="text_style_bd link left guidelink">
+                                                                                                <div class="blob blue"></div> <u>Guidelines for scanning the Photograph
+                                                    &amp; Signature</u>
+                                            </a>
+                                        </small>
+
+                                    </div>
+                                                                        <hr>
+                                    <h6 class="card-subtitle">Signature should not be in CAPITAL / BLOCK letters</h6>
+                                    <div id="signature_preview" class="text-center photo_sign_error">
+                                                                            </div>
+                                    <span id="signature_error"></span>
+                                                                        <!-- <div class="form-group col-md-12" style="position: absolute;bottom: 20px;margin:0px"> -->
+                                    <div class="form-group col-md-12">
+                                        <div class="custom-control custom-checkbox">
+                                            <p id="rejectSign" style="text-transform:uppercase;padding-top:10px;color:#ef050a;font-size:13px;font-weight:bold;">
+                                                                                            </p>
+                                            <input type="checkbox" class="custom-control-input" name="confirmSign" id="confirmSign" value="1" onclick="errorDecl();" autocomplete="off">
+                                            <label class="custom-control-label" for="confirmSign">I confirm that this is my valid signature and also agree to above mentioned Note.</label>
+                                            <div class="invalid-feedback" id="confirmSign_preview" style="right:20px">
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                    
+                                </div>
+                            </div>
+                        </div>
+
+                        
+                        
+
+                    </div>
+                </div>
+            </div>
+
+            <p class="er_alert1" style="text-align:center"></p>
+           
+            <div class="row justify-content-center mb-5 mt-5">
+                <a href="basic_details.php?q=MGY1MTVjZTRjOTE2ZTMxZDAyZWE1YjA4Yzc0Y2Y1ZmR8NzQyMjU5MDE2" class="btn sbtn1" type="button"> Back </a>
+
+                <input class="btn sbtn" type="button" name="Submit" id="Submit" value="Next" autocomplete="off">
+                <input type="hidden" name="myear" id="myear" value="" autocomplete="off">
+                <input type="hidden" name="submit_type" id="submit_type" value="" autocomplete="off">
+                <input type="hidden" name="q" id="q" value="MGY1MTVjZTRjOTE2ZTMxZDAyZWE1YjA4Yzc0Y2Y1ZmR8NzQyMjU5MDE2" autocomplete="off">
+                <input type="hidden" name="status" id="status" value="IC" autocomplete="off">
+                                <input type="hidden" name="ps" id="ps" value="NjdmOWY1YmIyODc2OGY1NjhhMTk4YzQ4MjRiYmQ3NDN8MTc4ODcwODQ4Mg==" autocomplete="off">
+                <input type="hidden" name="t" id="t" value="" autocomplete="off">
+                                <input type="hidden" name="smsverify_captcha" id="smsverify_captcha" value="1" autocomplete="off">
+                <input type="hidden" name="emailverify_captcha" id="emailverify_captcha" value="1" autocomplete="off">
+            </div>
+
+
+
+
+        </form>
+
+        <div class="watermark" style="background-image: url('');"></div>
+
+    </div>
+    <div class="modal " id="myModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content" style="position: fixed;width: 750px;height: 500px;margin-left: -65px;">
+                <div class="modal-header">
+                    <h5 class="modal-title"><b>Photo Verification</b></h5>
+                    <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <table class="col-md-12">
+                        <thead>
+                        </thead>
+                        <tbody class="table">
+                            <tr>
+                                <th style="color:red;" id="invalidupload_text"><b>Invalid Uploaded Photo/Sign</b></th>
+                                <th style="color:green;" id="uploadsample_text"><b>Valid Sample Photo/Sign</b></th>
+                            </tr>
+                            <tr>
+                                <td id="invalidupload_img">
+                                </td>
+                                <td id="uploadsample_img">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="color:red;" id="reasonstatus"></td>
+                            </tr>
+                            <tr>
+                                <td style="color:red; font-size: 12px" id="imgcount"></td>
+                            </tr>
+
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal " id="myModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content" style="position: fixed;width: 750px;height: 500px;margin-left: -65px;">
+                <div class="modal-header">
+                    <h5 class="modal-title"><b>Photo Verification</b></h5>
+                    <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <table class="col-md-12">
+                        <thead>
+                        </thead>
+                        <tbody class="table">
+                            <tr>
+                                <th style="color:red;" id="invalidupload_text"><b>Invalid Uploaded Photo/Sign</b></th>
+                                <th style="color:green;" id="uploadsample_text"><b>Valid Sample Photo/Sign</b></th>
+                            </tr>
+                            <tr>
+                                <td id="invalidupload_img">
+                                </td>
+                                <td id="uploadsample_img">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="color:red;" id="reasonstatus"></td>
+                            </tr>
+                            <tr>
+                                <td style="color:red; font-size: 12px" id="imgcount"></td>
+                            </tr>
+
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+	<footer class="footer">
+		<div class="container-fluid text-right">
+			<span class="text-muted"></span>
+			<span class="text-muted">Support and Best Viewed on Internet Explorer 9+; Google Chrome 30+ ; Firefox 20+</span>
+		</div>
+	</footer>
+<!-- <div id="footer_links">
+<div id="footer_copyright_txt"></div>
+<div id="footer_copyright_txt" class="footer_info" >Support and Best Viewed on Internet Explorer 9+; Google Chrome 30+ ; Firefox 20+</div>
+</div> -->
+<!--<script type="text/javascript" src="js/jquery_1.10.0.min.js"></script>-->
+<script type="text/javascript" src="/hub/application/js/jquery-3.7.1.min.js"></script>
+	<script language="javascript" type="text/javascript" src="/hub/application/js/browser.js"></script> 
+	<script language="javascript" type="text/javascript" src="/hub/application/js/reg_valid.js?t=" +math.random()=""></script>
+	<link href="/hub/application/images/validity.css" rel="stylesheet" type="text/css">
+	<script language="javascript" type="text/javascript" src="/hub/application/js/validity.js"></script>
+	<script language="javascript" type="text/javascript" src="/hub/application/js/ajaxloader_rwd.js"></script>
+<script language="javascript" type="text/javascript" src="/hub/application/js/overlay.js"></script>
+<script type="text/javascript">
+//$("input,select,textarea").attr("autocomplete","");
+$(document).ready(function(){  
+    // $("input").attr("autocomplete", 0);
+	//$("form").attr("autocomplete", "");
+	$("input").attr("autocomplete", "off");
+	$("input").focus(function(){
+	  if($(this).prop( "readonly" )){
+		$(this).blur();
+	  }
+	});
+
+	$(".zoompageinout").change(function(){   
+		$("body").attr("style","zoom:"+$(this).val()+"%;"+"-moz-transform: scale(1.2,1.2);");
+	});
+	
+});
+
+
+
+</script>    <script>
+    $('.pic').on('change', function() {
+        var fileName = document.getElementById("picture").files[0].name;
+        $(this).next('.custom-file-label').addClass("selected").html(fileName);
+    })
+    $('.sig').on('change', function() {
+        var fileName = document.getElementById("signature").files[0].name;
+        $(this).next('.custom-file-label').addClass("selected").html(fileName);
+    })
+
+    function errorDecl() {
+        var confirmPhoto = $('input[name=confirmPhoto]:checked').val();
+        if (confirmPhoto == 1) {
+            $("#confirmPhoto_preview").html('').hide();
+        }
+        var confirmSign = $('input[name=confirmSign]:checked').val();
+        if (confirmSign == 1) {
+            $("#confirmSign_preview").html('').hide();
+        }
+    }
+    </script>
+
+    <div id="wrapper_container">
+        <div id="wrapper">
+
+            <div id="body_container">
+                <div id="body_container_inner">
+
+
+                    <div class="clear"></div>
+                                        <!--footer start here-->
+
+                    <script language="javascript" type="text/javascript" src="script/image.js"></script>
+                    <!--footer end here-->
+                </div>
+                                <div id="fancybox-overlay" class="hide" style=""></div>
+
+                <!-- iframe used for ajax file upload-->
+                <!-- debug: change it to style="display:block" -->
+                <iframe name="upload_iframe" id="upload_iframe" style="display:none;"></iframe>
+                <!-- iframe used for ajax file upload-->
+                <div class="orientationMsg" style="display:none">
+                    <table width="780" border="0" cellspacing="0" cellpadding="0" align="center">
+	<tbody><tr>
+		<td class="tdbg">
+			<table width="780" border="0" cellspacing="0" cellpadding="0">
+				<tbody><tr>
+					<td height="300" valign="top">
+						<table width="750" border="0" align="center" cellpadding="0" cellspacing="0">
+							<tbody><tr>
+								<td width="750" height="15"></td>
+							</tr>
+						</tbody></table>
+						<table width="758" border="0" align="center" cellpadding="2" cellspacing="2">
+							<tbody><tr>
+								<td align="center" valign="middle" class="tablecontent1">
+									<div>
+									<p align="center" class="style4" style="text-align: center; color:red; font-size:25px; margin-top:120px;">This Website is viewable only in Landscape Mode.</p>
+									</div>
+									<p></p>
+								</td>
+							</tr>
+						</tbody></table>
+					</td>
+				</tr>
+			</tbody></table>
+		</td>
+	</tr>
+</tbody></table>                </div>
+
+                <style>
+  :root {
+  --navy:       #4c56c0;
+  --navy-dark:  #1e2a6e;
+  --navy-light: #eef0fb;
+  --blue:       #3d52c4;
+  --blue-btn:   #3b4fc8;
+  --accent:     #e8302a;
+  --green:      #16a34a;
+  --green-bg:   #f0fdf4;
+  --green-bd:   #bbf7d0;
+  --red:        #dc2626;
+  --red-bg:     #fef2f2;
+  --red-bd:     #fecaca;
+  --border:     #dde1f0;
+  --text:       #1a1f3c;
+  --muted:      #6b7280;
+  --white:      #ffffff;
+  --bg:         #f0f2f9;
+  --radius:     10px;
+}
+
+/* ── OVERLAY ──────────────────────────────────── */
+/* Using Bootstrap modal instead of custom overlay */
+
+/* ── MODAL CUSTOMIZATION ──────────────────────── */
+.modal-dialog {
+  max-width: 740px;
+}
+.modal-content {
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 24px 64px rgba(15,22,60,.22);
+  overflow: hidden;
+  font-family: 'Nunito', sans-serif;
+}
+
+/* Modal header – navy stripe */
+.modal-content .modal-header {
+  background: var(--navy);
+  padding: 0;
+  border-bottom: none;
+  display: flex; flex-direction: column;
+  flex-shrink: 0;
+  border-radius: 0;
+}
+.modal-header-top {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 22px 14px;
+  width: 100%;
+}
+.modal-header-left { display: flex; align-items: center; gap: 12px; }
+.modal-icon {
+  width: 38px; height: 38px; background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; color: #fff;
+  flex-shrink: 0;
+}
+.modal-icon svg { width: 18px; height: 18px; }
+.modal-title-group {}
+.modal-title-text { font-size: 17px; font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 0; }
+.modal-subtitle { font-size: 12px; color: rgba(255,255,255,.65); margin-top: 2px; }
+.modal-close-btn {
+  background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18);
+  color: rgba(255,255,255,.7); width: 32px; height: 32px; border-radius: 6px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all .15s; flex-shrink: 0; padding: 0;
+}
+.modal-close-btn:hover { background: rgba(255,255,255,.2); color: #fff; }
+.modal-close-btn svg { width: 13px; height: 13px; stroke-width: 2.5; }
+
+/* Tab bar inside header */
+.modal-tabs {
+  display: flex; padding: 5px 22px 0px; gap: 7px; width: 100%;background: #fff;
+}
+.mtab {
+  background: #eef2f7bd; /*border: none;*/border: 2px solid #4c56c05c; border-bottom: 3px solid transparent;
+  color: #000; font-family: 'Nunito', sans-serif;
+  font-size: 13px; font-weight: 600; padding: 10px 14px 9px;
+  cursor: pointer; transition: all .15s; white-space: nowrap; border-bottom: none;
+  border-radius: 8px 8px 0px 0px;
+}
+.mtab.active { color: #fff; /*border-bottom-color: #fff;*/ background: #4c56c0;}
+.mtab:hover:not(.active) { color: rgba(255,255,255); }
+button.mtab:hover
+{
+  background: #4c56c0;
+}
+
+/* Thin divider */
+.modal-divider { height: 1px; background: var(--border); flex-shrink: 0; }
+
+/* Modal body */
+.modal-content .modal-body {
+  overflow-y: auto;
+  padding: 22px 22px 24px;
+  max-height: calc(88vh - 200px);
+}
+.modal-content .modal-body::-webkit-scrollbar { width: 4px; }
+.modal-content .modal-body::-webkit-scrollbar-thumb { background: #c7d0e8; border-radius: 8px; }
+
+/* Tab panels */
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── VALID CARD ───────────────────────────────── */
+.valid-hero {
+  background: var(--green-bg);
+  border: 1.5px solid var(--green-bd);
+  border-radius: 10px;
+  padding: 18px 20px;
+  display: flex; align-items: flex-start; gap: 18px;
+  margin-bottom: 6px;
+}
+.valid-img-col { flex-shrink: 0; position: relative; }
+.valid-img-col img {
+  width: 88px; height: 108px; object-fit: cover;
+  border-radius: 7px; border: 2px solid #86efac;
+  background: #dcfce7; display: block;
+}
+.valid-badge-pill {
+  position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%);
+  background: var(--green); color: #fff;
+  font-size: 10px; font-weight: 800; letter-spacing: .4px;
+  padding: 3px 10px; border-radius: 20px; white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(22,163,74,.35);
+}
+.valid-checks { flex: 1; }
+.valid-checks h4 { font-size: 14px; font-weight: 800; color: var(--green); margin-bottom: 10px; }
+.check-list { list-style: none; display: flex; flex-direction: column; gap: 7px; padding-left: 0; margin-bottom: 0; }
+.check-list li {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: #166534; font-weight: 500;
+}
+.check-list li svg { flex-shrink: 0; color: var(--green); }
+
+/* ── SECTION LABEL ────────────────────────────── */
+.sec-label {
+  font-size: 11px; font-weight: 700; letter-spacing: .9px;
+  text-transform: uppercase; color: var(--muted);
+  margin: 18px 0 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.sec-label::after { content:''; flex:1; height:1px; background: var(--border); }
+
+/* ── INVALID GRID ─────────────────────────────── */
+.inv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
+  gap: 12px;
+}
+.inv-card {
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: 9px; overflow: hidden;
+  transition: box-shadow .2s, border-color .2s;
+}
+.inv-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,.08); border-color: #fca5a5; }
+.inv-img {
+  position: relative; height: 140px; background: #f8fafc; overflow: hidden;
+}
+.inv-img img { width:100%; height:100%; object-fit:cover; display:block; }
+.inv-img .ph {
+  width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+  font-size:10.5px; color:#94a3b8; background:#f1f5f9; font-style:italic; text-align:center; padding:8px;
+}
+.x-dot {
+  position: absolute; top:7px; right:7px;
+  width: 24px; height: 24px; background: var(--red);
+  border-radius: 50%; display: flex; align-items:center; justify-content:center;
+  box-shadow: 0 2px 6px rgba(220,38,38,.4);
+}
+.x-dot svg { width:11px; height:11px; stroke-width:2.8; color:#fff; }
+.inv-body { padding: 9px 11px 11px; }
+.inv-title { font-size:12.5px; font-weight:700; color:var(--text); margin-bottom:3px; }
+.inv-reason { font-size:11.5px; color:var(--muted); line-height:1.4; }
+
+/* ── TIPS ─────────────────────────────────────── */
+.tips-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.tip-card {
+  display:flex; gap:12px; align-items:flex-start;
+  background: var(--navy-light); border: 1px solid #c9d0ee;
+  border-radius:9px; padding:13px;
+}
+.tip-ico {
+  width:34px; height:34px; background:var(--navy);
+  border-radius:7px; display:flex; align-items:center; justify-content:center;
+  flex-shrink:0; color:#fff;
+}
+.tip-ico svg { width:16px; height:16px; }
+.tip-txt strong { display:block; font-size:13px; font-weight:700; color:var(--text); margin-bottom:3px; }
+.tip-txt span { font-size:12px; color:var(--muted); line-height:1.45; }
+
+/* ── MODAL FOOTER ─────────────────────────────── */
+.modal-content .modal-footer {
+  padding: 14px 22px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items:center; justify-content:space-between; gap:12px;
+  background: #fafbff; flex-shrink:0;
+}
+.footer-note { font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px; margin-bottom: 0; }
+.footer-note svg { color: var(--navy); flex-shrink:0; }
+.btn-ok {
+  background: var(--blue-btn); color:#fff; border:none;
+  padding: 10px 24px; border-radius:7px;
+  font-family:'Nunito',sans-serif; font-size:13.5px; font-weight:700;
+  cursor:pointer; transition:background .15s; white-space:nowrap;
+}
+.btn-ok:hover { background: var(--navy-dark); }
+
+/* Bootstrap modal backdrop blur override */
+.modal-backdrop.show { opacity: 0.55; }
+
+.modal-open
+{
+  padding-right: 0px !important;
+}
+
+/* responsive */
+@media(max-width:576px){
+  .tips-grid { grid-template-columns:1fr; }
+  .inv-grid { grid-template-columns:repeat(2,1fr); }
+  .valid-hero { flex-direction:column; }
+}
+</style>
+
+<!-- ═══════════════════════════════════════════
+             PHOTO GUIDELINES MODAL – Bootstrap 4
+        ════════════════════════════════════════════ -->
+        <div class="modal fade" id="photoModal" tabindex="-1" role="dialog" aria-labelledby="mTitle" aria-hidden="true">
+          <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
+            <div class="modal-content">
+
+              <!-- Header -->
+              <div class="modal-header">
+                <div class="modal-header-top">
+                  <div class="modal-header-left">
+                    <div class="modal-icon">
+                      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="2" y="4" width="16" height="13" rx="2"></rect><circle cx="10" cy="10.5" r="3"></circle><path d="M6.5 4V3M13.5 4V3"></path></svg>
+                    </div>
+                    <div class="modal-title-group">
+                      <div class="modal-title-text" id="mTitle">Accepted Photo Guidelines</div>
+                      <div class="modal-subtitle">Please review before uploading your photograph</div>
+                    </div>
+                  </div>
+                  <!-- Bootstrap 4 dismiss button -->
+                  <button type="button" class="modal-close-btn" data-dismiss="modal" aria-label="Close">
+                    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-linecap="round"><line x1="1" y1="1" x2="13" y2="13"></line><line x1="13" y1="1" x2="1" y2="13"></line></svg>
+                  </button>
+                </div>
+                <div class="modal-tabs">
+                  <button class="mtab active" onclick="switchTab('invalid',this)">❌ Invalid Examples</button>
+                  <button class="mtab" onclick="switchTab('valid',this)">✅ Valid Example</button>
+                  <button class="mtab" onclick="switchTab('tips',this)">💡 Tips</button>
+                </div>
+              </div>
+
+              <div class="modal-divider"></div>
+
+              <!-- Body -->
+              <div class="modal-body">
+
+                <!-- INVALID TAB -->
+                <div class="tab-panel active" id="tab-invalid">
+                  <div class="sec-label">Photos that will be rejected</div>
+                  <div class="inv-grid">
+
+                    <div class="inv-card">
+                      <div class="inv-img">
+                        <img src="images/guideline_images/invalid-bg.jpg" alt="" onerror="this.parentNode.innerHTML='&lt;div class=ph&gt;invalid-bg.jpg&lt;/div&gt;'">
+                        <span class="x-dot"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-linecap="round"><line x1="2" y1="2" x2="10" y2="10"></line><line x1="10" y1="2" x2="2" y2="10"></line></svg></span>
+                      </div>
+                      <div class="inv-body">
+                        <div class="inv-title">Coloured Background</div>
+                        <div class="inv-reason">Use plain white/light grey background only</div>
+                      </div>
+                    </div>
+
+                    <div class="inv-card">
+                      <div class="inv-img">
+                        <img src="images/guideline_images/invalid-blurry.jpg" alt="" onerror="this.parentNode.innerHTML='&lt;div class=ph&gt;invalid-blurry.jpg&lt;/div&gt;'">
+                        <span class="x-dot"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-linecap="round"><line x1="2" y1="2" x2="10" y2="10"></line><line x1="10" y1="2" x2="2" y2="10"></line></svg></span>
+                      </div>
+                      <div class="inv-body">
+                        <div class="inv-title">Blurry / Out of Focus</div>
+                        <div class="inv-reason">Ensure a sharp, high-resolution image</div>
+                      </div>
+                    </div>
+
+                    <div class="inv-card">
+                      <div class="inv-img">
+                        <img src="images/guideline_images/invalid-cartoon.jpg" alt="" onerror="this.parentNode.innerHTML='&lt;div class=ph&gt;invalid-cartoon.jpg&lt;/div&gt;'">
+                        <span class="x-dot"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-linecap="round"><line x1="2" y1="2" x2="10" y2="10"></line><line x1="10" y1="2" x2="2" y2="10"></line></svg></span>
+                      </div>
+                      <div class="inv-body">
+                        <div class="inv-title">Cartoon / Avatar</div>
+                        <div class="inv-reason">Must be a real photograph, not an illustration</div>
+                      </div>
+                    </div>
+
+                    <div class="inv-card">
+                      <div class="inv-img">
+                        <img src="images/guideline_images/invalid-multipleface.jpg" alt="" onerror="this.parentNode.innerHTML='&lt;div class=ph&gt;invalid-multipleface.jpg&lt;/div&gt;'">
+                        <span class="x-dot"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-linecap="round"><line x1="2" y1="2" x2="10" y2="10"></line><line x1="10" y1="2" x2="2" y2="10"></line></svg></span>
+                      </div>
+                      <div class="inv-body">
+                        <div class="inv-title">Multiple Faces</div>
+                        <div class="inv-reason">Only one person should appear in the frame</div>
+                      </div>
+                    </div>
+
+                    <div class="inv-card">
+                      <div class="inv-img">
+                        <img src="images/guideline_images/invalid-noface.jpg" alt="" onerror="this.parentNode.innerHTML='&lt;div class=ph&gt;invalid-noface.jpg&lt;/div&gt;'">
+                        <span class="x-dot"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-linecap="round"><line x1="2" y1="2" x2="10" y2="10"></line><line x1="10" y1="2" x2="2" y2="10"></line></svg></span>
+                      </div>
+                      <div class="inv-body">
+                        <div class="inv-title">No Face Visible</div>
+                        <div class="inv-reason">Face must be fully visible and centred</div>
+                      </div>
+                    </div>
+
+                    <div class="inv-card">
+                      <div class="inv-img">
+                        <img src="images/guideline_images/invalid-noplainbg.jpg" alt="" onerror="this.parentNode.innerHTML='&lt;div class=ph&gt;invalid-noplainbg.jpg&lt;/div&gt;'">
+                        <span class="x-dot"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-linecap="round"><line x1="2" y1="2" x2="10" y2="10"></line><line x1="10" y1="2" x2="2" y2="10"></line></svg></span>
+                      </div>
+                      <div class="inv-body">
+                        <div class="inv-title">Busy Background</div>
+                        <div class="inv-reason">Background must be plain and uncluttered</div>
+                      </div>
+                    </div>
+
+                    <div class="inv-card">
+                      <div class="inv-img">
+                        <img src="images/guideline_images/invalid-screenphoto.jpg" alt="" onerror="this.parentNode.innerHTML='&lt;div class=ph&gt;invalid-screenphoto.jpg&lt;/div&gt;'">
+                        <span class="x-dot"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-linecap="round"><line x1="2" y1="2" x2="10" y2="10"></line><line x1="10" y1="2" x2="2" y2="10"></line></svg></span>
+                      </div>
+                      <div class="inv-body">
+                        <div class="inv-title">Photo of a Screen</div>
+                        <div class="inv-reason">Do not photograph an image on a display</div>
+                      </div>
+                    </div>
+
+                    <div class="inv-card">
+                      <div class="inv-img">
+                        <img src="images/guideline_images/invalid-tilt.jpg" alt="" onerror="this.parentNode.innerHTML='&lt;div class=ph&gt;invalid-tilt.jpg&lt;/div&gt;'">
+                        <span class="x-dot"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-linecap="round"><line x1="2" y1="2" x2="10" y2="10"></line><line x1="10" y1="2" x2="2" y2="10"></line></svg></span>
+                      </div>
+                      <div class="inv-body">
+                        <div class="inv-title">Head Tilted</div>
+                        <div class="inv-reason">Look straight ahead, head level &amp; centred</div>
+                      </div>
+                    </div>
+
+                    <div class="inv-card">
+                      <div class="inv-img">
+                        <img src="images/guideline_images/invalid-lighting.jpg" alt="" onerror="this.parentNode.innerHTML='&lt;div class=ph&gt;invalid-lighting.jpg&lt;/div&gt;'">
+                        <span class="x-dot"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-linecap="round"><line x1="2" y1="2" x2="10" y2="10"></line><line x1="10" y1="2" x2="2" y2="10"></line></svg></span>
+                      </div>
+                      <div class="inv-body">
+                        <div class="inv-title">Poor Lighting</div>
+                        <div class="inv-reason">Even, soft lighting with no harsh shadows</div>
+                      </div>
+                    </div>
+
+                    <div class="inv-card">
+                      <div class="inv-img">
+                        <img src="images/guideline_images/invalid-position.jpg" alt="" onerror="this.parentNode.innerHTML='&lt;div class=ph&gt;invalid-position.jpg&lt;/div&gt;'">
+                        <span class="x-dot"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-linecap="round"><line x1="2" y1="2" x2="10" y2="10"></line><line x1="10" y1="2" x2="2" y2="10"></line></svg></span>
+                      </div>
+                      <div class="inv-body">
+                        <div class="inv-title">Incorrect Framing</div>
+                        <div class="inv-reason">Face should fill 70–80% of the frame</div>
+                      </div>
+                    </div>
+
+                  </div>
+                </div><!-- /tab-invalid -->
+
+                <!-- VALID TAB -->
+                <div class="tab-panel" id="tab-valid">
+                  <div class="sec-label">Accepted photo format</div>
+                  <div class="valid-hero">
+                    <div class="valid-img-col">
+                      <img src="images/guideline_images/valid-tick.jpg" alt="Valid photo" onerror="this.style.background='#dcfce7'">
+                      <span class="valid-badge-pill">✓ Accepted</span>
+                    </div>
+                    <div class="valid-checks">
+                      <h4>✅ Perfect Photo</h4>
+                      <ul class="check-list">
+                        <li><svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5 6.5 5 10 11.5 3"></polyline></svg>Plain white / light grey background</li>
+                        <li><svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5 6.5 5 10 11.5 3"></polyline></svg>Face clearly visible, straight gaze</li>
+                        <li><svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5 6.5 5 10 11.5 3"></polyline></svg>Sharp, in-focus image</li>
+                        <li><svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5 6.5 5 10 11.5 3"></polyline></svg>Good, even lighting — no shadows</li>
+                        <li><svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5 6.5 5 10 11.5 3"></polyline></svg>Head level, centred in frame</li>
+                        <li><svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5 6.5 5 10 11.5 3"></polyline></svg>Single person only</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div><!-- /tab-valid -->
+
+                <!-- TIPS TAB -->
+                <div class="tab-panel" id="tab-tips">
+                  <div class="sec-label">How to take the best photo</div>
+                  <div class="tips-grid">
+                    <div class="tip-card">
+                      <div class="tip-ico"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="9" r="6.5"></circle><path d="M9 5.5v3.5l2.5 1.5"></path></svg></div>
+                      <div class="tip-txt"><strong>Natural Daylight</strong><span>Face a window during the day for even, shadow-free light.</span></div>
+                    </div>
+                    <div class="tip-card">
+                      <div class="tip-ico"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="12" height="10" rx="2"></rect><circle cx="9" cy="9" r="2.5"></circle></svg></div>
+                      <div class="tip-txt"><strong>Portrait Mode</strong><span>Use your phone's portrait mode to keep your face sharp.</span></div>
+                    </div>
+                    <div class="tip-card">
+                      <div class="tip-ico"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="2" y="2" width="14" height="14" rx="2"></rect><path d="M2 7h14M7 2v14"></path></svg></div>
+                      <div class="tip-txt"><strong>Plain Background</strong><span>Stand against a white wall or hang a white sheet.</span></div>
+                    </div>
+                    <div class="tip-card">
+                      <div class="tip-ico"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="7" r="3"></circle><path d="M3 17c0-3.3 2.7-6 6-6s6 2.7 6 6"></path></svg></div>
+                      <div class="tip-txt"><strong>Solo in Frame</strong><span>Ensure no other person or reflection appears behind you.</span></div>
+                    </div>
+                    <div class="tip-card">
+                      <div class="tip-ico"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 3v1M9 14v1M3 9H2M16 9h-1M5 5l-.7-.7M13.7 13.7l-.7-.7"></path><circle cx="9" cy="9" r="3"></circle></svg></div>
+                      <div class="tip-txt"><strong>Hold Steady</strong><span>Rest your elbow on a surface or use a timer to avoid blur.</span></div>
+                    </div>
+                    <div class="tip-card">
+                      <div class="tip-ico"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="12" height="12" rx="1.5"></rect><path d="M3 8h12M8 3v12"></path></svg></div>
+                      <div class="tip-txt"><strong>Check the Crop</strong><span>Your face should fill most of the frame, crown to chin.</span></div>
+                    </div>
+                  </div>
+                </div><!-- /tab-tips -->
+
+              </div><!-- /modal-body -->
+
+              <!-- Footer -->
+              <div class="modal-footer">
+                <p class="footer-note">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="7" cy="7" r="6"></circle><line x1="7" y1="5" x2="7" y2="5.1" stroke-width="2.5"></line><line x1="7" y1="7.5" x2="7" y2="10"></line></svg>
+                  Non-compliant photos will be automatically rejected
+                </p>
+                <!-- Bootstrap 4 dismiss -->
+                <button class="btn-ok" data-dismiss="modal">
+                  Understood, Proceed →
+                </button>
+              </div>
+
+            </div><!-- /modal-content -->
+          </div><!-- /modal-dialog -->
+        </div><!-- /modal -->
+
+        <!-- Bootstrap 4 JS  -->
+        <script src="/hub/application/js/bootstrap.min_rwd.js"></script>
+
+        <script>
+          function switchTab(id, btn) {
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.mtab').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + id).classList.add('active');
+            btn.classList.add('active');
+          }
+        </script>
+
+<script type="text/javascript">
+$(document).ready(function() {
+    $("#cameraSection").css("display", 'block');
+
+    // Close button in Modal popup
+    $('.trigger').click(function() {
+        $('.modal-wrapper').toggleClass('open');
+        var isMobileVersion = document.getElementsByClassName('modal-wrapper open');
+        if (isMobileVersion.length > 0) {
+            openCameraCapture(1);
+        } else {
+            openCameraCapture(2);
+        }
+        $('.page-wrapper').toggleClass('blur');
+    });
+});
+
+// After file upload close the camera module
+function closeCamModule() {
+    $('.modal-wrapper').toggleClass('open');
+    var isMobileVersion = document.getElementsByClassName('modal-wrapper open');
+    if (isMobileVersion.length > 0) {
+        openCameraCapture(1);
+    } else {
+        openCameraCapture(2);
+    }
+    $('.page-wrapper').toggleClass('blur');
+}
+
+// Open Camera Popup and Play the Webcam 
+function openCameraCapture(val) {
+    if (val == 1) {
+        $("#photoSection").css("display", 'none');
+        $("#cameraSection").css("display", 'block');
+        startup();
+    } else {
+        closeCam();
+    }
+}
+
+var width = 280; // We will scale the photo width to this
+var height = 300; // This will be computed based on the input stream
+
+var streaming = false;
+
+var video = null;
+var canvas = null;
+var photo = null;
+var startbutton = null;
+
+function startup() {
+    video = document.getElementById('webCamera');
+    canvas = document.getElementById('videoCanvas');
+    photo = document.getElementById('photo');
+    startbutton = document.getElementById('startbutton');
+
+    navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false
+        })
+        .then(function(stream) {
+            video.srcObject = stream;
+            this.myStream = stream;
+            video.play();
+        })
+        .catch(function(err) {
+            $("#cameraSection").empty();
+            $("#cameraSection").html("<img src='images/webcam.png'><p class='webcam-msg'>WebCam not detected</p>");
+            console.log("An error occurred: " + err);
+        });
+
+
+    startbutton.addEventListener('click', function(ev) {
+        takepicture();
+        ev.preventDefault();
+    }, false);
+    clearphoto();
+}
+
+// Close the Camera & Stop the Recording process
+function closeCam() {
+    this.myStream.getVideoTracks()[0].stop();
+}
+
+// Capture the picture and store in canvas
+function takepicture() {
+    canvas = document.getElementById('canvas');
+    var context = canvas.getContext('2d');
+    if (width && height) {
+        canvas.width = width;
+        canvas.height = height;
+
+        // Crop the Image with the Focus box
+        context.drawImage(video, 120, 50, 400, 500, 0, 0, 280, 380);
+
+        var data = canvas.toDataURL('image/jpeg');
+        photo.setAttribute('src', data);
+
+        // convert to Blob (async)
+        canvas.toBlob((blob) => {
+            const file = new File([blob], "candidatephoto.jpeg", {
+                type: "image/jpeg",
+                lastModified: new Date().getTime()
+            });
+            const dT = new DataTransfer();
+            dT.items.add(file);
+            document.getElementById("picture").files = dT.files;
+        });
+
+        $("#photoSection").css("display", 'block');
+        $("#cameraSection").css("display", 'none');
+        $("#imageshowtext").val(data);
+    } else {
+        clearphoto();
+    }
+}
+
+// Draw Box in Video Container
+var video = document.querySelector("#webCamera");
+video.onplay = function() {
+    setTimeout(drawImge, 400);
+};
+
+
+// Trigger Capture again Modal Popup
+function captureAgainMode() {
+    $("#photoSection").css("display", 'none');
+    $("#cameraSection").css("display", 'block');
+}
+
+
+// Clear the Captured Photo
+function clearphoto() {
+    canvas = document.getElementById('canvas');
+    photo = document.getElementById('photo');
+    var context = canvas.getContext('2d');
+    context.fillStyle = "#AAA";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    var data = canvas.toDataURL('image/jpeg');
+    photo.setAttribute('src', data);
+}
+
+// Draw box function
+function drawImge() {
+    var video = document.querySelector("#webCamera");
+    var canvas = document.querySelector("#videoCanvas");
+    var ctx = canvas.getContext('2d');
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    var faceArea = 400;
+    var pX = canvas.width / 2 - faceArea / 2;
+    var pY = canvas.height / 2 - faceArea / 2;
+
+    ctx.rect(pX, pY, faceArea, faceArea);
+    ctx.lineWidth = "3";
+    ctx.strokeStyle = "red";
+    ctx.stroke();
+
+    setTimeout(drawImge, 100);
+}
+
+function showQrCode() {
+    $("#showQRButton").toggleClass('hide');
+    $("#QRimg").removeClass('blur');
+    intiateQRscan();
+}
+
+function hideQRCode(tag) {
+
+    var imagesrc = "error";
+    console.log(imagesrc);
+    $("#qr_preview_picture_tag").removeAttr("src");
+    $("#qr_preview_picture_tag").attr("src", imagesrc);
+
+    if (tag == '1') {
+        $("#showQRButton").removeClass('hide');
+        $("#QRimg").addClass('blur');
+    }
+}
+
+function intiateQRscan() {
+    $.ajax({
+        url: "ajaxpoll/qrresponse.php?q=MGY1MTVjZTRjOTE2ZTMxZDAyZWE1YjA4Yzc0Y2Y1ZmR8NzQyMjU5MDE2&intiate=1",
+        type: "GET",
+        success: function(data) {
+            if (data == '1') {
+                poll();
+            }
+        },
+        dataType: "json",
+    })
+    // poll();
+}
+/* Ajax Short Polling */
+function poll() {
+    $.ajax({
+        url: "ajaxpoll/qrresponse.php?q=MGY1MTVjZTRjOTE2ZTMxZDAyZWE1YjA4Yzc0Y2Y1ZmR8NzQyMjU5MDE2",
+        type: "GET",
+        success: function(data) {
+            if (data == '1') {
+                if (window.localStorage) {
+                    if (!localStorage.getItem('firstLoad')) {
+                        localStorage['firstLoad'] = true;
+                        window.location.reload();
+                        // hideQRCode(1);
+                        return false;
+                    } else {
+                        localStorage.removeItem('firstLoad');
+                    }
+                }
+                clearTimeout(timeout);
+            } else {
+                localStorage.removeItem('firstLoad');
+            }
+        },
+        dataType: "json",
+        complete: timeout = setTimeout(function() {
+            poll()
+        }, 5000),
+        timeout: 2000
+    })
+};
+
+let refresher = $(".refresher");
+
+$(".btn-refresh-success").on("click", () => {
+    refresher.addClass("loading");
+
+    setTimeout(function() {
+        refresher.removeClass("loading");
+        refresher.addClass("success");
+        setTimeout(() => refresher.removeClass("success"), 2000);
+    }, 1500);
+});
+</script>
+
+
+
+</div></div></div><form-agent-ui style="overflow: visible; position: relative; width: 0px; height: 0px; display: block;"><template shadowrootmode="open"><html style="position: absolute; top: 0px; left: 0px;"><head><style>/* WXT Shadow Root Reset */ :host{all:initial !important;}
+/*! tailwindcss v4.3.3 | MIT License | https://tailwindcss.com */
+@layer properties {
+  @supports (((-webkit-hyphens: none)) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color: rgb(from red r g b)))) {
+    *, :before, :after, ::backdrop {
+      --tw-scale-x: 1;
+      --tw-scale-y: 1;
+      --tw-scale-z: 1;
+      --tw-space-y-reverse: 0;
+      --tw-space-x-reverse: 0;
+      --tw-border-style: solid;
+      --tw-leading: initial;
+      --tw-font-weight: initial;
+      --tw-tracking: initial;
+      --tw-shadow: 0 0 #0000;
+      --tw-shadow-color: initial;
+      --tw-shadow-alpha: 100%;
+      --tw-inset-shadow: 0 0 #0000;
+      --tw-inset-shadow-color: initial;
+      --tw-inset-shadow-alpha: 100%;
+      --tw-ring-color: initial;
+      --tw-ring-shadow: 0 0 #0000;
+      --tw-inset-ring-color: initial;
+      --tw-inset-ring-shadow: 0 0 #0000;
+      --tw-ring-inset: initial;
+      --tw-ring-offset-width: 0px;
+      --tw-ring-offset-color: #fff;
+      --tw-ring-offset-shadow: 0 0 #0000;
+      --tw-outline-style: solid;
+      --tw-blur: initial;
+      --tw-brightness: initial;
+      --tw-contrast: initial;
+      --tw-grayscale: initial;
+      --tw-hue-rotate: initial;
+      --tw-invert: initial;
+      --tw-opacity: initial;
+      --tw-saturate: initial;
+      --tw-sepia: initial;
+      --tw-drop-shadow: initial;
+      --tw-drop-shadow-color: initial;
+      --tw-drop-shadow-alpha: 100%;
+      --tw-drop-shadow-size: initial;
+      --tw-duration: initial;
+      --tw-content: "";
+      --tw-translate-x: 0;
+      --tw-translate-y: 0;
+      --tw-translate-z: 0;
+      --tw-animation-delay: 0s;
+      --tw-animation-direction: normal;
+      --tw-animation-duration: initial;
+      --tw-animation-fill-mode: none;
+      --tw-animation-iteration-count: 1;
+      --tw-enter-blur: 0;
+      --tw-enter-opacity: 1;
+      --tw-enter-rotate: 0;
+      --tw-enter-scale: 1;
+      --tw-enter-translate-x: 0;
+      --tw-enter-translate-y: 0;
+      --tw-exit-blur: 0;
+      --tw-exit-opacity: 1;
+      --tw-exit-rotate: 0;
+      --tw-exit-scale: 1;
+      --tw-exit-translate-x: 0;
+      --tw-exit-translate-y: 0;
+    }
+  }
+}
+
+@layer theme {
+  :host, :host {
+    --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+    --color-gray-200: oklch(92.8% .006 264.531);
+    --spacing: .25rem;
+    --text-xs: .75rem;
+    --text-xs--line-height: calc(1 / .75);
+    --text-sm: .875rem;
+    --text-sm--line-height: calc(1.25 / .875);
+    --text-base: 1rem;
+    --text-base--line-height: calc(1.5 / 1);
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --tracking-widest: .1em;
+    --leading-normal: 1.5;
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-xl: .75rem;
+    --animate-spin: spin 1s linear infinite;
+    --default-transition-duration: .15s;
+    --default-transition-timing-function: cubic-bezier(.4, 0, .2, 1);
+    --default-font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    --default-mono-font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  }
+}
+
+@layer base {
+  *, :after, :before, ::backdrop {
+    box-sizing: border-box;
+    border: 0 solid;
+    margin: 0;
+    padding: 0;
+  }
+
+  ::file-selector-button {
+    box-sizing: border-box;
+    border: 0 solid;
+    margin: 0;
+    padding: 0;
+  }
+
+  html, :host {
+    -webkit-text-size-adjust: 100%;
+    tab-size: 4;
+    line-height: 1.5;
+    font-family: var(--default-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji");
+    font-feature-settings: var(--default-font-feature-settings, normal);
+    font-variation-settings: var(--default-font-variation-settings, normal);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  hr {
+    height: 0;
+    color: inherit;
+    border-top-width: 1px;
+  }
+
+  abbr:where([title]) {
+    -webkit-text-decoration: underline dotted;
+    text-decoration: underline dotted;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-size: inherit;
+    font-weight: inherit;
+  }
+
+  a {
+    color: inherit;
+    -webkit-text-decoration: inherit;
+    -webkit-text-decoration: inherit;
+    -webkit-text-decoration: inherit;
+    text-decoration: inherit;
+  }
+
+  b, strong {
+    font-weight: bolder;
+  }
+
+  code, kbd, samp, pre {
+    font-family: var(--default-mono-font-family, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);
+    font-feature-settings: var(--default-mono-font-feature-settings, normal);
+    font-variation-settings: var(--default-mono-font-variation-settings, normal);
+    font-size: 1em;
+  }
+
+  small {
+    font-size: 80%;
+  }
+
+  sub, sup {
+    vertical-align: baseline;
+    font-size: 75%;
+    line-height: 0;
+    position: relative;
+  }
+
+  sub {
+    bottom: -.25em;
+  }
+
+  sup {
+    top: -.5em;
+  }
+
+  table {
+    text-indent: 0;
+    border-color: inherit;
+    border-collapse: collapse;
+  }
+
+  :-moz-focusring:where(:not(iframe)) {
+    outline: auto;
+  }
+
+  progress {
+    vertical-align: baseline;
+  }
+
+  summary {
+    display: list-item;
+  }
+
+  ol, ul, menu {
+    list-style: none;
+  }
+
+  img, svg, video, canvas, audio, iframe, embed, object {
+    vertical-align: middle;
+    display: block;
+  }
+
+  img, video {
+    max-width: 100%;
+    height: auto;
+  }
+
+  button, input, select, optgroup, textarea {
+    font: inherit;
+    font-feature-settings: inherit;
+    font-variation-settings: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    opacity: 1;
+    background-color: #0000;
+    border-radius: 0;
+  }
+
+  ::file-selector-button {
+    font: inherit;
+    font-feature-settings: inherit;
+    font-variation-settings: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    opacity: 1;
+    background-color: #0000;
+    border-radius: 0;
+  }
+
+  :where(select:is([multiple], [size])) optgroup {
+    font-weight: bolder;
+  }
+
+  :where(select:is([multiple], [size])) optgroup option {
+    padding-inline-start: 20px;
+  }
+
+  ::file-selector-button {
+    margin-inline-end: 4px;
+  }
+
+  ::placeholder {
+    opacity: 1;
+  }
+
+  @supports (not ((-webkit-appearance: -apple-pay-button))) or (contain-intrinsic-size: 1px) {
+    ::placeholder {
+      color: currentColor;
+    }
+
+    @supports (color: color-mix(in lab, red, red)) {
+      ::placeholder {
+        color: color-mix(in oklab, currentcolor 50%, transparent);
+      }
+    }
+  }
+
+  textarea {
+    resize: vertical;
+  }
+
+  ::-webkit-search-decoration {
+    -webkit-appearance: none;
+  }
+
+  ::-webkit-date-and-time-value {
+    min-height: 1lh;
+    text-align: inherit;
+  }
+
+  ::-webkit-datetime-edit {
+    display: inline-flex;
+  }
+
+  ::-webkit-datetime-edit-fields-wrapper {
+    padding: 0;
+  }
+
+  ::-webkit-datetime-edit {
+    padding-block: 0;
+  }
+
+  ::-webkit-datetime-edit-year-field {
+    padding-block: 0;
+  }
+
+  ::-webkit-datetime-edit-month-field {
+    padding-block: 0;
+  }
+
+  ::-webkit-datetime-edit-day-field {
+    padding-block: 0;
+  }
+
+  ::-webkit-datetime-edit-hour-field {
+    padding-block: 0;
+  }
+
+  ::-webkit-datetime-edit-minute-field {
+    padding-block: 0;
+  }
+
+  ::-webkit-datetime-edit-second-field {
+    padding-block: 0;
+  }
+
+  ::-webkit-datetime-edit-millisecond-field {
+    padding-block: 0;
+  }
+
+  ::-webkit-datetime-edit-meridiem-field {
+    padding-block: 0;
+  }
+
+  ::-webkit-calendar-picker-indicator {
+    line-height: 1;
+  }
+
+  :-moz-ui-invalid {
+    box-shadow: none;
+  }
+
+  button, input:where([type="button"], [type="reset"], [type="submit"]) {
+    appearance: button;
+  }
+
+  ::file-selector-button {
+    appearance: button;
+  }
+
+  ::-webkit-inner-spin-button {
+    height: auto;
+  }
+
+  ::-webkit-outer-spin-button {
+    height: auto;
+  }
+
+  [hidden]:where(:not([hidden="until-found"])) {
+    display: none !important;
+  }
+
+  *, :after, :before, ::backdrop {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+
+  :host {
+    --font-sans: "Geist", sans-serif;
+    --font-mono: "Geist Mono", monospace;
+    --radius: .5rem;
+    --background: #fff;
+    --foreground: #09090b;
+    --card: #fff;
+    --card-foreground: #09090b;
+    --popover: #fff;
+    --popover-foreground: #09090b;
+    --primary: #16a34a;
+    --primary-foreground: #fff1f2;
+    --secondary: #f4f4f5;
+    --secondary-foreground: #18181b;
+    --muted: #f4f4f5;
+    --muted-foreground: #71717a;
+    --accent: #f4f4f5;
+    --accent-foreground: #18181b;
+    --destructive: #ef4444;
+    --destructive-foreground: #fafafa;
+    --border: #e4e4e7;
+    --input: #e4e4e7;
+    --ring: #16a34a;
+    --chart-1: #e76e50;
+    --chart-2: #2a9d90;
+    --chart-3: #274754;
+    --chart-4: #e8c468;
+    --chart-5: #f4a462;
+  }
+
+  .dark {
+    --background: #0c0a09;
+    --foreground: #f2f2f2;
+    --card: #1c1917;
+    --card-foreground: #f2f2f2;
+    --popover: #171717;
+    --popover-foreground: #f2f2f2;
+    --primary: #22c55e;
+    --primary-foreground: #052e16;
+    --secondary: #27272a;
+    --secondary-foreground: #fafafa;
+    --muted: #262626;
+    --muted-foreground: #a1a1aa;
+    --accent: #292524;
+    --accent-foreground: #fafafa;
+    --destructive: #7f1d1d;
+    --destructive-foreground: #fef2f2;
+    --border: #27272a;
+    --input: #27272a;
+    --ring: #15803d;
+    --chart-1: #2662d9;
+    --chart-2: #2eb88a;
+    --chart-3: #e88c30;
+    --chart-4: #af57db;
+    --chart-5: #e23670;
+  }
+
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components;
+
+@layer utilities {
+  .\@container\/card-header {
+    container: card-header / inline-size;
+  }
+
+  .pointer-events-none {
+    pointer-events: none;
+  }
+
+  .collapse {
+    visibility: collapse;
+  }
+
+  .invisible {
+    visibility: hidden;
+  }
+
+  .visible {
+    visibility: visible;
+  }
+
+  .sr-only {
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border-width: 0;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    position: absolute;
+    overflow: hidden;
+  }
+
+  .absolute {
+    position: absolute;
+  }
+
+  .fixed {
+    position: fixed;
+  }
+
+  .relative {
+    position: relative;
+  }
+
+  .static {
+    position: static;
+  }
+
+  .right-0 {
+    right: 0;
+  }
+
+  .right-2 {
+    right: calc(var(--spacing) * 2);
+  }
+
+  .right-4 {
+    right: calc(var(--spacing) * 4);
+  }
+
+  .bottom-0 {
+    bottom: 0;
+  }
+
+  .bottom-4 {
+    bottom: calc(var(--spacing) * 4);
+  }
+
+  .isolate {
+    isolation: isolate;
+  }
+
+  .z-10 {
+    z-index: 10;
+  }
+
+  .z-50 {
+    z-index: 50;
+  }
+
+  .col-start-2 {
+    grid-column-start: 2;
+  }
+
+  .row-span-2 {
+    grid-row: span 2 / span 2;
+  }
+
+  .row-start-1 {
+    grid-row-start: 1;
+  }
+
+  .container {
+    width: 100%;
+  }
+
+  @media (min-width: 40rem) {
+    .container {
+      max-width: 40rem;
+    }
+  }
+
+  @media (min-width: 48rem) {
+    .container {
+      max-width: 48rem;
+    }
+  }
+
+  @media (min-width: 64rem) {
+    .container {
+      max-width: 64rem;
+    }
+  }
+
+  @media (min-width: 80rem) {
+    .container {
+      max-width: 80rem;
+    }
+  }
+
+  @media (min-width: 96rem) {
+    .container {
+      max-width: 96rem;
+    }
+  }
+
+  .-mx-1 {
+    margin-inline: calc(var(--spacing) * -1);
+  }
+
+  .my-1 {
+    margin-block: var(--spacing);
+  }
+
+  .prose {
+    color: var(--tw-prose-body);
+    max-width: 65ch;
+  }
+
+  .prose :where(p):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    margin-top: 1.25em;
+    margin-bottom: 1.25em;
+  }
+
+  .prose :where([class~="lead"]):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: var(--tw-prose-lead);
+    margin-top: 1.2em;
+    margin-bottom: 1.2em;
+    font-size: 1.25em;
+    line-height: 1.6;
+  }
+
+  .prose :where(a):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: var(--tw-prose-links);
+    font-weight: 500;
+    text-decoration: underline;
+  }
+
+  .prose :where(strong):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: var(--tw-prose-bold);
+    font-weight: 600;
+  }
+
+  .prose :where(a strong):not(:where([class~="not-prose"], [class~="not-prose"] *)), .prose :where(blockquote strong):not(:where([class~="not-prose"], [class~="not-prose"] *)), .prose :where(thead th strong):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: inherit;
+  }
+
+  .prose :where(ol):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    margin-top: 1.25em;
+    margin-bottom: 1.25em;
+    padding-inline-start: 1.625em;
+    list-style-type: decimal;
+  }
+
+  .prose :where(ol[type="A"]):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    list-style-type: upper-alpha;
+  }
+
+  .prose :where(ol[type="a"]):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    list-style-type: lower-alpha;
+  }
+
+  .prose :where(ol[type="A" s]):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    list-style-type: upper-alpha;
+  }
+
+  .prose :where(ol[type="a" s]):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    list-style-type: lower-alpha;
+  }
+
+  .prose :where(ol[type="I"]):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    list-style-type: upper-roman;
+  }
+
+  .prose :where(ol[type="i"]):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    list-style-type: lower-roman;
+  }
+
+  .prose :where(ol[type="I" s]):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    list-style-type: upper-roman;
+  }
+
+  .prose :where(ol[type="i" s]):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    list-style-type: lower-roman;
+  }
+
+  .prose :where(ol[type="1"]):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    list-style-type: decimal;
+  }
+
+  .prose :where(ul):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    margin-top: 1.25em;
+    margin-bottom: 1.25em;
+    padding-inline-start: 1.625em;
+    list-style-type: disc;
+  }
+
+  .prose :where(ol > li):not(:where([class~="not-prose"], [class~="not-prose"] *))::marker {
+    color: var(--tw-prose-counters);
+    font-weight: 400;
+  }
+
+  .prose :where(ul > li):not(:where([class~="not-prose"], [class~="not-prose"] *))::marker {
+    color: var(--tw-prose-bullets);
+  }
+
+  .prose :where(dt):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: var(--tw-prose-headings);
+    margin-top: 1.25em;
+    font-weight: 600;
+  }
+
+  .prose :where(hr):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    border-color: var(--tw-prose-hr);
+    border-top-width: 1px;
+    margin-top: 3em;
+    margin-bottom: 3em;
+  }
+
+  .prose :where(blockquote):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: var(--tw-prose-quotes);
+    border-inline-start-width: .25rem;
+    border-inline-start-color: var(--tw-prose-quote-borders);
+    quotes: "“""”""‘""’";
+    margin-top: 1.6em;
+    margin-bottom: 1.6em;
+    padding-inline-start: 1em;
+    font-style: italic;
+    font-weight: 500;
+  }
+
+  .prose :where(blockquote p:first-of-type):not(:where([class~="not-prose"], [class~="not-prose"] *)):before {
+    content: open-quote;
+  }
+
+  .prose :where(blockquote p:last-of-type):not(:where([class~="not-prose"], [class~="not-prose"] *)):after {
+    content: close-quote;
+  }
+
+  .prose :where(h1):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: var(--tw-prose-headings);
+    margin-top: 0;
+    margin-bottom: .888889em;
+    font-size: 2.25em;
+    font-weight: 800;
+    line-height: 1.11111;
+  }
+
+  .prose :where(h1 strong):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: inherit;
+    font-weight: 900;
+  }
+
+  .prose :where(h2):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: var(--tw-prose-headings);
+    margin-top: 2em;
+    margin-bottom: 1em;
+    font-size: 1.5em;
+    font-weight: 700;
+    line-height: 1.33333;
+  }
+
+  .prose :where(h2 strong):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: inherit;
+    font-weight: 800;
+  }
+
+  .prose :where(h3):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: var(--tw-prose-headings);
+    margin-top: 1.6em;
+    margin-bottom: .6em;
+    font-size: 1.25em;
+    font-weight: 600;
+    line-height: 1.6;
+  }
+
+  .prose :where(h3 strong):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: inherit;
+    font-weight: 700;
+  }
+
+  .prose :where(h4):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: var(--tw-prose-headings);
+    margin-top: 1.5em;
+    margin-bottom: .5em;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+
+  .prose :where(h4 strong):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: inherit;
+    font-weight: 700;
+  }
+
+  .prose :where(img):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    margin-top: 2em;
+    margin-bottom: 2em;
+  }
+
+  .prose :where(picture):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    margin-top: 2em;
+    margin-bottom: 2em;
+    display: block;
+  }
+
+  .prose :where(video):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    margin-top: 2em;
+    margin-bottom: 2em;
+  }
+
+  .prose :where(kbd):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: var(--tw-prose-kbd);
+    box-shadow: 0 0 0 1px var(--tw-prose-kbd-shadows), 0 3px 0 var(--tw-prose-kbd-shadows);
+    padding-top: .1875em;
+    padding-inline-end: .375em;
+    padding-bottom: .1875em;
+    border-radius: .3125rem;
+    padding-inline-start: .375em;
+    font-family: inherit;
+    font-size: .875em;
+    font-weight: 500;
+  }
+
+  .prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: var(--tw-prose-code);
+    font-size: .875em;
+    font-weight: 600;
+  }
+
+  .prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *)):before, .prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *)):after {
+    content: "`";
+  }
+
+  .prose :where(a code):not(:where([class~="not-prose"], [class~="not-prose"] *)), .prose :where(h1 code):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: inherit;
+  }
+
+  .prose :where(h2 code):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: inherit;
+    font-size: .875em;
+  }
+
+  .prose :where(h3 code):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: inherit;
+    font-size: .9em;
+  }
+
+  .prose :where(h4 code):not(:where([class~="not-prose"], [class~="not-prose"] *)), .prose :where(blockquote code):not(:where([class~="not-prose"], [class~="not-prose"] *)), .prose :where(thead th code):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: inherit;
+  }
+
+  .prose :where(pre):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: var(--tw-prose-pre-code);
+    background-color: var(--tw-prose-pre-bg);
+    padding-top: .857143em;
+    padding-inline-end: 1.14286em;
+    padding-bottom: .857143em;
+    border-radius: .375rem;
+    margin-top: 1.71429em;
+    margin-bottom: 1.71429em;
+    padding-inline-start: 1.14286em;
+    font-size: .875em;
+    font-weight: 400;
+    line-height: 1.71429;
+    overflow-x: auto;
+  }
+
+  .prose :where(pre code):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    font-weight: inherit;
+    color: inherit;
+    font-size: inherit;
+    font-family: inherit;
+    line-height: inherit;
+    background-color: #0000;
+    border-width: 0;
+    border-radius: 0;
+    padding: 0;
+  }
+
+  .prose :where(pre code):not(:where([class~="not-prose"], [class~="not-prose"] *)):before, .prose :where(pre code):not(:where([class~="not-prose"], [class~="not-prose"] *)):after {
+    content: none;
+  }
+
+  .prose :where(table):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    table-layout: auto;
+    width: 100%;
+    margin-top: 2em;
+    margin-bottom: 2em;
+    font-size: .875em;
+    line-height: 1.71429;
+  }
+
+  .prose :where(thead):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    border-bottom-width: 1px;
+    border-bottom-color: var(--tw-prose-th-borders);
+  }
+
+  .prose :where(thead th):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: var(--tw-prose-headings);
+    vertical-align: bottom;
+    padding-inline-end: .571429em;
+    padding-bottom: .571429em;
+    padding-inline-start: .571429em;
+    font-weight: 600;
+  }
+
+  .prose :where(tbody tr):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    border-bottom-width: 1px;
+    border-bottom-color: var(--tw-prose-td-borders);
+  }
+
+  .prose :where(tbody tr:last-child):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    border-bottom-width: 0;
+  }
+
+  .prose :where(tbody td):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    vertical-align: baseline;
+  }
+
+  .prose :where(tfoot):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    border-top-width: 1px;
+    border-top-color: var(--tw-prose-th-borders);
+  }
+
+  .prose :where(tfoot td):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    vertical-align: top;
+  }
+
+  .prose :where(th, td):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    text-align: start;
+  }
+
+  .prose :where(figure > *):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+
+  .prose :where(figcaption):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: var(--tw-prose-captions);
+    margin-top: .857143em;
+    font-size: .875em;
+    line-height: 1.42857;
+  }
+
+  .prose {
+    --tw-prose-body: oklch(37.3% .034 259.733);
+    --tw-prose-headings: oklch(21% .034 264.665);
+    --tw-prose-lead: oklch(44.6% .03 256.802);
+    --tw-prose-links: oklch(21% .034 264.665);
+    --tw-prose-bold: oklch(21% .034 264.665);
+    --tw-prose-counters: oklch(55.1% .027 264.364);
+    --tw-prose-bullets: oklch(87.2% .01 258.338);
+    --tw-prose-hr: oklch(92.8% .006 264.531);
+    --tw-prose-quotes: oklch(21% .034 264.665);
+    --tw-prose-quote-borders: oklch(92.8% .006 264.531);
+    --tw-prose-captions: oklch(55.1% .027 264.364);
+    --tw-prose-kbd: oklch(21% .034 264.665);
+    --tw-prose-kbd-shadows: oklab(21% -.00316127 -.0338527 / .1);
+    --tw-prose-code: oklch(21% .034 264.665);
+    --tw-prose-pre-code: oklch(92.8% .006 264.531);
+    --tw-prose-pre-bg: oklch(27.8% .033 256.848);
+    --tw-prose-th-borders: oklch(87.2% .01 258.338);
+    --tw-prose-td-borders: oklch(92.8% .006 264.531);
+    --tw-prose-invert-body: oklch(87.2% .01 258.338);
+    --tw-prose-invert-headings: #fff;
+    --tw-prose-invert-lead: oklch(70.7% .022 261.325);
+    --tw-prose-invert-links: #fff;
+    --tw-prose-invert-bold: #fff;
+    --tw-prose-invert-counters: oklch(70.7% .022 261.325);
+    --tw-prose-invert-bullets: oklch(44.6% .03 256.802);
+    --tw-prose-invert-hr: oklch(37.3% .034 259.733);
+    --tw-prose-invert-quotes: oklch(96.7% .003 264.542);
+    --tw-prose-invert-quote-borders: oklch(37.3% .034 259.733);
+    --tw-prose-invert-captions: oklch(70.7% .022 261.325);
+    --tw-prose-invert-kbd: #fff;
+    --tw-prose-invert-kbd-shadows: #ffffff1a;
+    --tw-prose-invert-code: #fff;
+    --tw-prose-invert-pre-code: oklch(87.2% .01 258.338);
+    --tw-prose-invert-pre-bg: #00000080;
+    --tw-prose-invert-th-borders: oklch(44.6% .03 256.802);
+    --tw-prose-invert-td-borders: oklch(37.3% .034 259.733);
+    font-size: 1rem;
+    line-height: 1.75;
+  }
+
+  .prose :where(picture > img):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+
+  .prose :where(li):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    margin-top: .5em;
+    margin-bottom: .5em;
+  }
+
+  .prose :where(ol > li):not(:where([class~="not-prose"], [class~="not-prose"] *)), .prose :where(ul > li):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    padding-inline-start: .375em;
+  }
+
+  .prose :where(.prose > ul > li p):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    margin-top: .75em;
+    margin-bottom: .75em;
+  }
+
+  .prose :where(.prose > ul > li > p:first-child):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    margin-top: 1.25em;
+  }
+
+  .prose :where(.prose > ul > li > p:last-child):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    margin-bottom: 1.25em;
+  }
+
+  .prose :where(.prose > ol > li > p:first-child):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    margin-top: 1.25em;
+  }
+
+  .prose :where(.prose > ol > li > p:last-child):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    margin-bottom: 1.25em;
+  }
+
+  .prose :where(ul ul, ul ol, ol ul, ol ol):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    margin-top: .75em;
+    margin-bottom: .75em;
+  }
+
+  .prose :where(dl):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    margin-top: 1.25em;
+    margin-bottom: 1.25em;
+  }
+
+  .prose :where(dd):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    margin-top: .5em;
+    padding-inline-start: 1.625em;
+  }
+
+  .prose :where(hr + *):not(:where([class~="not-prose"], [class~="not-prose"] *)), .prose :where(h2 + *):not(:where([class~="not-prose"], [class~="not-prose"] *)), .prose :where(h3 + *):not(:where([class~="not-prose"], [class~="not-prose"] *)), .prose :where(h4 + *):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    margin-top: 0;
+  }
+
+  .prose :where(thead th:first-child):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    padding-inline-start: 0;
+  }
+
+  .prose :where(thead th:last-child):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    padding-inline-end: 0;
+  }
+
+  .prose :where(tbody td, tfoot td):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    padding-top: .571429em;
+    padding-inline-end: .571429em;
+    padding-bottom: .571429em;
+    padding-inline-start: .571429em;
+  }
+
+  .prose :where(tbody td:first-child, tfoot td:first-child):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    padding-inline-start: 0;
+  }
+
+  .prose :where(tbody td:last-child, tfoot td:last-child):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    padding-inline-end: 0;
+  }
+
+  .prose :where(figure):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    margin-top: 2em;
+    margin-bottom: 2em;
+  }
+
+  .prose :where(.prose > :first-child):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    margin-top: 0;
+  }
+
+  .prose :where(.prose > :last-child):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    margin-bottom: 0;
+  }
+
+  .mt-0\.5 {
+    margin-top: calc(var(--spacing) * .5);
+  }
+
+  .ml-auto {
+    margin-left: auto;
+  }
+
+  .block {
+    display: block;
+  }
+
+  .contents {
+    display: contents;
+  }
+
+  .flex {
+    display: flex;
+  }
+
+  .grid {
+    display: grid;
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  .inline {
+    display: inline;
+  }
+
+  .inline-flex {
+    display: inline-flex;
+  }
+
+  .table {
+    display: table;
+  }
+
+  .field-sizing-content {
+    field-sizing: content;
+  }
+
+  .aspect-square {
+    aspect-ratio: 1;
+  }
+
+  .size-3\.5 {
+    width: calc(var(--spacing) * 3.5);
+    height: calc(var(--spacing) * 3.5);
+  }
+
+  .size-4 {
+    width: calc(var(--spacing) * 4);
+    height: calc(var(--spacing) * 4);
+  }
+
+  .size-5 {
+    width: calc(var(--spacing) * 5);
+    height: calc(var(--spacing) * 5);
+  }
+
+  .size-6 {
+    width: calc(var(--spacing) * 6);
+    height: calc(var(--spacing) * 6);
+  }
+
+  .size-8 {
+    width: calc(var(--spacing) * 8);
+    height: calc(var(--spacing) * 8);
+  }
+
+  .size-9 {
+    width: calc(var(--spacing) * 9);
+    height: calc(var(--spacing) * 9);
+  }
+
+  .size-10 {
+    width: calc(var(--spacing) * 10);
+    height: calc(var(--spacing) * 10);
+  }
+
+  .size-full {
+    width: 100%;
+    height: 100%;
+  }
+
+  .h-6 {
+    height: calc(var(--spacing) * 6);
+  }
+
+  .h-8 {
+    height: calc(var(--spacing) * 8);
+  }
+
+  .h-9 {
+    height: calc(var(--spacing) * 9);
+  }
+
+  .h-10 {
+    height: calc(var(--spacing) * 10);
+  }
+
+  .h-px {
+    height: 1px;
+  }
+
+  .max-h-\(--available-height\) {
+    max-height: var(--available-height);
+  }
+
+  .min-h-16 {
+    min-height: calc(var(--spacing) * 16);
+  }
+
+  .min-h-screen {
+    min-height: 100vh;
+  }
+
+  .w-\(--anchor-width\) {
+    width: var(--anchor-width);
+  }
+
+  .w-4 {
+    width: calc(var(--spacing) * 4);
+  }
+
+  .w-auto {
+    width: auto;
+  }
+
+  .w-full {
+    width: 100%;
+  }
+
+  .max-w-\[80rem\] {
+    max-width: 80rem;
+  }
+
+  .min-w-0 {
+    min-width: 0;
+  }
+
+  .min-w-32 {
+    min-width: calc(var(--spacing) * 32);
+  }
+
+  .min-w-64 {
+    min-width: calc(var(--spacing) * 64);
+  }
+
+  .min-w-\[23rem\] {
+    min-width: 23rem;
+  }
+
+  .min-w-\[96px\] {
+    min-width: 96px;
+  }
+
+  .flex-1 {
+    flex: 1;
+  }
+
+  .shrink-0 {
+    flex-shrink: 0;
+  }
+
+  .grow {
+    flex-grow: 1;
+  }
+
+  .origin-\(--transform-origin\) {
+    transform-origin: var(--transform-origin);
+  }
+
+  .scale-0 {
+    --tw-scale-x: 0%;
+    --tw-scale-y: 0%;
+    --tw-scale-z: 0%;
+    scale: var(--tw-scale-x) var(--tw-scale-y);
+  }
+
+  .scale-100 {
+    --tw-scale-x: 100%;
+    --tw-scale-y: 100%;
+    --tw-scale-z: 100%;
+    scale: var(--tw-scale-x) var(--tw-scale-y);
+  }
+
+  .animate-spin {
+    animation: var(--animate-spin);
+  }
+
+  .cursor-default {
+    cursor: default;
+  }
+
+  .touch-none {
+    touch-action: none;
+  }
+
+  .list-inside {
+    list-style-position: inside;
+  }
+
+  .list-disc {
+    list-style-type: disc;
+  }
+
+  .auto-rows-min {
+    grid-auto-rows: min-content;
+  }
+
+  .flex-col {
+    flex-direction: column;
+  }
+
+  .flex-wrap {
+    flex-wrap: wrap;
+  }
+
+  .items-center {
+    align-items: center;
+  }
+
+  .items-start {
+    align-items: flex-start;
+  }
+
+  .justify-between {
+    justify-content: space-between;
+  }
+
+  .justify-center {
+    justify-content: center;
+  }
+
+  .gap-\(--card-spacing\) {
+    gap: var(--card-spacing);
+  }
+
+  .gap-1 {
+    gap: var(--spacing);
+  }
+
+  .gap-1\.5 {
+    gap: calc(var(--spacing) * 1.5);
+  }
+
+  .gap-2 {
+    gap: calc(var(--spacing) * 2);
+  }
+
+  .gap-3 {
+    gap: calc(var(--spacing) * 3);
+  }
+
+  .gap-4 {
+    gap: calc(var(--spacing) * 4);
+  }
+
+  .gap-6 {
+    gap: calc(var(--spacing) * 6);
+  }
+
+  .gap-12 {
+    gap: calc(var(--spacing) * 12);
+  }
+
+  :where(.space-y-2 > :not(:last-child)) {
+    --tw-space-y-reverse: 0;
+    margin-block-start: calc(calc(var(--spacing) * 2) * var(--tw-space-y-reverse));
+    margin-block-end: calc(calc(var(--spacing) * 2) * calc(1 - var(--tw-space-y-reverse)));
+  }
+
+  :where(.-space-x-2 > :not(:last-child)) {
+    --tw-space-x-reverse: 0;
+    margin-inline-start: calc(calc(var(--spacing) * -2) * var(--tw-space-x-reverse));
+    margin-inline-end: calc(calc(var(--spacing) * -2) * calc(1 - var(--tw-space-x-reverse)));
+  }
+
+  .self-start {
+    align-self: flex-start;
+  }
+
+  .justify-self-end {
+    justify-self: flex-end;
+  }
+
+  .truncate {
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .overflow-hidden {
+    overflow: hidden;
+  }
+
+  .overflow-x-hidden {
+    overflow-x: hidden;
+  }
+
+  .overflow-y-auto {
+    overflow-y: auto;
+  }
+
+  .rounded-\[inherit\] {
+    border-radius: inherit;
+  }
+
+  .rounded-\[min\(var\(--radius-md\)\,8px\)\] {
+    border-radius: min(var(--radius-md), 8px);
+  }
+
+  .rounded-\[min\(var\(--radius-md\)\,10px\)\] {
+    border-radius: min(var(--radius-md), 10px);
+  }
+
+  .rounded-full {
+    border-radius: 3.40282e38px;
+  }
+
+  .rounded-lg {
+    border-radius: var(--radius);
+  }
+
+  .rounded-md {
+    border-radius: calc(var(--radius) - 2px);
+  }
+
+  .rounded-sm {
+    border-radius: calc(var(--radius) - 4px);
+  }
+
+  .rounded-xl {
+    border-radius: var(--radius-xl);
+  }
+
+  .rounded-t-xl {
+    border-top-left-radius: var(--radius-xl);
+    border-top-right-radius: var(--radius-xl);
+  }
+
+  .rounded-b-xl {
+    border-bottom-right-radius: var(--radius-xl);
+    border-bottom-left-radius: var(--radius-xl);
+  }
+
+  .border {
+    border-style: var(--tw-border-style);
+    border-width: 1px;
+  }
+
+  .border-dashed {
+    --tw-border-style: dashed;
+    border-style: dashed;
+  }
+
+  .border-border {
+    border-color: var(--border);
+  }
+
+  .border-destructive\/40 {
+    border-color: var(--destructive);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .border-destructive\/40 {
+      border-color: color-mix(in oklab, var(--destructive) 40%, transparent);
+    }
+  }
+
+  .border-input {
+    border-color: var(--input);
+  }
+
+  .border-transparent {
+    border-color: #0000;
+  }
+
+  .bg-background, .bg-background\/90 {
+    background-color: var(--background);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .bg-background\/90 {
+      background-color: color-mix(in oklab, var(--background) 90%, transparent);
+    }
+  }
+
+  .bg-border {
+    background-color: var(--border);
+  }
+
+  .bg-card {
+    background-color: var(--card);
+  }
+
+  .bg-destructive\/5 {
+    background-color: var(--destructive);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .bg-destructive\/5 {
+      background-color: color-mix(in oklab, var(--destructive) 5%, transparent);
+    }
+  }
+
+  .bg-destructive\/10 {
+    background-color: var(--destructive);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .bg-destructive\/10 {
+      background-color: color-mix(in oklab, var(--destructive) 10%, transparent);
+    }
+  }
+
+  .bg-muted, .bg-muted\/30 {
+    background-color: var(--muted);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .bg-muted\/30 {
+      background-color: color-mix(in oklab, var(--muted) 30%, transparent);
+    }
+  }
+
+  .bg-popover {
+    background-color: var(--popover);
+  }
+
+  .bg-primary {
+    background-color: var(--primary);
+  }
+
+  .bg-secondary {
+    background-color: var(--secondary);
+  }
+
+  .bg-transparent {
+    background-color: #0000;
+  }
+
+  .bg-clip-padding {
+    background-clip: padding-box;
+  }
+
+  .object-cover {
+    object-fit: cover;
+  }
+
+  .p-1 {
+    padding: var(--spacing);
+  }
+
+  .p-3 {
+    padding: calc(var(--spacing) * 3);
+  }
+
+  .p-5 {
+    padding: calc(var(--spacing) * 5);
+  }
+
+  .p-px {
+    padding: 1px;
+  }
+
+  .px-\(--card-spacing\) {
+    padding-inline: var(--card-spacing);
+  }
+
+  .px-2 {
+    padding-inline: calc(var(--spacing) * 2);
+  }
+
+  .px-2\.5 {
+    padding-inline: calc(var(--spacing) * 2.5);
+  }
+
+  .px-3 {
+    padding-inline: calc(var(--spacing) * 3);
+  }
+
+  .px-10 {
+    padding-inline: calc(var(--spacing) * 10);
+  }
+
+  .py-\(--card-spacing\) {
+    padding-block: var(--card-spacing);
+  }
+
+  .py-1 {
+    padding-block: var(--spacing);
+  }
+
+  .py-1\.5 {
+    padding-block: calc(var(--spacing) * 1.5);
+  }
+
+  .py-2 {
+    padding-block: calc(var(--spacing) * 2);
+  }
+
+  .py-16 {
+    padding-block: calc(var(--spacing) * 16);
+  }
+
+  .pr-8 {
+    padding-right: calc(var(--spacing) * 8);
+  }
+
+  .pl-2 {
+    padding-left: calc(var(--spacing) * 2);
+  }
+
+  .text-center {
+    text-align: center;
+  }
+
+  .font-sans {
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  }
+
+  .text-base {
+    font-size: var(--text-base);
+    line-height: var(--tw-leading, var(--text-base--line-height));
+  }
+
+  .text-sm {
+    font-size: var(--text-sm);
+    line-height: var(--tw-leading, var(--text-sm--line-height));
+  }
+
+  .text-xs {
+    font-size: var(--text-xs);
+    line-height: var(--tw-leading, var(--text-xs--line-height));
+  }
+
+  .leading-none {
+    --tw-leading: 1;
+    line-height: 1;
+  }
+
+  .leading-normal {
+    --tw-leading: var(--leading-normal);
+    line-height: var(--leading-normal);
+  }
+
+  .font-medium {
+    --tw-font-weight: var(--font-weight-medium);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .font-semibold {
+    --tw-font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .tracking-widest {
+    --tw-tracking: var(--tracking-widest);
+    letter-spacing: var(--tracking-widest);
+  }
+
+  .whitespace-nowrap {
+    white-space: nowrap;
+  }
+
+  .text-card-foreground {
+    color: var(--card-foreground);
+  }
+
+  .text-destructive {
+    color: var(--destructive);
+  }
+
+  .text-foreground {
+    color: var(--foreground);
+  }
+
+  .text-muted-foreground {
+    color: var(--muted-foreground);
+  }
+
+  .text-popover-foreground {
+    color: var(--popover-foreground);
+  }
+
+  .text-primary {
+    color: var(--primary);
+  }
+
+  .text-primary-foreground {
+    color: var(--primary-foreground);
+  }
+
+  .text-secondary-foreground {
+    color: var(--secondary-foreground);
+  }
+
+  .underline-offset-4 {
+    text-underline-offset: 4px;
+  }
+
+  .bg-blend-color {
+    background-blend-mode: color;
+  }
+
+  .shadow {
+    --tw-shadow: 0 1px 3px 0 var(--tw-shadow-color, #0000001a), 0 1px 2px -1px var(--tw-shadow-color, #0000001a);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+
+  .shadow-lg {
+    --tw-shadow: 0 10px 15px -3px var(--tw-shadow-color, #0000001a), 0 4px 6px -4px var(--tw-shadow-color, #0000001a);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+
+  .shadow-md {
+    --tw-shadow: 0 4px 6px -1px var(--tw-shadow-color, #0000001a), 0 2px 4px -2px var(--tw-shadow-color, #0000001a);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+
+  .shadow-xs {
+    --tw-shadow: 0 1px 2px 0 var(--tw-shadow-color, #0000000d);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+
+  .ring-1 {
+    --tw-ring-shadow: var(--tw-ring-inset, ) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color, currentcolor);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+
+  .ring-2 {
+    --tw-ring-shadow: var(--tw-ring-inset, ) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color, currentcolor);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+
+  .ring-background {
+    --tw-ring-color: var(--background);
+  }
+
+  .ring-border {
+    --tw-ring-color: var(--border);
+  }
+
+  .ring-foreground\/10 {
+    --tw-ring-color: var(--foreground);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .ring-foreground\/10 {
+      --tw-ring-color: color-mix(in oklab, var(--foreground) 10%, transparent);
+    }
+  }
+
+  .outline-hidden {
+    --tw-outline-style: none;
+    outline-style: none;
+  }
+
+  @media (forced-colors: active) {
+    .outline-hidden {
+      outline-offset: 2px;
+      outline: 2px solid #0000;
+    }
+  }
+
+  .outline {
+    outline-style: var(--tw-outline-style);
+    outline-width: 1px;
+  }
+
+  .blur {
+    --tw-blur: blur(8px);
+    filter: var(--tw-blur, ) var(--tw-brightness, ) var(--tw-contrast, ) var(--tw-grayscale, ) var(--tw-hue-rotate, ) var(--tw-invert, ) var(--tw-saturate, ) var(--tw-sepia, ) var(--tw-drop-shadow, );
+  }
+
+  .invert {
+    --tw-invert: invert(100%);
+    filter: var(--tw-blur, ) var(--tw-brightness, ) var(--tw-contrast, ) var(--tw-grayscale, ) var(--tw-hue-rotate, ) var(--tw-invert, ) var(--tw-saturate, ) var(--tw-sepia, ) var(--tw-drop-shadow, );
+  }
+
+  .filter {
+    filter: var(--tw-blur, ) var(--tw-brightness, ) var(--tw-contrast, ) var(--tw-grayscale, ) var(--tw-hue-rotate, ) var(--tw-invert, ) var(--tw-saturate, ) var(--tw-sepia, ) var(--tw-drop-shadow, );
+  }
+
+  .transition {
+    transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
+    transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
+    transition-duration: var(--tw-duration, var(--default-transition-duration));
+  }
+
+  .transition-\[color\,box-shadow\] {
+    transition-property: color, box-shadow;
+    transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
+    transition-duration: var(--tw-duration, var(--default-transition-duration));
+  }
+
+  .transition-all {
+    transition-property: all;
+    transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
+    transition-duration: var(--tw-duration, var(--default-transition-duration));
+  }
+
+  .transition-colors {
+    transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to;
+    transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
+    transition-duration: var(--tw-duration, var(--default-transition-duration));
+  }
+
+  .duration-100 {
+    --tw-duration: .1s;
+    transition-duration: .1s;
+  }
+
+  .outline-none {
+    --tw-outline-style: none;
+    outline-style: none;
+  }
+
+  .select-none {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .\[--card-spacing\:--spacing\(6\)\] {
+    --card-spacing: calc(var(--spacing) * 6);
+  }
+
+  .\[vite\:react-babel\] {
+    vite: react-babel;
+  }
+
+  .paused {
+    animation-play-state: paused;
+  }
+
+  .running {
+    animation-play-state: running;
+  }
+
+  .group-focus\/dropdown-menu-item\:text-accent-foreground:is(:where(.group\/dropdown-menu-item):focus *) {
+    color: var(--accent-foreground);
+  }
+
+  .group-has-data-\[size\=lg\]\/avatar-group\:size-10:is(:where(.group\/avatar-group):has([data-size="lg"]) *) {
+    width: calc(var(--spacing) * 10);
+    height: calc(var(--spacing) * 10);
+  }
+
+  .group-has-data-\[size\=sm\]\/avatar-group\:size-6:is(:where(.group\/avatar-group):has([data-size="sm"]) *) {
+    width: calc(var(--spacing) * 6);
+    height: calc(var(--spacing) * 6);
+  }
+
+  .group-data-\[disabled\=true\]\:pointer-events-none:is(:where(.group)[data-disabled="true"] *) {
+    pointer-events: none;
+  }
+
+  .group-data-\[disabled\=true\]\:opacity-50:is(:where(.group)[data-disabled="true"] *) {
+    opacity: .5;
+  }
+
+  .group-data-\[size\=default\]\/avatar\:size-2\.5:is(:where(.group\/avatar)[data-size="default"] *) {
+    width: calc(var(--spacing) * 2.5);
+    height: calc(var(--spacing) * 2.5);
+  }
+
+  .group-data-\[size\=lg\]\/avatar\:size-3:is(:where(.group\/avatar)[data-size="lg"] *) {
+    width: calc(var(--spacing) * 3);
+    height: calc(var(--spacing) * 3);
+  }
+
+  .group-data-\[size\=sm\]\/avatar\:size-2:is(:where(.group\/avatar)[data-size="sm"] *) {
+    width: calc(var(--spacing) * 2);
+    height: calc(var(--spacing) * 2);
+  }
+
+  .group-data-\[size\=sm\]\/avatar\:text-xs:is(:where(.group\/avatar)[data-size="sm"] *) {
+    font-size: var(--text-xs);
+    line-height: var(--tw-leading, var(--text-xs--line-height));
+  }
+
+  .group-data-\[size\=sm\]\/card\:text-sm:is(:where(.group\/card)[data-size="sm"] *) {
+    font-size: var(--text-sm);
+    line-height: var(--tw-leading, var(--text-sm--line-height));
+  }
+
+  .peer-disabled\:cursor-not-allowed:is(:where(.peer):disabled ~ *) {
+    cursor: not-allowed;
+  }
+
+  .peer-disabled\:opacity-50:is(:where(.peer):disabled ~ *) {
+    opacity: .5;
+  }
+
+  .file\:inline-flex::file-selector-button {
+    display: inline-flex;
+  }
+
+  .file\:h-7::file-selector-button {
+    height: calc(var(--spacing) * 7);
+  }
+
+  .file\:border-0::file-selector-button {
+    border-style: var(--tw-border-style);
+    border-width: 0;
+  }
+
+  .file\:bg-transparent::file-selector-button {
+    background-color: #0000;
+  }
+
+  .file\:text-sm::file-selector-button {
+    font-size: var(--text-sm);
+    line-height: var(--tw-leading, var(--text-sm--line-height));
+  }
+
+  .file\:font-medium::file-selector-button {
+    --tw-font-weight: var(--font-weight-medium);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .file\:text-foreground::file-selector-button {
+    color: var(--foreground);
+  }
+
+  .placeholder\:text-muted-foreground::placeholder {
+    color: var(--muted-foreground);
+  }
+
+  .after\:absolute:after {
+    content: var(--tw-content);
+    position: absolute;
+  }
+
+  .after\:inset-0:after {
+    content: var(--tw-content);
+    inset: 0;
+  }
+
+  .after\:rounded-full:after {
+    content: var(--tw-content);
+    border-radius: 3.40282e38px;
+  }
+
+  .after\:border:after {
+    content: var(--tw-content);
+    border-style: var(--tw-border-style);
+    border-width: 1px;
+  }
+
+  .after\:border-border:after {
+    content: var(--tw-content);
+    border-color: var(--border);
+  }
+
+  .after\:mix-blend-darken:after {
+    content: var(--tw-content);
+    mix-blend-mode: darken;
+  }
+
+  @media (hover: hover) {
+    .hover\:bg-\[color-mix\(in_oklch\,var\(--secondary\)\,var\(--foreground\)_5\%\)\]:hover {
+      background-color: var(--secondary);
+    }
+
+    @supports (color: color-mix(in lab, red, red)) {
+      .hover\:bg-\[color-mix\(in_oklch\,var\(--secondary\)\,var\(--foreground\)_5\%\)\]:hover {
+        background-color: color-mix(in oklch,var(--secondary),var(--foreground) 5%);
+      }
+    }
+
+    .hover\:bg-destructive\/20:hover {
+      background-color: var(--destructive);
+    }
+
+    @supports (color: color-mix(in lab, red, red)) {
+      .hover\:bg-destructive\/20:hover {
+        background-color: color-mix(in oklab, var(--destructive) 20%, transparent);
+      }
+    }
+
+    .hover\:bg-muted:hover {
+      background-color: var(--muted);
+    }
+
+    .hover\:bg-primary\/80:hover {
+      background-color: var(--primary);
+    }
+
+    @supports (color: color-mix(in lab, red, red)) {
+      .hover\:bg-primary\/80:hover {
+        background-color: color-mix(in oklab, var(--primary) 80%, transparent);
+      }
+    }
+
+    .hover\:text-foreground:hover {
+      color: var(--foreground);
+    }
+
+    .hover\:underline:hover {
+      text-decoration-line: underline;
+    }
+  }
+
+  .focus\:bg-accent:focus {
+    background-color: var(--accent);
+  }
+
+  .focus\:text-accent-foreground:focus, :is(.focus\:\*\*\:text-accent-foreground:focus *), :is(.not-data-\[variant\=destructive\]\:focus\:\*\*\:text-accent-foreground:not([data-variant="destructive"]):focus *) {
+    color: var(--accent-foreground);
+  }
+
+  .focus-visible\:border-destructive\/40:focus-visible {
+    border-color: var(--destructive);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .focus-visible\:border-destructive\/40:focus-visible {
+      border-color: color-mix(in oklab, var(--destructive) 40%, transparent);
+    }
+  }
+
+  .focus-visible\:border-ring:focus-visible {
+    border-color: var(--ring);
+  }
+
+  .focus-visible\:ring-3:focus-visible, .focus-visible\:ring-\[3px\]:focus-visible {
+    --tw-ring-shadow: var(--tw-ring-inset, ) 0 0 0 calc(3px + var(--tw-ring-offset-width)) var(--tw-ring-color, currentcolor);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+
+  .focus-visible\:ring-destructive\/20:focus-visible {
+    --tw-ring-color: var(--destructive);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .focus-visible\:ring-destructive\/20:focus-visible {
+      --tw-ring-color: color-mix(in oklab, var(--destructive) 20%, transparent);
+    }
+  }
+
+  .focus-visible\:ring-ring\/50:focus-visible {
+    --tw-ring-color: var(--ring);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .focus-visible\:ring-ring\/50:focus-visible {
+      --tw-ring-color: color-mix(in oklab, var(--ring) 50%, transparent);
+    }
+  }
+
+  .focus-visible\:outline-1:focus-visible {
+    outline-style: var(--tw-outline-style);
+    outline-width: 1px;
+  }
+
+  .active\:not-aria-\[haspopup\]\:translate-y-px:active:not([aria-haspopup]) {
+    --tw-translate-y: 1px;
+    translate: var(--tw-translate-x) var(--tw-translate-y);
+  }
+
+  .disabled\:pointer-events-none:disabled {
+    pointer-events: none;
+  }
+
+  .disabled\:cursor-not-allowed:disabled {
+    cursor: not-allowed;
+  }
+
+  .disabled\:opacity-50:disabled {
+    opacity: .5;
+  }
+
+  :where([data-slot="button-group"]) .in-data-\[slot\=button-group\]\:rounded-md {
+    border-radius: calc(var(--radius) - 2px);
+  }
+
+  .has-data-\[icon\=inline-end\]\:pr-1\.5:has([data-icon="inline-end"]) {
+    padding-right: calc(var(--spacing) * 1.5);
+  }
+
+  .has-data-\[icon\=inline-end\]\:pr-2:has([data-icon="inline-end"]) {
+    padding-right: calc(var(--spacing) * 2);
+  }
+
+  .has-data-\[icon\=inline-start\]\:pl-1\.5:has([data-icon="inline-start"]) {
+    padding-left: calc(var(--spacing) * 1.5);
+  }
+
+  .has-data-\[icon\=inline-start\]\:pl-2:has([data-icon="inline-start"]) {
+    padding-left: calc(var(--spacing) * 2);
+  }
+
+  .has-data-\[slot\=card-action\]\:grid-cols-\[1fr_auto\]:has([data-slot="card-action"]) {
+    grid-template-columns: 1fr auto;
+  }
+
+  .has-data-\[slot\=card-description\]\:grid-rows-\[auto_auto\]:has([data-slot="card-description"]) {
+    grid-template-rows: auto auto;
+  }
+
+  .has-\[\>img\:first-child\]\:pt-0:has( > img:first-child) {
+    padding-top: 0;
+  }
+
+  .aria-expanded\:bg-muted[aria-expanded="true"] {
+    background-color: var(--muted);
+  }
+
+  .aria-expanded\:bg-secondary[aria-expanded="true"] {
+    background-color: var(--secondary);
+  }
+
+  .aria-expanded\:text-foreground[aria-expanded="true"] {
+    color: var(--foreground);
+  }
+
+  .aria-expanded\:text-secondary-foreground[aria-expanded="true"] {
+    color: var(--secondary-foreground);
+  }
+
+  .aria-invalid\:border-destructive[aria-invalid="true"] {
+    border-color: var(--destructive);
+  }
+
+  .aria-invalid\:ring-3[aria-invalid="true"] {
+    --tw-ring-shadow: var(--tw-ring-inset, ) 0 0 0 calc(3px + var(--tw-ring-offset-width)) var(--tw-ring-color, currentcolor);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+
+  .aria-invalid\:ring-destructive\/20[aria-invalid="true"] {
+    --tw-ring-color: var(--destructive);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .aria-invalid\:ring-destructive\/20[aria-invalid="true"] {
+      --tw-ring-color: color-mix(in oklab, var(--destructive) 20%, transparent);
+    }
+  }
+
+  .data-closed\:animate-out[data-closed] {
+    animation: exit var(--tw-animation-duration, var(--tw-duration, .15s))var(--tw-ease, ease)var(--tw-animation-delay, 0s)var(--tw-animation-iteration-count, 1)var(--tw-animation-direction, normal)var(--tw-animation-fill-mode, none);
+  }
+
+  .data-closed\:overflow-hidden[data-closed] {
+    overflow: hidden;
+  }
+
+  .data-closed\:fade-out-0[data-closed] {
+    --tw-exit-opacity: 0;
+  }
+
+  .data-closed\:zoom-out-95[data-closed] {
+    --tw-exit-scale: .95;
+  }
+
+  .data-disabled\:pointer-events-none[data-disabled] {
+    pointer-events: none;
+  }
+
+  .data-disabled\:opacity-50[data-disabled] {
+    opacity: .5;
+  }
+
+  .data-horizontal\:h-2\.5[data-horizontal] {
+    height: calc(var(--spacing) * 2.5);
+  }
+
+  .data-horizontal\:h-px[data-horizontal] {
+    height: 1px;
+  }
+
+  .data-horizontal\:w-full[data-horizontal] {
+    width: 100%;
+  }
+
+  .data-horizontal\:flex-col[data-horizontal] {
+    flex-direction: column;
+  }
+
+  .data-horizontal\:border-t[data-horizontal] {
+    border-top-style: var(--tw-border-style);
+    border-top-width: 1px;
+  }
+
+  .data-horizontal\:border-t-transparent[data-horizontal] {
+    border-top-color: #0000;
+  }
+
+  .data-inset\:pl-8[data-inset] {
+    padding-left: calc(var(--spacing) * 8);
+  }
+
+  .data-open\:animate-in[data-open] {
+    animation: enter var(--tw-animation-duration, var(--tw-duration, .15s))var(--tw-ease, ease)var(--tw-animation-delay, 0s)var(--tw-animation-iteration-count, 1)var(--tw-animation-direction, normal)var(--tw-animation-fill-mode, none);
+  }
+
+  .data-open\:bg-accent[data-open] {
+    background-color: var(--accent);
+  }
+
+  .data-open\:text-accent-foreground[data-open] {
+    color: var(--accent-foreground);
+  }
+
+  .data-open\:fade-in-0[data-open] {
+    --tw-enter-opacity: 0;
+  }
+
+  .data-open\:zoom-in-95[data-open] {
+    --tw-enter-scale: .95;
+  }
+
+  .data-popup-open\:bg-accent[data-popup-open] {
+    background-color: var(--accent);
+  }
+
+  .data-popup-open\:text-accent-foreground[data-popup-open] {
+    color: var(--accent-foreground);
+  }
+
+  .data-vertical\:h-full[data-vertical] {
+    height: 100%;
+  }
+
+  .data-vertical\:w-2\.5[data-vertical] {
+    width: calc(var(--spacing) * 2.5);
+  }
+
+  .data-vertical\:w-px[data-vertical] {
+    width: 1px;
+  }
+
+  .data-vertical\:self-stretch[data-vertical] {
+    align-self: stretch;
+  }
+
+  .data-vertical\:border-l[data-vertical] {
+    border-left-style: var(--tw-border-style);
+    border-left-width: 1px;
+  }
+
+  .data-vertical\:border-l-transparent[data-vertical] {
+    border-left-color: #0000;
+  }
+
+  .data-\[side\=bottom\]\:slide-in-from-top-2[data-side="bottom"] {
+    --tw-enter-translate-y: calc(2*var(--spacing)*-1);
+  }
+
+  .data-\[side\=inline-end\]\:slide-in-from-left-2[data-side="inline-end"] {
+    --tw-enter-translate-x: calc(2*var(--spacing)*-1);
+  }
+
+  .data-\[side\=inline-start\]\:slide-in-from-right-2[data-side="inline-start"], .data-\[side\=left\]\:slide-in-from-right-2[data-side="left"] {
+    --tw-enter-translate-x: calc(2*var(--spacing));
+  }
+
+  .data-\[side\=right\]\:slide-in-from-left-2[data-side="right"] {
+    --tw-enter-translate-x: calc(2*var(--spacing)*-1);
+  }
+
+  .data-\[side\=top\]\:slide-in-from-bottom-2[data-side="top"] {
+    --tw-enter-translate-y: calc(2*var(--spacing));
+  }
+
+  .data-\[size\=lg\]\:size-10[data-size="lg"] {
+    width: calc(var(--spacing) * 10);
+    height: calc(var(--spacing) * 10);
+  }
+
+  .data-\[size\=sm\]\:size-6[data-size="sm"] {
+    width: calc(var(--spacing) * 6);
+    height: calc(var(--spacing) * 6);
+  }
+
+  .data-\[size\=sm\]\:\[--card-spacing\:--spacing\(4\)\][data-size="sm"] {
+    --card-spacing: calc(var(--spacing) * 4);
+  }
+
+  :is(.\*\:data-\[slot\=avatar\]\:ring-2 > *)[data-slot="avatar"] {
+    --tw-ring-shadow: var(--tw-ring-inset, ) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color, currentcolor);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+
+  :is(.\*\:data-\[slot\=avatar\]\:ring-background > *)[data-slot="avatar"] {
+    --tw-ring-color: var(--background);
+  }
+
+  .data-\[variant\=destructive\]\:text-destructive[data-variant="destructive"] {
+    color: var(--destructive);
+  }
+
+  .data-\[variant\=destructive\]\:focus\:bg-destructive\/10[data-variant="destructive"]:focus {
+    background-color: var(--destructive);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .data-\[variant\=destructive\]\:focus\:bg-destructive\/10[data-variant="destructive"]:focus {
+      background-color: color-mix(in oklab, var(--destructive) 10%, transparent);
+    }
+  }
+
+  .data-\[variant\=destructive\]\:focus\:text-destructive[data-variant="destructive"]:focus {
+    color: var(--destructive);
+  }
+
+  @media (min-width: 48rem) {
+    .md\:text-sm {
+      font-size: var(--text-sm);
+      line-height: var(--tw-leading, var(--text-sm--line-height));
+    }
+  }
+
+  .dark\:scale-0:where(.dark, .dark *) {
+    --tw-scale-x: 0%;
+    --tw-scale-y: 0%;
+    --tw-scale-z: 0%;
+    scale: var(--tw-scale-x) var(--tw-scale-y);
+  }
+
+  .dark\:scale-100:where(.dark, .dark *) {
+    --tw-scale-x: 100%;
+    --tw-scale-y: 100%;
+    --tw-scale-z: 100%;
+    scale: var(--tw-scale-x) var(--tw-scale-y);
+  }
+
+  .dark\:border-input:where(.dark, .dark *) {
+    border-color: var(--input);
+  }
+
+  .dark\:bg-destructive\/20:where(.dark, .dark *) {
+    background-color: var(--destructive);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .dark\:bg-destructive\/20:where(.dark, .dark *) {
+      background-color: color-mix(in oklab, var(--destructive) 20%, transparent);
+    }
+  }
+
+  .dark\:bg-input\/30:where(.dark, .dark *) {
+    background-color: var(--input);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .dark\:bg-input\/30:where(.dark, .dark *) {
+      background-color: color-mix(in oklab, var(--input) 30%, transparent);
+    }
+  }
+
+  .dark\:after\:mix-blend-lighten:where(.dark, .dark *):after {
+    content: var(--tw-content);
+    mix-blend-mode: lighten;
+  }
+
+  @media (hover: hover) {
+    .dark\:hover\:bg-destructive\/30:where(.dark, .dark *):hover {
+      background-color: var(--destructive);
+    }
+
+    @supports (color: color-mix(in lab, red, red)) {
+      .dark\:hover\:bg-destructive\/30:where(.dark, .dark *):hover {
+        background-color: color-mix(in oklab, var(--destructive) 30%, transparent);
+      }
+    }
+
+    .dark\:hover\:bg-input\/50:where(.dark, .dark *):hover {
+      background-color: var(--input);
+    }
+
+    @supports (color: color-mix(in lab, red, red)) {
+      .dark\:hover\:bg-input\/50:where(.dark, .dark *):hover {
+        background-color: color-mix(in oklab, var(--input) 50%, transparent);
+      }
+    }
+
+    .dark\:hover\:bg-muted\/50:where(.dark, .dark *):hover {
+      background-color: var(--muted);
+    }
+
+    @supports (color: color-mix(in lab, red, red)) {
+      .dark\:hover\:bg-muted\/50:where(.dark, .dark *):hover {
+        background-color: color-mix(in oklab, var(--muted) 50%, transparent);
+      }
+    }
+  }
+
+  .dark\:focus-visible\:ring-destructive\/40:where(.dark, .dark *):focus-visible {
+    --tw-ring-color: var(--destructive);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .dark\:focus-visible\:ring-destructive\/40:where(.dark, .dark *):focus-visible {
+      --tw-ring-color: color-mix(in oklab, var(--destructive) 40%, transparent);
+    }
+  }
+
+  .dark\:aria-invalid\:border-destructive\/50:where(.dark, .dark *)[aria-invalid="true"] {
+    border-color: var(--destructive);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .dark\:aria-invalid\:border-destructive\/50:where(.dark, .dark *)[aria-invalid="true"] {
+      border-color: color-mix(in oklab, var(--destructive) 50%, transparent);
+    }
+  }
+
+  .dark\:aria-invalid\:ring-destructive\/40:where(.dark, .dark *)[aria-invalid="true"] {
+    --tw-ring-color: var(--destructive);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .dark\:aria-invalid\:ring-destructive\/40:where(.dark, .dark *)[aria-invalid="true"] {
+      --tw-ring-color: color-mix(in oklab, var(--destructive) 40%, transparent);
+    }
+  }
+
+  .dark\:data-\[variant\=destructive\]\:focus\:bg-destructive\/20:where(.dark, .dark *)[data-variant="destructive"]:focus {
+    background-color: var(--destructive);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .dark\:data-\[variant\=destructive\]\:focus\:bg-destructive\/20:where(.dark, .dark *)[data-variant="destructive"]:focus {
+      background-color: color-mix(in oklab, var(--destructive) 20%, transparent);
+    }
+  }
+
+  .\[\&_svg\]\:pointer-events-none svg {
+    pointer-events: none;
+  }
+
+  .\[\&_svg\]\:shrink-0 svg {
+    flex-shrink: 0;
+  }
+
+  .\[\&_svg\:not\(\[class\*\=\'size-\'\]\)\]\:size-3 svg:not([class*="size-"]) {
+    width: calc(var(--spacing) * 3);
+    height: calc(var(--spacing) * 3);
+  }
+
+  .\[\&_svg\:not\(\[class\*\=\'size-\'\]\)\]\:size-4 svg:not([class*="size-"]) {
+    width: calc(var(--spacing) * 4);
+    height: calc(var(--spacing) * 4);
+  }
+
+  .\[\.border-b\]\:pb-\(--card-spacing\).border-b {
+    padding-bottom: var(--card-spacing);
+  }
+
+  .\[\.border-t\]\:pt-\(--card-spacing\).border-t {
+    padding-top: var(--card-spacing);
+  }
+
+  :is(.\*\:\[img\:first-child\]\:rounded-t-xl > *):is(img:first-child) {
+    border-top-left-radius: var(--radius-xl);
+    border-top-right-radius: var(--radius-xl);
+  }
+
+  :is(.\*\:\[img\:last-child\]\:rounded-b-xl > *):is(img:last-child) {
+    border-bottom-right-radius: var(--radius-xl);
+    border-bottom-left-radius: var(--radius-xl);
+  }
+
+  :is(.data-\[variant\=destructive\]\:\*\:\[svg\]\:text-destructive[data-variant="destructive"] > *):is(svg) {
+    color: var(--destructive);
+  }
+
+  .\[\&\>svg\]\:size-4 > svg {
+    width: calc(var(--spacing) * 4);
+    height: calc(var(--spacing) * 4);
+  }
+
+  .group-has-data-\[size\=lg\]\/avatar-group\:\[\&\>svg\]\:size-5:is(:where(.group\/avatar-group):has([data-size="lg"]) *) > svg {
+    width: calc(var(--spacing) * 5);
+    height: calc(var(--spacing) * 5);
+  }
+
+  .group-has-data-\[size\=sm\]\/avatar-group\:\[\&\>svg\]\:size-3:is(:where(.group\/avatar-group):has([data-size="sm"]) *) > svg {
+    width: calc(var(--spacing) * 3);
+    height: calc(var(--spacing) * 3);
+  }
+
+  .group-data-\[size\=default\]\/avatar\:\[\&\>svg\]\:size-2:is(:where(.group\/avatar)[data-size="default"] *) > svg, .group-data-\[size\=lg\]\/avatar\:\[\&\>svg\]\:size-2:is(:where(.group\/avatar)[data-size="lg"] *) > svg {
+    width: calc(var(--spacing) * 2);
+    height: calc(var(--spacing) * 2);
+  }
+
+  .group-data-\[size\=sm\]\/avatar\:\[\&\>svg\]\:hidden:is(:where(.group\/avatar)[data-size="sm"] *) > svg {
+    display: none;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes enter {
+  from {
+    opacity: var(--tw-enter-opacity, 1);
+    transform: translate3d(var(--tw-enter-translate-x, 0),var(--tw-enter-translate-y, 0),0)scale3d(var(--tw-enter-scale, 1),var(--tw-enter-scale, 1),var(--tw-enter-scale, 1))rotate(var(--tw-enter-rotate, 0));
+    filter: blur(var(--tw-enter-blur, 0));
+  }
+}
+
+@keyframes exit {
+  to {
+    opacity: var(--tw-exit-opacity, 1);
+    transform: translate3d(var(--tw-exit-translate-x, 0),var(--tw-exit-translate-y, 0),0)scale3d(var(--tw-exit-scale, 1),var(--tw-exit-scale, 1),var(--tw-exit-scale, 1))rotate(var(--tw-exit-rotate, 0));
+    filter: blur(var(--tw-exit-blur, 0));
+  }
+}
+/*$vite$:1*/</style></head><body><div><div class="pointer-events-none fixed right-4 bottom-4 flex items-center gap-2 rounded-lg bg-background/90 px-3 py-2 text-foreground text-sm shadow-lg ring-1 ring-border"><svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-4 text-primary" role="img" aria-label="Form Agent logo"><title>Form Agent logo</title><rect x="7" y="4" width="34" height="40" rx="5" stroke="currentColor" stroke-width="3"></rect><path d="M15 15h18M15 23h18M15 31h9" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path><path d="m28.5 33.5 3.5 3.5 7-7.5" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"></path></svg><span>Active on this page, with your permission</span></div></div></body></html></template></form-agent-ui></body></html>

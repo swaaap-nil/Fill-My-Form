@@ -22,21 +22,10 @@ const t = content[locale];
     >
       {t.helpIntro}
     </p><p class="notice mobile-notice">{t.mobile}</p>{
-      siteConfig.chrome ? (
+      siteConfig.chrome || siteConfig.firefox ? (
         <Install locale={locale} placement="help" />
       ) : (
         <p class="notice">{t.unavailable}</p>
-      )
-    }{
-      siteConfig.firefox && (
-        <a
-          class="button button-secondary"
-          href={siteConfig.firefox}
-          data-install="firefox"
-          data-placement="help"
-        >
-          Firefox <span aria-hidden="true">↗</span>
-        </a>
       )
     }<ol class="help-steps">{t.helpSteps.map((step) => <li>{step}</li>)}</ol><p>
       {t.faqs[2]?.[1]}

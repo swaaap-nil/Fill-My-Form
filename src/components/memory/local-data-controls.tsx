@@ -40,7 +40,7 @@ export const LocalDataControls = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `form-agent-data-${data.exportedAt.slice(0, 10)}.json`;
+    link.download = `fill-my-form-data-${data.exportedAt.slice(0, 10)}.json`;
     link.click();
     URL.revokeObjectURL(url);
     setStatus(message("localDataExported"));
@@ -69,7 +69,7 @@ export const LocalDataControls = ({
   };
 
   return (
-    <section className="flex flex-col gap-3 rounded-md border border-border p-3">
+    <section className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3">
       <div className="flex flex-wrap gap-2">
         <Button type="button" size="sm" variant="outline" onClick={exportData}>
           <Download className="size-4" />

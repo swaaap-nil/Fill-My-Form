@@ -3,6 +3,8 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import type { Page } from "@playwright/test";
 import type { Form, PageObservation } from "../src/core/form/types";
+import { resolve as resolveMatch } from "../src/core/matching/resolve";
+import { ontology } from "../src/core/ontology";
 import { expect, test } from "./fixtures";
 
 /**
@@ -191,6 +193,123 @@ test("controlled.html's four hard controls extract with the right FieldKind", as
     "United States",
     "United Kingdom",
   ]);
+});
+
+test("radio groups without fieldsets use the shared question label", async ({
+  page,
+}) => {
+  await page.setContent(`
+    <form>
+      <div class="form-group">
+        <label>Preferred language</label>
+        <div><input type="radio" id="lang-en" name="language" value="en"><label for="lang-en">English</label></div>
+        <div><input type="radio" id="lang-hi" name="language" value="hi"><label for="lang-hi">Hindi</label></div>
+      </div>
+    </form>
+  `);
+  await injectExtractor(page);
+
+  const full = await observeFull(page);
+  const language = full[0]?.fields.find((f) => f.name === "language");
+
+  expect(language?.kind).toBe("radio");
+  expect(language?.label).toBe("Preferred language");
+  expect(language?.options?.map((option) => option.label)).toEqual([
+    "English",
+    "Hindi",
+  ]);
+});
+
+test("ibps-like.html labels the file field from the upload prompt, not picker chrome", async ({
+  page,
+}) => {
+  await page.goto("/ibps-like.html");
+  await injectExtractor(page);
+
+  const full = await observeFull(page);
+  const fields = full[0]?.fields ?? [];
+  const photo = fields.find((f) => f.name === "photographUpload");
+  const signature = fields.find((f) => f.name === "signatureUpload");
+
+  expect(photo?.kind).toBe("file");
+  expect(photo?.label).toBe("Scanned Photograph of the Candidate:");
+  expect(photo?.label).not.toBe("Choose file");
+  expect(signature?.kind).toBe("file");
+  expect(signature?.label).toBe("Scanned Signature of the Candidate:");
+  expect(signature?.label).not.toBe("Choose file");
+});
+
+test("aai-copied.html recognises copied photo and signature upload fields", async ({
+  page,
+}) => {
+  await page.goto("/aai-copied.html");
+  await injectExtractor(page);
+
+  const full = await observeFull(page);
+  const fields = full[0]?.fields ?? [];
+  const photo = fields.find((f) => f.name === "picture");
+  const signature = fields.find((f) => f.name === "signature");
+
+  expect(photo).toBeDefined();
+  expect(signature).toBeDefined();
+  if (!photo || !signature) {
+    throw new Error("AAI upload fields were not extracted");
+  }
+
+  expect(photo.kind).toBe("file");
+  expect(photo.label).toBe("Scanned Photograph of the Candidate:");
+  expect(resolveMatch(photo, ontology).candidates[0]?.conceptKey).toBe(
+    "documents.photo",
+  );
+
+  expect(signature.kind).toBe("file");
+  expect(signature.label).toBe("Scanned Signature of the Candidate:");
+  expect(resolveMatch(signature, ontology).candidates[0]?.conceptKey).toBe(
+    "documents.signature",
+  );
+});
+
+test("aai-more.html has no upload fields to recognise", async ({ page }) => {
+  await page.goto("/aai-more.html");
+  await injectExtractor(page);
+
+  const full = await observeFull(page);
+  const fileFields = full
+    .flatMap((form) => form.fields)
+    .filter((field) => field.kind === "file");
+
+  expect(fileFields).toEqual([]);
+});
+
+test("aai-more.html recognises common personal, address and bank fields", async ({
+  page,
+}) => {
+  await page.goto("/aai-more.html");
+  await injectExtractor(page);
+
+  const full = await observeFull(page);
+  const fields = full[0]?.fields ?? [];
+  const conceptsByName = new Map(
+    fields.map((field) => [
+      field.name,
+      resolveMatch(field, ontology).candidates[0]?.conceptKey,
+    ]),
+  );
+
+  expect(conceptsByName.get("opt_cat")).toBe("identity.category");
+  expect(conceptsByName.get("are_you_indian")).toBe("identity.nationality");
+  expect(conceptsByName.get("optsex")).toBe("identity.gender");
+  expect(conceptsByName.get("mstatus")).toBe("identity.marital_status");
+  expect(conceptsByName.get("spousefirstname")).toBe("identity.spouse_name");
+  expect(conceptsByName.get("txtaddress3")).toBe("contact.address.line3");
+  expect(conceptsByName.get("txtdistrict")).toBe("contact.address.district");
+  expect(conceptsByName.get("account_holder_name")).toBe(
+    "bank.account_holder_name",
+  );
+  expect(conceptsByName.get("bankaccno")).toBe("bank.account_number");
+  expect(conceptsByName.get("c_acc_no")).toBe("bank.account_number");
+  expect(conceptsByName.get("bank_branch")).toBe("bank.branch_name");
+  expect(conceptsByName.get("type_of_account")).toBe("bank.account_type");
 });
 
 test("extracting a 500-field page stays within budget", async ({ page }) => {

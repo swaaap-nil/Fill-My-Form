@@ -93,6 +93,9 @@ const isFormControl = (el: Element): el is Candidate =>
   el instanceof HTMLSelectElement ||
   el instanceof HTMLTextAreaElement;
 
+const containsFormControl = (el: Element): boolean =>
+  isFormControl(el) || !!el.querySelector("input, select, textarea");
+
 /** Elements with zero layout box, or under a `hidden` ancestor. */
 const isInvisible = (el: HTMLElement): boolean => {
   if (el.closest("[hidden]")) return true;
@@ -104,7 +107,16 @@ const isInvisible = (el: HTMLElement): boolean => {
 
 const isSkipped = (el: Candidate): boolean => {
   const type = el instanceof HTMLInputElement ? el.type : undefined;
-  if (type === "hidden" || type === "password") return true;
+  if (
+    type === "button" ||
+    type === "hidden" ||
+    type === "image" ||
+    type === "password" ||
+    type === "reset" ||
+    type === "submit"
+  ) {
+    return true;
+  }
   if (el.disabled) return true;
   if ("readOnly" in el && el.readOnly) return true;
   return isInvisible(el);
@@ -113,6 +125,35 @@ const isSkipped = (el: Candidate): boolean => {
 const textOf = (el: Element | null | undefined): string | undefined => {
   const text = el?.textContent?.replace(/\s+/g, " ").trim();
   return text ? text : undefined;
+};
+
+const isFileInput = (el: Element): el is HTMLInputElement =>
+  el instanceof HTMLInputElement && el.type === "file";
+
+const normaliseUiText = (text: string): string =>
+  text
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const isGenericFilePickerText = (el: Element, text: string): boolean => {
+  if (!isFileInput(el)) return false;
+  const normalised = normaliseUiText(text);
+  return (
+    normalised === "choose file" ||
+    normalised === "browse" ||
+    normalised === "choose file browse" ||
+    normalised === "no file chosen"
+  );
+};
+
+const meaningfulLabelText = (
+  el: Element,
+  text: string | undefined,
+): string | undefined => {
+  if (!text) return undefined;
+  return isGenericFilePickerText(el, text) ? undefined : text;
 };
 
 /** Nearest ancestor `<fieldset>`, if the control is grouped inside one. */
@@ -127,31 +168,42 @@ const fieldsetOf = (el: Element): HTMLFieldSetElement | null =>
 const resolveLabel = (doc: Document, el: Element): string | undefined => {
   if (el.id) {
     const forLabel = doc.querySelector(`label[for="${cssEscape(el.id)}"]`);
-    const text = textOf(forLabel);
+    const text = meaningfulLabelText(el, textOf(forLabel));
     if (text) return text;
   }
 
   const wrapping = el.closest("label");
-  const wrappingText = textOf(wrapping);
+  const wrappingText = meaningfulLabelText(el, textOf(wrapping));
   if (wrappingText) return wrappingText;
 
-  const ariaLabel = el.getAttribute("aria-label")?.trim();
+  const ariaLabel = meaningfulLabelText(
+    el,
+    el.getAttribute("aria-label")?.trim(),
+  );
   if (ariaLabel) return ariaLabel;
 
   const labelledBy = el.getAttribute("aria-labelledby");
   if (labelledBy) {
-    const text = labelledBy
-      .split(/\s+/)
-      .map((id) => textOf(doc.getElementById(id)))
-      .filter((t): t is string => !!t)
-      .join(" ");
+    const text = meaningfulLabelText(
+      el,
+      labelledBy
+        .split(/\s+/)
+        .map((id) => textOf(doc.getElementById(id)))
+        .filter((t): t is string => !!t)
+        .join(" "),
+    );
     if (text) return text;
   }
 
-  const precedingText = precedingSiblingText(el);
+  const precedingText = meaningfulLabelText(el, precedingSiblingText(el));
   if (precedingText) return precedingText;
 
-  return el.getAttribute("placeholder")?.trim() || undefined;
+  const ancestorText = precedingAncestorText(el);
+  if (ancestorText) return ancestorText;
+
+  return (
+    meaningfulLabelText(el, el.getAttribute("placeholder")?.trim()) || undefined
+  );
 };
 
 /**
@@ -169,9 +221,10 @@ const resolveLabel = (doc: Document, el: Element): string | undefined => {
 const resolveGroupLabel = (
   doc: Document,
   first: HTMLInputElement,
+  members: readonly HTMLInputElement[],
   fieldset: HTMLFieldSetElement | null,
 ): string | undefined => {
-  if (!fieldset) return resolveLabel(doc, first);
+  if (!fieldset) return resolveUnfieldedGroupLabel(doc, first, members);
 
   if (fieldset.id) {
     const forLabel = doc.querySelector(
@@ -200,16 +253,79 @@ const resolveGroupLabel = (
   return precedingSiblingText(fieldset);
 };
 
+const resolveUnfieldedGroupLabel = (
+  doc: Document,
+  first: HTMLInputElement,
+  members: readonly HTMLInputElement[],
+): string | undefined => {
+  const common = commonAncestor(members);
+  if (common) {
+    const memberIds = new Set(members.map((m) => m.id).filter(Boolean));
+    const labels = Array.from(common.querySelectorAll("label"));
+    for (const label of labels) {
+      const htmlFor = label.getAttribute("for");
+      if (htmlFor && memberIds.has(htmlFor)) continue;
+      if (members.some((member) => label.contains(member))) continue;
+
+      const text = textOf(label);
+      if (text) return text;
+    }
+  }
+
+  return resolveLabel(doc, first);
+};
+
+const commonAncestor = (
+  elements: readonly Element[],
+): HTMLElement | undefined => {
+  const [first, ...rest] = elements;
+  if (!first) return undefined;
+
+  let candidate = first.parentElement;
+  while (candidate) {
+    if (rest.every((el) => candidate?.contains(el))) return candidate;
+    candidate = candidate.parentElement;
+  }
+
+  return undefined;
+};
+
 /** Nearest non-empty preceding sibling's text, within the same parent. */
 const precedingSiblingText = (el: Element): string | undefined => {
   let sibling = el.previousElementSibling;
   while (sibling) {
-    if (!isFormControl(sibling)) {
+    if (!containsFormControl(sibling)) {
       const text = textOf(sibling);
       if (text) return text;
     }
     sibling = sibling.previousElementSibling;
   }
+  return undefined;
+};
+
+const precedingAncestorText = (el: Element): string | undefined => {
+  let child: Element = el;
+  let parent = el.parentElement;
+
+  while (
+    parent &&
+    parent.tagName !== "FORM" &&
+    parent.tagName !== "BODY" &&
+    parent.tagName !== "HTML"
+  ) {
+    let sibling = child.previousElementSibling;
+    while (sibling) {
+      if (!containsFormControl(sibling)) {
+        const text = meaningfulLabelText(el, textOf(sibling));
+        if (text) return text;
+      }
+      sibling = sibling.previousElementSibling;
+    }
+
+    child = parent;
+    parent = parent.parentElement;
+  }
+
   return undefined;
 };
 
@@ -528,7 +644,7 @@ const extractForm = (
 
       if (g.kind === "group") {
         const fieldset = fieldsetOf(g.first);
-        const label = resolveGroupLabel(doc, g.first, fieldset);
+        const label = resolveGroupLabel(doc, g.first, g.els, fieldset);
         const options: FormOption[] = g.els.map((el) => ({
           value: el.value,
           label: resolveLabel(doc, el) ?? el.value,

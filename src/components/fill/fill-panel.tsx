@@ -149,7 +149,7 @@ export const FillPanel = () => {
 
   return (
     <div className="flex w-full flex-col gap-4">
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3 shadow-sm shadow-black/5 dark:shadow-black/20">
         {activeTabGranted ? (
           <Button type="button" onClick={scan}>
             Scan this page
@@ -162,12 +162,12 @@ export const FillPanel = () => {
       </div>
 
       {grantedOrigins.length > 0 && (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3">
           <p className="font-medium text-xs">Sites you've granted access to</p>
           {grantedOrigins.map((origin) => (
             <div
               key={origin}
-              className="flex items-center justify-between gap-2 text-xs"
+              className="flex items-center justify-between gap-2 rounded-md bg-muted/50 px-2 py-1.5 text-xs"
             >
               <span className="truncate text-muted-foreground">{origin}</span>
               <Button

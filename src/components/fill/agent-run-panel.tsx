@@ -63,9 +63,11 @@ export const AgentRunPanel = ({ tabId }: AgentRunPanelProps) => {
   };
 
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-border border-dashed p-3">
+    <div className="flex flex-col gap-3 rounded-lg border border-primary/30 bg-accent/70 p-3">
       {/* TODO(design): placeholder — see docs/roadmap/_context.md */}
-      <p className="font-medium text-xs">Agent loop (beta)</p>
+      <p className="font-semibold text-xs text-accent-foreground">
+        Agent loop (beta)
+      </p>
 
       {!view && (
         <Button

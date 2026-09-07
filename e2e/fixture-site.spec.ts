@@ -44,6 +44,29 @@ test("messy.html stays messy", async ({ page }) => {
   await expect(page.getByText("Aadhaar Number")).toBeVisible();
 });
 
+test("ibps-like.html exposes the scanned photograph upload shape", async ({
+  page,
+}) => {
+  await page.goto("/ibps-like.html");
+
+  await expect(
+    page.getByText("Scanned Photograph of the Candidate:"),
+  ).toBeVisible();
+  await expect(page.locator("#photographUpload")).toHaveAttribute(
+    "type",
+    "file",
+  );
+  await expect(
+    page.getByText("Scanned Signature of the Candidate:"),
+  ).toBeVisible();
+  await expect(page.locator("#signatureUpload")).toHaveAttribute(
+    "type",
+    "file",
+  );
+  await expect(page.getByText("Choose file")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Browse" })).toBeVisible();
+});
+
 test("dynamic.html injects fields after load and between steps", async ({
   page,
 }) => {

@@ -1,0 +1,65 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>IBPS-like upload form</title>
+<style>
+  body { font: 16px/1.5 system-ui, sans-serif; max-width: 58rem; margin: 3rem auto; padding: 0 1rem; }
+  h1 { margin-bottom: 1.5rem; }
+  .note { color: #00f; font-weight: 700; margin: .3rem 0; }
+  .upload-panel { border: 1px solid #d6d6e7; margin-top: 2.5rem; padding: 1.8rem; display: grid; grid-template-columns: minmax(18rem, 1fr) 15rem; gap: 2rem; align-items: start; }
+  .file-row { margin: 1rem 0 2rem; }
+  .file-title { font-size: 1.1rem; margin-bottom: .6rem; }
+  .fake-file { display: inline-flex; border: 1px solid #cbd5e1; border-radius: 4px; overflow: hidden; }
+  .fake-file span { padding: .45rem .9rem; min-width: 15rem; }
+  .fake-file button { border: 0; border-left: 1px solid #cbd5e1; padding: .45rem .9rem; font: inherit; color: #334155; }
+  input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: .01; }
+  .preview { width: 10rem; height: 13rem; border: 1px solid #333; margin-top: 4.5rem; }
+  .caption { text-align: center; font-weight: 700; }
+  .confirm { display: block; margin-top: 2rem; font-weight: 600; }
+</style>
+
+<h1>Photo &amp; Signature</h1>
+<p class="note">NOTE: A recent, clearly recognizable passport size photograph should be uploaded by the candidate.</p>
+<p class="note">NOTE: Candidates are required to capture and upload their photograph either by using webcam or mobile phone.</p>
+
+<form id="candidate-upload" method="post" action="/upload">
+  <section class="upload-panel">
+    <div>
+      <div class="file-row">
+        <div class="file-title">Scanned Photograph of the Candidate:</div>
+        <div class="fake-file">
+          <span>Choose file</span>
+          <button type="button">Browse</button>
+          <input id="photographUpload" name="photographUpload" type="file" accept="image/jpeg,image/png" />
+        </div>
+      </div>
+
+      <p><a href="/guidelines">Guidelines for scanning the Photograph &amp; Signature</a></p>
+      <p><strong>Photo should be clearly visible in the adjacent box</strong></p>
+      <p><strong>(AND)</strong></p>
+      <p><strong>Capture Photo using Webcamera</strong></p>
+
+      <label class="confirm">
+        <input name="photoConfirm" type="checkbox" required />
+        I confirm that this is my valid photo and also agree to above mentioned Note.
+      </label>
+
+      <div class="file-row">
+        <div class="file-title">Scanned Signature of the Candidate:</div>
+        <div class="fake-file">
+          <span>Choose file</span>
+          <button type="button">Browse</button>
+          <input id="signatureUpload" name="signatureUpload" type="file" accept="image/jpeg,image/png" />
+        </div>
+      </div>
+
+      <label class="confirm">
+        <input name="signatureConfirm" type="checkbox" required />
+        I confirm that this is my valid signature and also agree to above mentioned Note.
+      </label>
+    </div>
+    <div>
+      <div class="preview"></div>
+      <div class="caption">Uploaded Image</div>
+    </div>
+  </section>
+</form>

@@ -10,6 +10,9 @@
   "privacyNote": {
     "message": "Your personal information stays on this device."
   },
+  "headerSubtitle": {
+    "message": "Saved on this device"
+  },
   "logoAlt": {
     "message": "Fill My Form logo"
   },

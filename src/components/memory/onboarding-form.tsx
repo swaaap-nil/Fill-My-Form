@@ -130,10 +130,15 @@ export const OnboardingForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex w-full flex-col gap-6">
+    <form onSubmit={handleSubmit} className="flex w-full flex-col gap-5">
       {groupedStandard.map(([group, items]) => (
-        <fieldset key={group} className="flex flex-col gap-3">
-          <legend className="font-semibold text-sm">{group}</legend>
+        <fieldset
+          key={group}
+          className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 shadow-sm shadow-black/5 dark:shadow-black/20"
+        >
+          <legend className="px-1 font-semibold text-sm text-foreground">
+            {group}
+          </legend>
           {items.map((concept) => (
             <div key={concept.key} className="flex flex-col gap-1">
               <Label htmlFor={concept.key}>{concept.label}</Label>
@@ -153,7 +158,7 @@ export const OnboardingForm = () => {
         </fieldset>
       ))}
 
-      <fieldset className="flex flex-col gap-3 rounded-md border border-border p-3">
+      <fieldset className="flex flex-col gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
         <legend className="flex items-center gap-1.5 font-semibold text-sm">
           <Lock className="size-3.5" />
           Sensitive information
@@ -180,7 +185,7 @@ export const OnboardingForm = () => {
         ))}
       </fieldset>
 
-      <fieldset className="flex flex-col gap-3 rounded-md border border-border p-3">
+      <fieldset className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3">
         <legend className="flex items-center gap-1.5 font-semibold text-sm">
           <FileUp className="size-3.5" />
           Files

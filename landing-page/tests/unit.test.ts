@@ -77,4 +77,12 @@ test('production launch rejects missing or unsafe configuration', () => {
     }).firefox,
     '',
   );
+  assert.equal(
+    validateConfig({
+      PUBLIC_FIREFOX_STORE_URL:
+        'https://addons.mozilla.org/en-US/firefox/addon/example/',
+      FIREFOX_VERIFIED: 'true',
+    }).firefox,
+    'https://addons.mozilla.org/en-US/firefox/addon/example/',
+  );
 });

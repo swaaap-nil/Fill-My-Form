@@ -22,10 +22,10 @@ const SidePanel = () => {
   return (
     <Layout>
       <div className="flex w-full flex-col gap-4">
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted p-1">
           <Button
             type="button"
-            variant={view === View.FILL ? "default" : "outline"}
+            variant={view === View.FILL ? "default" : "ghost"}
             size="sm"
             onClick={() => setView(View.FILL)}
           >
@@ -33,7 +33,7 @@ const SidePanel = () => {
           </Button>
           <Button
             type="button"
-            variant={view === View.ONBOARDING ? "default" : "outline"}
+            variant={view === View.ONBOARDING ? "default" : "ghost"}
             size="sm"
             onClick={() => setView(View.ONBOARDING)}
           >
