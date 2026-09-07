@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   localeKeys,
+  firefoxStoreUrl,
   matchLocale,
   fromHeader,
   localizedPath,
@@ -19,6 +20,14 @@ test('language matching respects order, regions, scripts and English fallback', 
   assert.equal(fromHeader('ar;q=bogus,hi-IN;q=0.9'), 'hi');
   assert.equal(fromHeader('en;q=0.1,de;q=0.9'), 'de');
   assert.equal(localizedPath('ar', 'privacy'), '/ar/privacy/');
+  assert.equal(
+    firefoxStoreUrl('en'),
+    'https://addons.mozilla.org/en-US/fill-my-form',
+  );
+  assert.equal(
+    firefoxStoreUrl('pt-br'),
+    'https://addons.mozilla.org/pt-BR/fill-my-form',
+  );
 });
 function structure(value: unknown): unknown {
   if (typeof value === 'string') {
@@ -70,19 +79,6 @@ test('production launch rejects missing or unsafe configuration', () => {
   };
   assert.equal(validateConfig(valid).ga, 'G-TEST123');
   assert.equal(validateConfig({ ...valid, SITE_ENV: 'preview' }).ga, '');
-  assert.equal(
-    validateConfig({
-      PUBLIC_FIREFOX_STORE_URL:
-        'https://addons.mozilla.org/en-US/firefox/addon/example/',
-    }).firefox,
-    '',
-  );
-  assert.equal(
-    validateConfig({
-      PUBLIC_FIREFOX_STORE_URL:
-        'https://addons.mozilla.org/en-US/firefox/addon/example/',
-      FIREFOX_VERIFIED: 'true',
-    }).firefox,
-    'https://addons.mozilla.org/en-US/firefox/addon/example/',
-  );
+  assert.equal(validateConfig({}).firefox, false);
+  assert.equal(validateConfig({ FIREFOX_VERIFIED: 'true' }).firefox, true);
 });

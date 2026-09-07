@@ -25,8 +25,6 @@ export default defineConfig({
       PUBLIC_SITE_URL: 'https://example.com',
       PUBLIC_CHROME_STORE_URL:
         'https://chromewebstore.google.com/detail/test/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-      PUBLIC_FIREFOX_STORE_URL:
-        'https://addons.mozilla.org/en-US/firefox/addon/fill-my-form/',
       FIREFOX_VERIFIED: 'true',
       PUBLIC_GA4_ID: 'G-TEST123',
       LAUNCH_REVIEWED: 'true',

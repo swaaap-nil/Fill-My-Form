@@ -55,10 +55,11 @@ PUBLIC_GA4_ID=G-XXXXXXXXXX
 LAUNCH_REVIEWED=true
 ```
 
-Optional Firefox CTA support stays hidden unless both are set:
+Optional Firefox CTA support stays hidden unless verified. The public Firefox
+store URL is generated per locale with the `fill-my-form` slug, such as
+`https://addons.mozilla.org/en-US/fill-my-form`.
 
 ```sh
-PUBLIC_FIREFOX_STORE_URL=https://addons.mozilla.org/...
 FIREFOX_VERIFIED=true
 ```
 

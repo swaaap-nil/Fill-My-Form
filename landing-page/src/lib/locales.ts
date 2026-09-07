@@ -1,14 +1,24 @@
 export const locales = {
-  en: { name: 'English', tag: 'en', dir: 'ltr' },
-  hi: { name: 'हिन्दी', tag: 'hi', dir: 'ltr' },
-  es: { name: 'Español', tag: 'es', dir: 'ltr' },
-  'pt-br': { name: 'Português (Brasil)', tag: 'pt-BR', dir: 'ltr' },
-  fr: { name: 'Français', tag: 'fr', dir: 'ltr' },
-  de: { name: 'Deutsch', tag: 'de', dir: 'ltr' },
-  id: { name: 'Bahasa Indonesia', tag: 'id', dir: 'ltr' },
-  ar: { name: 'العربية', tag: 'ar', dir: 'rtl' },
-  ja: { name: '日本語', tag: 'ja', dir: 'ltr' },
-  'zh-cn': { name: '简体中文', tag: 'zh-Hans', dir: 'ltr' },
+  en: { name: 'English', tag: 'en', dir: 'ltr', firefoxLocale: 'en-US' },
+  hi: { name: 'हिन्दी', tag: 'hi', dir: 'ltr', firefoxLocale: 'hi-IN' },
+  es: { name: 'Español', tag: 'es', dir: 'ltr', firefoxLocale: 'es-ES' },
+  'pt-br': {
+    name: 'Português (Brasil)',
+    tag: 'pt-BR',
+    dir: 'ltr',
+    firefoxLocale: 'pt-BR',
+  },
+  fr: { name: 'Français', tag: 'fr', dir: 'ltr', firefoxLocale: 'fr' },
+  de: { name: 'Deutsch', tag: 'de', dir: 'ltr', firefoxLocale: 'de' },
+  id: { name: 'Bahasa Indonesia', tag: 'id', dir: 'ltr', firefoxLocale: 'id' },
+  ar: { name: 'العربية', tag: 'ar', dir: 'rtl', firefoxLocale: 'ar' },
+  ja: { name: '日本語', tag: 'ja', dir: 'ltr', firefoxLocale: 'ja' },
+  'zh-cn': {
+    name: '简体中文',
+    tag: 'zh-Hans',
+    dir: 'ltr',
+    firefoxLocale: 'zh-CN',
+  },
 } as const;
 export type Locale = keyof typeof locales;
 export const localeKeys = Object.keys(locales) as Locale[];
@@ -44,4 +54,7 @@ export function fromHeader(header: string): Locale {
 }
 export function localizedPath(locale: Locale, page = '') {
   return `/${locale}/${page ? `${page}/` : ''}`;
+}
+export function firefoxStoreUrl(locale: Locale) {
+  return `https://addons.mozilla.org/${locales[locale].firefoxLocale}/fill-my-form`;
 }

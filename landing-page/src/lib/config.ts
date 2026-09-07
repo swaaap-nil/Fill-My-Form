@@ -15,10 +15,8 @@ export function validateConfig(env: Record<string, string | undefined>) {
     );
   }
   const chrome = env.PUBLIC_CHROME_STORE_URL || '';
-  const firefox = env.PUBLIC_FIREFOX_STORE_URL || '';
   for (const [value, host, prefix] of [
     [chrome, 'chromewebstore.google.com', '/detail/'],
-    [firefox, 'addons.mozilla.org', '/'],
   ] as const) {
     if (!value) continue;
     const target = new URL(value);
@@ -53,7 +51,7 @@ export function validateConfig(env: Record<string, string | undefined>) {
     production,
     site: url.origin,
     chrome,
-    firefox: env.FIREFOX_VERIFIED === 'true' ? firefox : '',
+    firefox: env.FIREFOX_VERIFIED === 'true',
     ga: production ? ga : '',
   };
 }
