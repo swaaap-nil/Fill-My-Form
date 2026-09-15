@@ -49,22 +49,35 @@ test("ibps-like.html exposes the scanned photograph upload shape", async ({
 }) => {
   await page.goto("/ibps-like.html");
 
+  const photographRow = page
+    .locator(".file-row")
+    .filter({ hasText: "Scanned Photograph of the Candidate:" });
   await expect(
-    page.getByText("Scanned Photograph of the Candidate:"),
+    photographRow.getByText("Scanned Photograph of the Candidate:"),
   ).toBeVisible();
   await expect(page.locator("#photographUpload")).toHaveAttribute(
     "type",
     "file",
   );
+  await expect(photographRow.getByText("Choose file")).toBeVisible();
   await expect(
-    page.getByText("Scanned Signature of the Candidate:"),
+    photographRow.getByRole("button", { name: "Browse" }),
+  ).toBeVisible();
+
+  const signatureRow = page
+    .locator(".file-row")
+    .filter({ hasText: "Scanned Signature of the Candidate:" });
+  await expect(
+    signatureRow.getByText("Scanned Signature of the Candidate:"),
   ).toBeVisible();
   await expect(page.locator("#signatureUpload")).toHaveAttribute(
     "type",
     "file",
   );
-  await expect(page.getByText("Choose file")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Browse" })).toBeVisible();
+  await expect(signatureRow.getByText("Choose file")).toBeVisible();
+  await expect(
+    signatureRow.getByRole("button", { name: "Browse" }),
+  ).toBeVisible();
 });
 
 test("dynamic.html injects fields after load and between steps", async ({
