@@ -1,0 +1,29 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Image upload with a byte limit</title>
+<style>
+  body { font: 16px/1.6 system-ui, sans-serif; max-width: 40rem; margin: 3rem auto; padding: 0 1rem; }
+  label { display: block; margin-top: 1rem; font-weight: 600; }
+  input { width: 100%; padding: .5rem; font: inherit; }
+  .hint { font-weight: 400; color: #666; font-size: .875rem; }
+</style>
+
+<h1>Photo upload</h1>
+<p>
+  A labelled image file input that declares a max size in bytes. Reload must
+  not drop the field — it lives in the served HTML, not in a script.
+</p>
+
+<form id="photo-upload" method="post" action="/submit">
+  <label for="photo">
+    Passport size photo
+    <span class="hint">JPEG or PNG, max 8 KB</span>
+  </label>
+  <input
+    id="photo"
+    name="photo"
+    type="file"
+    accept="image/*"
+    data-max-file-size-bytes="8000"
+  />
+</form>
