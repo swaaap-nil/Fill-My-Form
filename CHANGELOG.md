@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.1.0](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.0.2...v1.1.0) (2026-09-15)
+
+
+### Features
+
+* **memory:** stable memory when developemnt ([956d0b6](https://github.com/swaaap-nil/Fill-My-Form/commit/956d0b683a7761c9b0d034cfa06cedb87dc06bef))
+
+
+### Bug Fixes
+
+* **e2e:** keep the oversized-photo field across grant reload ([23cc581](https://github.com/swaaap-nil/Fill-My-Form/commit/23cc58121e2789e6f3d352542e1c373d3a312924))
+* **firefox:** keep the fill panel's active tab in sync ([ffc22f2](https://github.com/swaaap-nil/Fill-My-Form/commit/ffc22f28c0f612a7997bb7dff231fdf689f62d41))
+
 ## [1.0.2](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.0.1...v1.0.2) (2026-09-15)
 
 
