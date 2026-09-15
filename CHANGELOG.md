@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.1.0...v1.1.1) (2026-09-15)
+
+
+### Bug Fixes
+
+* **ci:** skip redundant CI re-run in release workflow ([3aa61c1](https://github.com/swaaap-nil/Fill-My-Form/commit/3aa61c1088eb9f38f75981c0b822acf64aa551c2))
+
 ## [1.1.0](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.0.2...v1.1.0) (2026-09-15)
 
 
