@@ -146,25 +146,19 @@ jobs:
           path: build
 
       - name: Dry-run Firefox submission
-        run: >
-          bun wxt submit --dry-run
-          --firefox-zip "${FIREFOX_ZIP}"
-          --firefox-sources-zip "${SOURCES_ZIP}"
+        run: bun run scripts/submit-firefox.ts --dry-run
         env:
           FIREFOX_ZIP: ${{ needs.build.outputs.firefox_zip }}
-          SOURCES_ZIP: ${{ needs.build.outputs.sources_zip }}
+          FIREFOX_SOURCES_ZIP: ${{ needs.build.outputs.sources_zip }}
           FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
           FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
           FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
 
       - name: Submit Firefox
-        run: >
-          bun wxt submit
-          --firefox-zip "${FIREFOX_ZIP}"
-          --firefox-sources-zip "${SOURCES_ZIP}"
+        run: bun run scripts/submit-firefox.ts
         env:
           FIREFOX_ZIP: ${{ needs.build.outputs.firefox_zip }}
-          SOURCES_ZIP: ${{ needs.build.outputs.sources_zip }}
+          FIREFOX_SOURCES_ZIP: ${{ needs.build.outputs.sources_zip }}
           FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
           FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
           FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}

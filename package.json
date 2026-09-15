@@ -33,7 +33,8 @@
     "typecheck": "tsc --noEmit",
     "check": "bun lint && bun typecheck && bun run test && bun run check:forbidden-deps && bun run check:generalized-fixtures",
     "prepare": "husky",
-    "postinstall": "wxt prepare"
+    "postinstall": "wxt prepare",
+    "submit:firefox": "bun run scripts/submit-firefox.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
