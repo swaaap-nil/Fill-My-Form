@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 env:
   NODE_VERSION: 24.x
@@ -28,15 +29,46 @@ jobs:
       - name: Check tag and published versions
         run: bun run scripts/release-version.ts
 
+  # Tags are only ever pushed at a commit that release-please just merged to
+  # main, and that push already ran tests.yml in full (including the slow
+  # e2e job). Re-running it here would just repeat that on the identical
+  # SHA, so skip it when a passing run is already on record — and fall back
+  # to running it when there isn't one (e.g. a manually pushed tag).
+  check-existing-ci:
+    name: Check Existing CI
+    runs-on: ubuntu-latest
+    needs: [verify]
+    outputs:
+      passed: ${{ steps.check.outputs.passed }}
+    steps:
+      - name: Check for a passing CI run on this commit
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          conclusion=$(gh api "repos/${REPO}/actions/workflows/tests.yml/runs?head_sha=${SHA}&status=success" --jq '.workflow_runs[0].conclusion // ""')
+          if [ "$conclusion" = "success" ]; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+          fi
+
   tests:
     name: Tests
-    needs: [verify]
+    needs: [check-existing-ci]
+    if: needs.check-existing-ci.outputs.passed != 'true'
     uses: ./.github/workflows/tests.yml
 
   build:
     name: Build Release Artifacts
     runs-on: ubuntu-latest
-    needs: [tests]
+    needs: [check-existing-ci, tests]
+    if: |
+      always() &&
+      needs.check-existing-ci.result == 'success' &&
+      (needs.tests.result == 'success' || needs.tests.result == 'skipped')
     outputs:
       chrome_zip: ${{ steps.artifacts.outputs.chrome_zip }}
       firefox_zip: ${{ steps.artifacts.outputs.firefox_zip }}
