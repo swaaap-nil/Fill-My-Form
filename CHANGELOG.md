@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.2](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.0.1...v1.0.2) (2026-09-15)
+
+
+### Bug Fixes
+
+* broken firefox build ([ddf7fe5](https://github.com/swaaap-nil/Fill-My-Form/commit/ddf7fe5da48f0ed74d5b7f954836523b57e805bc))
+* **ci:** submit Firefox versions through the AMO API ([a0dfe24](https://github.com/swaaap-nil/Fill-My-Form/commit/a0dfe2444f418663d2525fbaf72cde01c914a9b9))
+* firefox bug ([9ef76ec](https://github.com/swaaap-nil/Fill-My-Form/commit/9ef76ecf2eb2fb9f89068df7c18bcdb576859bf0))
+* **firefox:** wire toolbar icon to sidebar, fix dev CORS, add regression tests ([a3d7d0a](https://github.com/swaaap-nil/Fill-My-Form/commit/a3d7d0a0c767e4bcf41864f9d8b48e541c8bfd4b))
+* remove theme switcher ([1d15ad8](https://github.com/swaaap-nil/Fill-My-Form/commit/1d15ad801791995157f8352bc764a507415726cb))
+
 ## [1.0.1](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.0.0...v1.0.1) (2026-09-15)
 
 
