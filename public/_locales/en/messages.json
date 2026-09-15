@@ -16,21 +16,9 @@
   "logoAlt": {
     "message": "Fill My Form logo"
   },
-  "toggleTheme": {
-    "message": "Toggle theme"
-  },
   "contentScriptActive": {
     "description": "Badge shown on a page the user has granted access to.",
     "message": "Active on this page, with your permission"
-  },
-  "light": {
-    "message": "Light"
-  },
-  "dark": {
-    "message": "Dark"
-  },
-  "system": {
-    "message": "System"
   },
   "localDataExport": {
     "message": "Export"

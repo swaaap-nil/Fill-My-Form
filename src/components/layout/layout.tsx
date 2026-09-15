@@ -1,6 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { StorageKey, useStorage } from "@/lib/storage";
-import { Theme } from "@/types";
+import { useEffect, useState } from "react";
 import { ErrorBoundary } from "~/components/common/error-boundary";
 import { Suspense } from "~/components/common/suspense";
 import { Footer } from "~/components/layout/footer";
@@ -17,6 +16,7 @@ interface LayoutProps {
 }
 
 const queryClient = new QueryClient();
+const systemDarkQuery = "(prefers-color-scheme: dark)";
 
 export const Layout = ({
   children,
@@ -42,7 +42,7 @@ const LayoutContent = ({
   readonly children?: React.ReactNode;
   readonly className?: string;
 }) => {
-  const { data: theme } = useStorage(StorageKey.THEME);
+  const prefersDark = useSystemPrefersDark();
 
   return (
     <div
@@ -50,10 +50,7 @@ const LayoutContent = ({
       className={cn(
         "flex min-h-screen w-full min-w-[23rem] flex-col items-center justify-center bg-background text-base text-foreground font-sans",
         {
-          dark:
-            theme === Theme.DARK ||
-            (theme === Theme.SYSTEM &&
-              window.matchMedia("(prefers-color-scheme: dark)").matches),
+          dark: prefersDark,
         },
       )}
     >
@@ -70,4 +67,26 @@ const LayoutContent = ({
       <Toaster />
     </div>
   );
+};
+
+const useSystemPrefersDark = () => {
+  const [prefersDark, setPrefersDark] = useState(
+    () => window.matchMedia(systemDarkQuery).matches,
+  );
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(systemDarkQuery);
+    const handleChange = (event: MediaQueryListEvent) => {
+      setPrefersDark(event.matches);
+    };
+
+    setPrefersDark(mediaQuery.matches);
+    mediaQuery.addEventListener("change", handleChange);
+
+    return () => {
+      mediaQuery.removeEventListener("change", handleChange);
+    };
+  }, []);
+
+  return prefersDark;
 };
