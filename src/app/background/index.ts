@@ -46,6 +46,10 @@ import {
 } from "~/lib/indexeddb-local-data";
 import { onMessage, type RunView, sendMessage } from "~/lib/messaging";
 import { siteAccess } from "~/lib/site-access";
+import {
+  type SidePanelBrowser,
+  wireToolbarIconBehavior,
+} from "~/lib/toolbar-icon";
 
 /**
  * The composition root.
@@ -232,37 +236,7 @@ const main = () => {
       }),
     );
 
-  // Clicking the toolbar icon opens the side panel. Requires no
-  // `action.default_popup` in the manifest, and Chrome only. Firefox has no
-  // sidePanel API, so this is feature-detected rather than assumed.
-  if (browser.sidePanel) {
-    browser.sidePanel
-      .setPanelBehavior({ openPanelOnActionClick: true })
-      .catch((error: unknown) =>
-        logger.warn("could not set side panel behavior", {
-          errorCode: String(error),
-        }),
-      );
-  } else {
-    // Firefox: WXT emits a `sidebar_action` for the built-in sidebar, but
-    // that API has no Chrome-style "open on action click" behavior — the
-    // `action` (toolbar) button and the sidebar are separate UI, and with
-    // no `default_popup` the toolbar button otherwise does nothing when
-    // clicked. Wire the two together explicitly via `sidebarAction.toggle`.
-    // Not in `@wxt-dev/browser`'s Chrome-derived types, hence the cast.
-    const firefoxBrowser = browser as unknown as {
-      sidebarAction?: { toggle: () => Promise<void> };
-    };
-    browser.action.onClicked.addListener(() => {
-      firefoxBrowser.sidebarAction
-        ?.toggle()
-        .catch((error: unknown) =>
-          logger.warn("could not toggle sidebar", {
-            errorCode: String(error),
-          }),
-        );
-    });
-  }
+  wireToolbarIconBehavior(browser as unknown as SidePanelBrowser, logger);
 
   // Runtime content-script registrations do not survive a browser restart,
   // but the user's permission grants do. Re-register for granted origins.

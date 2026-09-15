@@ -2,6 +2,7 @@ import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, type WxtViteConfig } from "wxt";
+import { EXTENSION_ORIGIN_PATTERN } from "./scripts/dev-server-cors";
 import { applyHostPermissionsPolicy } from "./scripts/manifest-hook";
 
 /**
@@ -111,19 +112,8 @@ export default defineConfig({
     ({
       plugins: [tailwindcss()],
       server: {
-        /**
-         * In dev, WXT serves every script from this Vite server and the
-         * extension pages fetch them from a `chrome-extension://` (Chrome) or
-         * `moz-extension://` (Firefox) origin. Vite 8 blocks cross-origin
-         * requests by default, so without this the side panel loads no
-         * JavaScript and renders as a blank white panel with only a CORS
-         * error in its console.
-         *
-         * Scoped to extension origins rather than `true`: this server also
-         * serves source files, and a page you visit while developing should
-         * not be able to read them.
-         */
-        cors: { origin: /^(chrome|moz)-extension:\/\// },
+        // See `scripts/dev-server-cors.ts` for why this is scoped the way it is.
+        cors: { origin: EXTENSION_ORIGIN_PATTERN },
       },
 
       /**

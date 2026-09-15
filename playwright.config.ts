@@ -13,6 +13,10 @@ import { defineConfig } from "@playwright/test";
  * artifacts instead. See docs/testing.md.
  *
  * Requires a production build first — `bun test:e2e` does that for you.
+ *
+ * Chromium only — see docs/testing.md for why there is no Firefox e2e
+ * equivalent (Playwright cannot load an unsigned extension into Firefox at
+ * all; that's not a config gap here, it's an upstream limitation).
  */
 export default defineConfig({
   testDir: "./e2e",

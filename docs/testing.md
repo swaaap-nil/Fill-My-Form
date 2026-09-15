@@ -25,7 +25,7 @@ test starts needing a DOM, the logic is in the wrong layer.
 | Layer | Runner | What |
 |---|---|---|
 | `src/core/**` | `bun test` | Ontology, matching, state transitions, tool schemas, policy, providers |
-| Adapters (`src/lib`) | `bun test` with fakes | Storage, messaging, site access |
+| Adapters (`src/lib`) | `bun test` with fakes | Storage, messaging, site access, Chrome/Firefox toolbar-icon wiring |
 | End to end | `bun test:e2e` | The built extension in real Chromium, plus the fixtures |
 
 ## The fixture site
@@ -125,6 +125,40 @@ pinning — and generate the baselines in a container when you do.
 **Not part of `bun check`.** These launch a real browser and are an order of
 magnitude slower than the unit tests. They run as a separate CI job so a lint
 failure still surfaces in seconds.
+
+**Chromium only — there is no Firefox e2e, and there cannot be one with this
+toolchain.** Two Firefox-only bugs shipped undetected in one session: the
+toolbar icon did nothing on Firefox (nothing wired `browser.action.onClicked`
+to `sidebarAction.toggle()`, the Firefox equivalent of Chrome's
+`sidePanel.setPanelBehavior`), and the dev server's CORS policy blocked
+`moz-extension://` origins, rendering the side panel blank in `wxt -b
+firefox` dev mode. Both are now covered as fast, dependency-injected unit
+tests instead of e2e — `~/lib/tests/toolbar-icon.test.ts` (verified to fail
+against the old logic) and `scripts/tests/dev-server-cors.test.ts` — following
+the same fake-browser pattern as `~/lib/site-access`.
+
+A real-Firefox e2e smoke test (navigating to `moz-extension://<id>/...` pages
+in an actual Firefox, mirroring what `e2e/extension.spec.ts` does for Chrome)
+was attempted and is **not possible with Playwright**: Firefox refuses to load
+an unsigned extension — whether an unpacked directory or a `.xpi` — dropped
+into `<profile>/extensions/`, silently deleting it at startup even with
+`xpinstall.signatures.required: false` set. That pref only takes effect on
+Nightly/Developer Edition builds; Playwright ships a release-channel Firefox,
+so there's no way to disable signature enforcement from the outside. (This was
+verified empirically with throwaway scripts against Playwright's real
+bundled Firefox, not assumed from docs.) The only genuinely working mechanism is
+`selenium-webdriver` + `geckodriver`'s `installAddon(path, temporary=true)`, a
+separate toolchain not currently in this repo; picking that up is a real,
+scoped decision for whoever needs it next, not a gap to quietly paper over.
+
+**No test anywhere simulates a real click on the browser's native toolbar
+icon, in either browser.** Playwright cannot drive browser chrome — only page
+content — in Chrome or Firefox. `e2e/extension.spec.ts`'s "toolbar icon opens
+the side panel" test only asserts the manifest shape (`openPanelOnActionClick`
+would be honored, given no `default_popup`); the Firefox click-wiring *logic*
+is proven the same indirect way, via `~/lib/tests/toolbar-icon.test.ts`.
+Whether a real click reaches it in either browser stays a manual verification
+step.
 
 ### Known flakiness: resource-starved hangs, not code bugs
 
