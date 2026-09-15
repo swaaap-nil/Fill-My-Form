@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.1](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.0.0...v1.0.1) (2026-09-15)
+
+
+### Bug Fixes
+
+* **e2e:** scope ibps-like upload assertions per field ([3666c0e](https://github.com/swaaap-nil/Fill-My-Form/commit/3666c0eeeb55cf7fb367030fcbeea71282b62b75))
+* **server:** add tests ([e477311](https://github.com/swaaap-nil/Fill-My-Form/commit/e47731121effd58a5f2c003485fc94bf58d1a666))
+
 ## 1.0.0 (2026-09-07)
 
 
