@@ -65,6 +65,10 @@ export const FillPanel = () => {
   const [confirmedIds, setConfirmedIds] = useState<Set<DecisionId>>(new Set());
   const [grantedOrigins, setGrantedOrigins] = useState<readonly string[]>([]);
   const [activeTabId, setActiveTabId] = useState<number | undefined>();
+  // Cached alongside `activeTabId` so `grantAccess` can call
+  // `permissions.request()` with no `await` ahead of it in the click
+  // handler — see the comment there for why that matters in Firefox.
+  const [activeTabUrl, setActiveTabUrl] = useState<string | undefined>();
   // Whether the *currently active tab's* origin has been granted — not
   // just whether the user has granted access to *some* site. "Scan this
   // page" only ever means the active tab, so it stays hidden until that
@@ -76,6 +80,7 @@ export const FillPanel = () => {
 
     const tab = await getActiveTab();
     setActiveTabId(tab?.id);
+    setActiveTabUrl(tab?.url);
     setActiveTabGranted(
       tab?.url ? await siteAccess.hasSiteAccess(tab.url) : false,
     );
@@ -112,10 +117,16 @@ export const FillPanel = () => {
     // The user gesture that fires this handler is what makes
     // `permissions.request()` (inside `siteAccess.requestSiteAccess`)
     // valid — it must run here, synchronously reachable from the click,
-    // not be proxied through a message to the background.
-    const tab = await getActiveTab();
-    if (tab?.url) {
-      await siteAccess.requestSiteAccess(tab.url, tab.id);
+    // not be proxied through a message to the background. Firefox is
+    // stricter than Chrome about this: Chrome tolerates an `await` (e.g.
+    // `browser.tabs.query()`) ahead of the request call, but Firefox
+    // clears its "handling user input" flag as soon as control returns to
+    // the event loop, so the same `await` there makes `permissions.request`
+    // reject silently. `activeTabUrl`/`activeTabId` are cached from the
+    // last `refreshAccessState()` so this handler's first async call is
+    // `requestSiteAccess` itself.
+    if (activeTabUrl) {
+      await siteAccess.requestSiteAccess(activeTabUrl, activeTabId);
     }
     await refreshAccessState();
   };
