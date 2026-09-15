@@ -120,26 +120,36 @@ test("files: an oversized photo is transformed before upload", async ({
   const photoPath = testInfo.outputPath("photo.png");
   await writeFixture(photoPath, png(160, 160));
 
+  const injectPhotoField = () =>
+    formPage.evaluate(() => {
+      if (document.getElementById("photo")) return;
+      const form = document.querySelector("form");
+      if (!form) throw new Error("fixture form missing");
+      const label = document.createElement("label");
+      label.htmlFor = "photo";
+      label.textContent = "Passport size photo";
+      const input = document.createElement("input");
+      input.id = "photo";
+      input.name = "photo";
+      input.type = "file";
+      input.accept = "image/*";
+      input.dataset.maxFileSizeBytes = "8000";
+      form.append(label, input);
+    });
+
   const formPage = await context.newPage();
   await formPage.goto("/simple.html");
-  await formPage.evaluate(() => {
-    const form = document.querySelector("form");
-    if (!form) throw new Error("fixture form missing");
-    const label = document.createElement("label");
-    label.htmlFor = "photo";
-    label.textContent = "Passport size photo";
-    const input = document.createElement("input");
-    input.id = "photo";
-    input.name = "photo";
-    input.type = "file";
-    input.accept = "image/*";
-    input.dataset.maxFileSizeBytes = "8000";
-    form.append(label, input);
-  });
+  await injectPhotoField();
 
   const panelPage = await openPanel(context, extensionId);
   await seedFile(panelPage, "Photograph", photoPath);
+  // `grantAccess` reloads `formPage` when access is already granted (the
+  // e2e build's static `host_permissions` for localhost means it usually
+  // is) — that wipes the field just injected, since it only ever existed
+  // in that page's live DOM. Re-inject after, whether or not a reload
+  // happened, rather than depend on winning that race.
   await grantAccess(formPage, panelPage);
+  await injectPhotoField();
 
   await formPage.bringToFront();
   await panelPage.getByRole("button", { name: "Scan this page" }).click();

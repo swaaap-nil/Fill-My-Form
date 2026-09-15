@@ -17,12 +17,39 @@ if (!USE_FRESH_PROFILE) {
   mkdirSync(DEV_PROFILE, { recursive: true });
 }
 
+/**
+ * Chrome derives an unpacked extension's id from the absolute path it was
+ * loaded from. `build/chrome-mv3-dev` is usually that same path every run,
+ * but anything that changes it (a different clone location, `build/` wiped
+ * and rebuilt at a differently-cased path, CI vs. local) mints a new id —
+ * and with it a new `chrome-extension://<id>/` origin, which orphans the
+ * IndexedDB store `src/lib/indexeddb-local-data.ts` writes memory into. The
+ * `.chrome-profile` persists fine; it just ends up holding data under an id
+ * nothing points at anymore.
+ *
+ * Manifest V3's `key` field pins the id instead of deriving it, so dev
+ * memory survives regardless of path. This is a public key with no matching
+ * private key kept anywhere, so it carries no secret and is safe to commit.
+ * Dev-only: a packaged store build must not set `key` (the store assigns
+ * its own id).
+ *
+ * Chrome-only: Firefox doesn't derive its dev id from the load path in the
+ * first place — `browser_specific_settings.gecko.id` below already pins it,
+ * in both dev and release. Firefox ignores an unknown `key` field, but
+ * there's nothing for it to fix there.
+ */
+const DEV_EXTENSION_PUBLIC_KEY =
+  "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuyd+SX6kWhsNifAiaZy+RaFzKM6HduroNDYAiT+c1QufmE9HxBV2lFl8mo8qD6bSPg10V22IA+pxk/yXtm4Y8dadHJYM7CmCUtNPGHb7l1tMKVwCIRRqFLAAMUR7sM49jZgaqMYukSxge6D9mcRCpXF5OooDx5ye6+Jjq+B3iageKCMLHNbyGxluHeAnT6SHoxSQr/TAPlqZn6vbFussKMIGXQu0n/FG8Kn2ZjX1bNwwecd4Sun0ZF1bcgFjppOdjs3e795eaYQKBn41c67sDSDCeU886MFbVLoybb5lDdzr2QvVo8tArXANeBJkZH91NJCwAdOYjr/bRIMuCkPOUwIDAQAB";
+
 export default defineConfig({
   manifestVersion: 3,
   manifest: (env) => ({
     name: "__MSG_extensionName__",
     description: "__MSG_extensionDescription__",
     default_locale: "en",
+    ...(env.command === "serve" && env.browser !== "firefox"
+      ? { key: DEV_EXTENSION_PUBLIC_KEY }
+      : {}),
 
     // The floor for the `sidePanel` API, which the toolbar icon depends on.
     minimum_chrome_version: "114",
