@@ -91,7 +91,12 @@ test("files: a saved resume PDF uploads on simple.html", async ({
   await formPage.goto("/simple.html");
 
   const panelPage = await openPanel(context, extensionId);
-  await seedFile(panelPage, "Resume", pdfPath);
+  await seedFile(
+    panelPage,
+    "Resume",
+    pdfPath,
+    "autosave-status-documents.resume",
+  );
   await grantAccess(formPage, panelPage);
 
   await formPage.bringToFront();

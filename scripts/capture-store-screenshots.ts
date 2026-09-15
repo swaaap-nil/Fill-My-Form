@@ -74,8 +74,15 @@ async function main() {
     await panelPage
       .getByLabel("National ID number (Aadhaar)", { exact: true })
       .fill("1234 5678 9012");
-    await panelPage.getByRole("button", { name: "Save" }).click();
-    await panelPage.waitForTimeout(300);
+    await panelPage.getByTestId("saved-count").waitFor({ state: "visible" });
+    await panelPage
+      .getByTestId("saved-count")
+      .waitFor({ state: "attached", timeout: 5000 });
+    await panelPage.waitForFunction(() =>
+      document
+        .querySelector('[data-testid="saved-count"]')
+        ?.textContent?.includes("3 values"),
+    );
     await panelPage.evaluate(() => window.scrollTo(0, 0));
 
     await panelPage.screenshot({

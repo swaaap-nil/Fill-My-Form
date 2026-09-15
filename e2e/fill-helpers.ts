@@ -18,7 +18,13 @@ export const openPanel = async (
   return panelPage;
 };
 
-/** Fills one onboarding field by its concept label and saves. */
+const waitForSavedCount = async (panelPage: Page, count: number) => {
+  await expect(panelPage.getByTestId("saved-count")).toContainText(
+    `${count} value`,
+  );
+};
+
+/** Fills one onboarding field by its concept label and waits for autosave. */
 export const seedAnswer = async (
   panelPage: Page,
   label: string,
@@ -26,15 +32,13 @@ export const seedAnswer = async (
 ) => {
   await panelPage.getByRole("button", { name: "My information" }).click();
   await panelPage.getByLabel(label, { exact: true }).fill(value);
-  await panelPage.getByRole("button", { name: "Save" }).click();
-  await expect(panelPage.getByTestId("saved-count")).toContainText("1 value");
+  await waitForSavedCount(panelPage, 1);
   await panelPage.getByRole("button", { name: "Current page" }).click();
 };
 
 /**
- * Seeds several onboarding fields in one form session — `savedKeys` (backing
- * `saved-count`) accumulates across saves, so the count asserted at the end
- * is the total, not "1 value" per field the way `seedAnswer` checks it.
+ * Seeds several onboarding fields in one form session. `savedKeys` (backing
+ * `saved-count`) accumulates across autosaves, so each assertion is the total.
  */
 export const seedAnswers = async (
   panelPage: Page,
@@ -45,10 +49,7 @@ export const seedAnswers = async (
     const input = panelPage.getByLabel(label, { exact: true });
     await input.fill(value);
     await expect(input).toHaveValue(value);
-    await panelPage.getByRole("button", { name: "Save" }).click();
-    await expect(panelPage.getByTestId("saved-count")).toContainText(
-      `${index + 1} value`,
-    );
+    await waitForSavedCount(panelPage, index + 1);
   }
   await panelPage.getByRole("button", { name: "Current page" }).click();
 };
@@ -57,11 +58,17 @@ export const seedFile = async (
   panelPage: Page,
   label: string,
   path: string,
+  statusTestId?: string,
 ) => {
   await panelPage.getByRole("button", { name: "My information" }).click();
   await panelPage.getByLabel(label, { exact: true }).setInputFiles(path);
-  await panelPage.getByRole("button", { name: "Save" }).click();
-  await expect(panelPage.getByTestId("saved-count")).toContainText("1 value");
+  if (statusTestId) {
+    await expect(panelPage.getByTestId(statusTestId)).toHaveAttribute(
+      "aria-label",
+      "Saved",
+    );
+  }
+  await waitForSavedCount(panelPage, 1);
   await panelPage.getByRole("button", { name: "Current page" }).click();
 };
 

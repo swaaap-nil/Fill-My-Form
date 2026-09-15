@@ -3,6 +3,31 @@ import { join } from "node:path";
 import { expect, test } from "./fill-fixtures";
 import { grantAccess, openPanel, seedAnswer } from "./fill-helpers";
 
+test("my information: text fields autosave with inline status", async ({
+  context,
+  extensionId,
+}) => {
+  const panelPage = await openPanel(context, extensionId);
+  await panelPage.getByRole("button", { name: "My information" }).click();
+
+  await expect(panelPage.getByRole("button", { name: "Save" })).toBeHidden();
+
+  const firstName = panelPage.getByLabel("First name", { exact: true });
+  const status = panelPage.getByTestId("autosave-status-identity.first_name");
+
+  await firstName.fill("Ananya");
+  await expect(status).toBeVisible();
+  await expect(status).toHaveAttribute(
+    "aria-label",
+    /Waiting to save|Saving|Saved/,
+  );
+  await expect(status).toHaveAttribute("aria-label", "Saved");
+  await expect(panelPage.getByTestId("saved-count")).toContainText("1 value");
+
+  await firstName.fill("");
+  await expect(panelPage.getByTestId("saved-count")).toContainText("1 value");
+});
+
 test("local data: export, wipe, and import round-trips memory and journal", async ({
   context,
   extensionId,

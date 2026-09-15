@@ -1,6 +1,5 @@
-import { FileUp, Lock } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { Button } from "~/components/ui/button";
+import { AlertCircle, Check, FileUp, Loader2, Lock } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { type FileReference, isFileReference } from "~/core/memory/types";
@@ -56,6 +55,10 @@ const restrictedConcepts = fillableConcepts.filter(
   (c) => c.sensitivity === Sensitivity.RESTRICTED,
 );
 
+const AUTOSAVE_DELAY_MS = 600;
+
+type FieldStatus = "idle" | "pending" | "saving" | "saved" | "error";
+
 const groupByPrefix = <T extends { key: string }>(
   items: readonly T[],
 ): [string, T[]][] => {
@@ -73,7 +76,11 @@ export const OnboardingForm = () => {
   const [values, setValues] = useState<Record<string, string>>({});
   const [fileRefs, setFileRefs] = useState<Record<string, FileReference>>({});
   const [savedKeys, setSavedKeys] = useState<Set<string>>(new Set());
-  const [saving, setSaving] = useState(false);
+  const [fieldStatuses, setFieldStatuses] = useState<
+    Record<string, FieldStatus>
+  >({});
+  const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const saveVersions = useRef<Record<string, number>>({});
 
   const loadSnapshot = () => {
     sendMessage("getMemorySnapshot", undefined).then(({ items }) => {
@@ -86,51 +93,141 @@ export const OnboardingForm = () => {
       setValues(loaded);
       setFileRefs(loadedFiles);
       setSavedKeys(new Set(items.map((i) => i.key)));
+      setFieldStatuses({});
     });
   };
 
   useEffect(loadSnapshot, []);
 
+  useEffect(
+    () => () => {
+      for (const timer of Object.values(saveTimers.current)) {
+        clearTimeout(timer);
+      }
+    },
+    [],
+  );
+
   const groupedStandard = useMemo(() => groupByPrefix(standardConcepts), []);
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setSaving(true);
-
-    const entries = Object.entries(values).filter(([, v]) => v.trim() !== "");
-    const fileEntries = Object.entries(fileRefs);
-    await Promise.all([
-      ...entries.map(([key, value]) => {
-        const concept = fillableConcepts.find((c) => c.key === key);
-        return sendMessage("recordOnboardingAnswer", {
-          key,
-          value,
-          label: concept?.label,
-        });
-      }),
-      ...fileEntries.map(([key, value]) => {
-        const concept = fileConcepts.find((c) => c.key === key);
-        return sendMessage("recordOnboardingAnswer", {
-          key,
-          value,
-          label: concept?.label,
-        });
-      }),
-    ]);
-
-    setSavedKeys(new Set([...entries, ...fileEntries].map(([key]) => key)));
-    setSaving(false);
+  const setFieldStatus = (key: string, status: FieldStatus) => {
+    setFieldStatuses((prev) => ({ ...prev, [key]: status }));
   };
 
-  const tagFile = async (key: string, file: File | undefined) => {
+  const recordField = async (
+    key: string,
+    value: string | FileReference,
+    label: string,
+    version: number,
+  ) => {
+    setFieldStatus(key, "saving");
+    try {
+      await sendMessage("recordOnboardingAnswer", { key, value, label });
+      if (saveVersions.current[key] !== version) return;
+      setSavedKeys((prev) => new Set(prev).add(key));
+      setFieldStatus(key, "saved");
+    } catch {
+      if (saveVersions.current[key] === version) setFieldStatus(key, "error");
+    }
+  };
+
+  const scheduleTextSave = (key: string, value: string, label: string) => {
+    const nextVersion = (saveVersions.current[key] ?? 0) + 1;
+    saveVersions.current[key] = nextVersion;
+    clearTimeout(saveTimers.current[key]);
+
+    if (value.trim() === "") {
+      setFieldStatus(key, "idle");
+      return;
+    }
+
+    setFieldStatus(key, "pending");
+    saveTimers.current[key] = setTimeout(() => {
+      void recordField(key, value, label, nextVersion);
+    }, AUTOSAVE_DELAY_MS);
+  };
+
+  const tagFile = async (
+    key: string,
+    label: string,
+    file: File | undefined,
+  ) => {
     if (!file) return;
-    const store = await createIndexedDbFileReferenceStore();
-    const ref = await store.save(file);
-    setFileRefs((prev) => ({ ...prev, [key]: ref }));
+    const nextVersion = (saveVersions.current[key] ?? 0) + 1;
+    saveVersions.current[key] = nextVersion;
+    clearTimeout(saveTimers.current[key]);
+    setFieldStatus(key, "saving");
+
+    try {
+      const store = await createIndexedDbFileReferenceStore();
+      const ref = await store.save(file);
+      setFileRefs((prev) => ({ ...prev, [key]: ref }));
+      await recordField(key, ref, label, nextVersion);
+    } catch {
+      if (saveVersions.current[key] === nextVersion)
+        setFieldStatus(key, "error");
+    }
+  };
+
+  const renderStatus = (key: string) => {
+    const status = fieldStatuses[key] ?? "idle";
+    if (status === "idle") return null;
+
+    const statusLabels: Record<Exclude<FieldStatus, "idle">, string> = {
+      pending: "Waiting to save",
+      saving: "Saving",
+      saved: "Saved",
+      error: "Save failed",
+    };
+
+    return (
+      <span
+        aria-label={statusLabels[status]}
+        className="pointer-events-none absolute top-1/2 right-2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full bg-card/90 text-muted-foreground"
+        data-testid={`autosave-status-${key}`}
+        role="img"
+      >
+        {status === "pending" || status === "saving" ? (
+          <Loader2 className="size-3.5 animate-spin" />
+        ) : status === "saved" ? (
+          <Check className="size-3.5 text-primary" />
+        ) : (
+          <AlertCircle className="size-3.5 text-destructive" />
+        )}
+      </span>
+    );
+  };
+
+  const renderTextField = (concept: (typeof fillableConcepts)[number]) => {
+    return (
+      <div key={concept.key} className="flex flex-col gap-1">
+        <Label htmlFor={concept.key}>{concept.label}</Label>
+        <div className="relative">
+          <Input
+            className="pr-9"
+            id={concept.key}
+            type={inputTypeFor(concept.expects)}
+            value={values[concept.key] ?? ""}
+            onChange={(e) => {
+              const value = e.target.value;
+              setValues((prev) => ({
+                ...prev,
+                [concept.key]: value,
+              }));
+              scheduleTextSave(concept.key, value, concept.label);
+            }}
+          />
+          {renderStatus(concept.key)}
+        </div>
+      </div>
+    );
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex w-full flex-col gap-5">
+    <form
+      className="flex w-full flex-col gap-5"
+      onSubmit={(event) => event.preventDefault()}
+    >
       {groupedStandard.map(([group, items]) => (
         <fieldset
           key={group}
@@ -139,22 +236,7 @@ export const OnboardingForm = () => {
           <legend className="px-1 font-semibold text-sm text-foreground">
             {group}
           </legend>
-          {items.map((concept) => (
-            <div key={concept.key} className="flex flex-col gap-1">
-              <Label htmlFor={concept.key}>{concept.label}</Label>
-              <Input
-                id={concept.key}
-                type={inputTypeFor(concept.expects)}
-                value={values[concept.key] ?? ""}
-                onChange={(e) =>
-                  setValues((prev) => ({
-                    ...prev,
-                    [concept.key]: e.target.value,
-                  }))
-                }
-              />
-            </div>
-          ))}
+          {items.map(renderTextField)}
         </fieldset>
       ))}
 
@@ -167,22 +249,7 @@ export const OnboardingForm = () => {
           Government IDs, financial and health details. These are only ever
           filled after you explicitly confirm each one.
         </p>
-        {restrictedConcepts.map((concept) => (
-          <div key={concept.key} className="flex flex-col gap-1">
-            <Label htmlFor={concept.key}>{concept.label}</Label>
-            <Input
-              id={concept.key}
-              type={inputTypeFor(concept.expects)}
-              value={values[concept.key] ?? ""}
-              onChange={(e) =>
-                setValues((prev) => ({
-                  ...prev,
-                  [concept.key]: e.target.value,
-                }))
-              }
-            />
-          </div>
-        ))}
+        {restrictedConcepts.map(renderTextField)}
       </fieldset>
 
       <fieldset className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3">
@@ -195,11 +262,17 @@ export const OnboardingForm = () => {
           return (
             <div key={concept.key} className="flex flex-col gap-1">
               <Label htmlFor={concept.key}>{concept.label}</Label>
-              <Input
-                id={concept.key}
-                type="file"
-                onChange={(e) => tagFile(concept.key, e.target.files?.[0])}
-              />
+              <div className="relative">
+                <Input
+                  className="pr-9"
+                  id={concept.key}
+                  type="file"
+                  onChange={(e) =>
+                    tagFile(concept.key, concept.label, e.target.files?.[0])
+                  }
+                />
+                {renderStatus(concept.key)}
+              </div>
               {ref && (
                 <p className="text-muted-foreground text-xs">
                   {ref.name} · {Math.round(ref.sizeBytes / 1024)} KB
@@ -210,9 +283,6 @@ export const OnboardingForm = () => {
         })}
       </fieldset>
 
-      <Button type="submit" disabled={saving}>
-        {saving ? "Saving…" : "Save"}
-      </Button>
       <p className="text-muted-foreground text-xs" data-testid="saved-count">
         {savedKeys.size} value{savedKeys.size === 1 ? "" : "s"} saved
       </p>
