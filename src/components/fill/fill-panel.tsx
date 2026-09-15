@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import type { Browser } from "wxt/browser";
 import { browser } from "wxt/browser";
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
@@ -67,7 +68,12 @@ export const FillPanel = () => {
   const [activeTabId, setActiveTabId] = useState<number | undefined>();
   // Cached alongside `activeTabId` so `grantAccess` can call
   // `permissions.request()` with no `await` ahead of it in the click
-  // handler — see the comment there for why that matters in Firefox.
+  // handler — see the comment there for why that matters in Firefox. Kept
+  // fresh continuously (see the `tabs.onActivated`/`onUpdated` listeners
+  // below) rather than only at mount, grant, or revoke — the panel can
+  // stay open across a tab switch, and a stale cache would then send
+  // `requestSiteAccess` at whatever tab happened to be active when the
+  // panel last refreshed, not the one the user is actually looking at.
   const [activeTabUrl, setActiveTabUrl] = useState<string | undefined>();
   // Whether the *currently active tab's* origin has been granted — not
   // just whether the user has granted access to *some* site. "Scan this
@@ -75,20 +81,44 @@ export const FillPanel = () => {
   // specific origin is granted, rather than as soon as any origin is.
   const [activeTabGranted, setActiveTabGranted] = useState(false);
 
+  const applyActiveTab = useCallback(
+    async (tab: Browser.tabs.Tab | undefined) => {
+      setActiveTabId(tab?.id);
+      setActiveTabUrl(tab?.url);
+      setActiveTabGranted(
+        tab?.url ? await siteAccess.hasSiteAccess(tab.url) : false,
+      );
+    },
+    [],
+  );
+
   const refreshAccessState = useCallback(async () => {
     setGrantedOrigins(await siteAccess.listGrantedOrigins());
-
-    const tab = await getActiveTab();
-    setActiveTabId(tab?.id);
-    setActiveTabUrl(tab?.url);
-    setActiveTabGranted(
-      tab?.url ? await siteAccess.hasSiteAccess(tab.url) : false,
-    );
-  }, []);
+    await applyActiveTab(await getActiveTab());
+  }, [applyActiveTab]);
 
   useEffect(() => {
     refreshAccessState();
-  }, [refreshAccessState]);
+
+    const handleActivated = ({ tabId }: { tabId: number }) => {
+      browser.tabs.get(tabId).then(applyActiveTab);
+    };
+    const handleUpdated = (
+      _tabId: number,
+      _changeInfo: unknown,
+      tab: Browser.tabs.Tab,
+    ) => {
+      // Covers a same-tab navigation (no `onActivated` fires for that) —
+      // ignore updates to a tab that isn't the active one.
+      if (tab.active) applyActiveTab(tab);
+    };
+    browser.tabs.onActivated.addListener(handleActivated);
+    browser.tabs.onUpdated.addListener(handleUpdated);
+    return () => {
+      browser.tabs.onActivated.removeListener(handleActivated);
+      browser.tabs.onUpdated.removeListener(handleUpdated);
+    };
+  }, [refreshAccessState, applyActiveTab]);
 
   const scan = async () => {
     if (activeTabId === undefined) {
