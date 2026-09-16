@@ -15,13 +15,11 @@ describe("release artifacts", () => {
   });
 
   it("uses WXT's deterministic zip names for the package version", () => {
-    expect(expectedReleaseArtifacts("build", "ai-form-agent", "0.1.1")).toEqual(
-      {
-        chromeZip: "build/ai-form-agent-0.1.1-chrome.zip",
-        firefoxZip: "build/ai-form-agent-0.1.1-firefox.zip",
-        sourcesZip: "build/ai-form-agent-0.1.1-sources.zip",
-      },
-    );
+    expect(expectedReleaseArtifacts("build", "fill-my-form", "0.1.1")).toEqual({
+      chromeZip: "build/fill-my-form-0.1.1-chrome.zip",
+      firefoxZip: "build/fill-my-form-0.1.1-firefox.zip",
+      sourcesZip: "build/fill-my-form-0.1.1-sources.zip",
+    });
   });
 
   it("passes when all release artifacts exist", async () => {
@@ -29,7 +27,7 @@ describe("release artifacts", () => {
     await mkdir(join(dir, "build"));
     const artifacts = expectedReleaseArtifacts(
       join(dir, "build"),
-      "ai-form-agent",
+      "fill-my-form",
       "0.1.1",
     );
 
@@ -45,7 +43,7 @@ describe("release artifacts", () => {
     await mkdir(join(dir, "build"));
     const artifacts = expectedReleaseArtifacts(
       join(dir, "build"),
-      "ai-form-agent",
+      "fill-my-form",
       "0.1.1",
     );
 

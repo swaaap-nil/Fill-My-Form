@@ -26,7 +26,7 @@ curl -fsSL https://bun.sh/install | bash
 
 # 2. Clone the exact commit the submission was built from
 git clone <repository-url>
-cd ai-form-agent
+cd fill-my-form
 git checkout <commit-sha>
 
 # 3. Install dependencies exactly as locked
@@ -40,11 +40,11 @@ bun run build:firefox
 
 ```
 build/firefox-mv2/               # unpacked extension
-build/ai-form-agent-0.1.0-firefox.zip   # the submitted package
-build/ai-form-agent-0.1.0-sources.zip   # this repository, zipped, for AMO's source review
+build/fill-my-form-0.1.0-firefox.zip   # the submitted package
+build/fill-my-form-0.1.0-sources.zip   # this repository, zipped, for AMO's source review
 ```
 
-`build/ai-form-agent-0.1.0-firefox.zip`'s contents should be byte-identical to
+`build/fill-my-form-0.1.0-firefox.zip`'s contents should be byte-identical to
 the package uploaded to addons.mozilla.org for version `0.1.0` (modulo
 filesystem metadata such as file timestamps inside the zip, which Firefox's
 own tooling does not treat as significant for review purposes).

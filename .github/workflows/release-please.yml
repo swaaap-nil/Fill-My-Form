@@ -20,4 +20,4 @@ jobs:
         with:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
           release-type: node
-          package-name: ai-form-agent
+          package-name: fill-my-form

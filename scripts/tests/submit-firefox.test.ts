@@ -10,8 +10,8 @@ import {
 describe("firefox submit helpers", () => {
   it("names zips from the package version", () => {
     expect(defaultArtifactPaths("1.0.1")).toEqual({
-      zip: "build/ai-form-agent-1.0.1-firefox.zip",
-      sourcesZip: "build/ai-form-agent-1.0.1-sources.zip",
+      zip: "build/fill-my-form-1.0.1-firefox.zip",
+      sourcesZip: "build/fill-my-form-1.0.1-sources.zip",
     });
   });
 

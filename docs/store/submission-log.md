@@ -99,11 +99,11 @@ Real launch screenshots should wait for actual UI design.
     Answering yes triggers AMO's mandatory source-code upload flow.
   - AMO's source-code page states the submitted source **must not** be
     transpiled, concatenated, or minified. Verified before upload:
-    `build/ai-form-agent-0.1.0-sources.zip` is the raw repository (245
+    `build/fill-my-form-0.1.0-sources.zip` is the raw repository (245
     files, plain readable `.ts`/`.tsx` with comments intact — spot-checked
     `src/lib/site-access.ts` — not the built/bundled output), with
     `BUILD.md` present at the root as required.
-  - `build/ai-form-agent-0.1.0-sources.zip` uploaded to AMO as the source
+  - `build/fill-my-form-0.1.0-sources.zip` uploaded to AMO as the source
     code.
 - **Chrome Web Store:** not yet submitted. Requires the user to create a
   Chrome Web Store Developer Dashboard account (one-time $5 registration
