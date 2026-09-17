@@ -96,6 +96,41 @@ test("propose: scanning shows every field's proposal and fills nothing", async (
   await expect(formPage.getByLabel("First name")).toHaveValue("");
 });
 
+test("summary cards: card surface opens details without stealing fill clicks", async ({
+  context,
+  extensionId,
+}) => {
+  const formPage = await context.newPage();
+  await formPage.goto("/simple.html");
+
+  const panelPage = await openPanel(context, extensionId);
+  await seedAnswer(panelPage, "Email address", "ananya@example.com");
+  await grantAccess(formPage, panelPage);
+
+  await formPage.bringToFront();
+  await panelPage.getByRole("button", { name: "Scan this page" }).click();
+  await expect(panelPage.getByText("1 answer detected")).toBeVisible();
+
+  await panelPage
+    .getByTestId("answers-summary-card")
+    .click({ position: { x: 8, y: 8 } });
+  await expect(panelPage.getByText("contact.email")).toBeVisible();
+  await panelPage.getByRole("button", { name: "Back" }).click();
+
+  await panelPage
+    .getByTestId("known-fields-summary-card")
+    .click({ position: { x: 8, y: 8 } });
+  await expect(panelPage.getByText("identity.first_name")).toBeVisible();
+  await panelPage.getByRole("button", { name: "Back" }).click();
+
+  await panelPage.getByRole("button", { name: "FillMyForm 😡" }).click();
+  await expect(panelPage.getByText("1 answer filled")).toBeVisible();
+  await expect(panelPage.getByRole("button", { name: "Back" })).toBeHidden();
+  await expect(formPage.getByLabel("Email address")).toHaveValue(
+    "ananya@example.com",
+  );
+});
+
 test("confirm: confirming a proposal writes the value into the page", async ({
   context,
   extensionId,

@@ -2,6 +2,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   ChevronLeft,
+  ChevronRight,
   LoaderCircle,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -133,27 +134,49 @@ const SummaryCardShell = ({
   readonly subtitle: string;
   readonly className?: string;
   readonly children: React.ReactNode;
-}) => (
-  <div
-    className={cn(
-      "flex flex-col gap-3 rounded-lg border border-primary/25 bg-card p-3 shadow-sm shadow-black/5 transition-all duration-300 motion-reduce:transition-none dark:shadow-black/20",
-      className,
-    )}
-  >
-    <button
-      type="button"
-      data-testid={testId}
-      className="cursor-pointer rounded-md text-left outline-none transition-colors hover:text-accent-foreground focus-visible:ring-3 focus-visible:ring-ring/40"
-      onClick={onOpenDetails}
+}) => {
+  const openDetailsFromHeader = (
+    event: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    event.stopPropagation();
+    onOpenDetails();
+  };
+
+  return (
+    <div
+      data-testid={`${testId}-card`}
+      className={cn(
+        "group/summary-card relative flex cursor-pointer flex-col gap-3 rounded-lg border border-primary/25 bg-card p-3 shadow-sm shadow-black/5 transition-all duration-300 ease-out hover:border-primary/55 hover:bg-accent/25 hover:shadow-md hover:shadow-primary/10 active:translate-y-px active:scale-[0.995] focus-within:border-primary/60 focus-within:ring-3 focus-within:ring-ring/30 motion-reduce:transform-none motion-reduce:transition-none dark:shadow-black/20",
+        "motion-safe:hover:-translate-y-0.5",
+        className,
+      )}
     >
-      <div className="min-w-0 rounded-md">
-        <p className="font-semibold text-sm">{title}</p>
-        <p className="text-muted-foreground text-xs">{subtitle}</p>
-      </div>
-    </button>
-    {children}
-  </div>
-);
+      <button
+        type="button"
+        className="absolute inset-0 rounded-lg outline-none"
+        aria-label={title}
+        tabIndex={-1}
+        onClick={onOpenDetails}
+      />
+      <button
+        type="button"
+        data-testid={testId}
+        className="relative z-10 flex w-full cursor-pointer items-start justify-between gap-3 rounded-md text-left outline-none transition-colors hover:text-accent-foreground focus-visible:ring-3 focus-visible:ring-ring/40"
+        onClick={openDetailsFromHeader}
+      >
+        <div className="min-w-0 rounded-md">
+          <p className="font-semibold text-sm">{title}</p>
+          <p className="text-muted-foreground text-xs">{subtitle}</p>
+        </div>
+        <ChevronRight
+          className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-all duration-300 group-hover/summary-card:translate-x-0.5 group-hover/summary-card:text-primary group-focus-within/summary-card:translate-x-0.5 group-focus-within/summary-card:text-primary motion-reduce:transform-none motion-reduce:transition-none"
+          aria-hidden="true"
+        />
+      </button>
+      <div className="relative z-10">{children}</div>
+    </div>
+  );
+};
 
 const ScanToolbar = ({
   state,
