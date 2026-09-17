@@ -130,6 +130,16 @@ const includesAll = (
   expected: readonly string[],
 ): boolean => expected.every((value) => values?.includes(value));
 
+const requirePermissions = (
+  manifest: ManifestLike,
+  expected: readonly string[],
+): string[] =>
+  expected.flatMap((permission) =>
+    manifest.permissions?.includes(permission)
+      ? []
+      : [`permissions is missing ${permission}.`],
+  );
+
 export const evaluateTargetManifest = (
   target: TargetBrowser,
   manifest: ManifestLike,
@@ -137,6 +147,15 @@ export const evaluateTargetManifest = (
   const findings = evaluateManifest(manifest);
 
   if (target === "firefox") {
+    findings.push(
+      ...requirePermissions(manifest, [
+        "storage",
+        "activeTab",
+        "tabs",
+        "scripting",
+      ]),
+    );
+
     if (manifest.manifest_version !== 3) {
       findings.push("Firefox manifest_version must be 3.");
     }
@@ -185,6 +204,16 @@ export const evaluateTargetManifest = (
   }
 
   if (target === "chrome") {
+    findings.push(
+      ...requirePermissions(manifest, [
+        "storage",
+        "sidePanel",
+        "activeTab",
+        "tabs",
+        "scripting",
+      ]),
+    );
+
     if (manifest.manifest_version !== 3) {
       findings.push("Chrome manifest_version must be 3.");
     }

@@ -102,6 +102,7 @@ export default defineConfig({
       "storage",
       ...(env.browser === "firefox" ? [] : ["sidePanel"]),
       "activeTab",
+      "tabs",
       "scripting",
     ],
     optional_host_permissions: ["https://*/*", "http://*/*"],

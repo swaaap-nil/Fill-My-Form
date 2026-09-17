@@ -16,7 +16,7 @@ const VENDORED_ICON_FIXTURE = join(
 
 const CLEAN_MANIFEST: ManifestLike = {
   manifest_version: 3,
-  permissions: ["storage", "sidePanel", "activeTab", "scripting"],
+  permissions: ["storage", "sidePanel", "activeTab", "tabs", "scripting"],
   optional_host_permissions: ["https://*/*", "http://*/*"],
   content_scripts: [],
   content_security_policy: {
@@ -32,7 +32,7 @@ const CLEAN_CHROME_MANIFEST: ManifestLike = {
 
 const CLEAN_FIREFOX_MANIFEST: ManifestLike = {
   ...CLEAN_MANIFEST,
-  permissions: ["storage", "activeTab", "scripting"],
+  permissions: ["storage", "activeTab", "tabs", "scripting"],
   browser_specific_settings: {
     gecko: {
       id: "ff@swapnilsuman.me",
@@ -152,10 +152,19 @@ describe("evaluateTargetManifest", () => {
   it("fails when Firefox contains Chrome's sidePanel permission", () => {
     const findings = evaluateTargetManifest("firefox", {
       ...CLEAN_FIREFOX_MANIFEST,
-      permissions: ["storage", "sidePanel", "activeTab", "scripting"],
+      permissions: ["storage", "sidePanel", "activeTab", "tabs", "scripting"],
     });
 
     expect(findings.some((f) => f.includes("sidePanel"))).toBe(true);
+  });
+
+  it("fails when Chrome is missing tabs permission", () => {
+    const findings = evaluateTargetManifest("chrome", {
+      ...CLEAN_CHROME_MANIFEST,
+      permissions: ["storage", "sidePanel", "activeTab", "scripting"],
+    });
+
+    expect(findings.some((f) => f.includes("tabs"))).toBe(true);
   });
 
   it("fails when Firefox has no Gecko id", () => {

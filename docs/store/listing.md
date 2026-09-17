@@ -92,9 +92,15 @@ permission. One paragraph each, reusable for both stores.
 
 **`activeTab`**
 > Lets the extension identify the currently active tab only after the user
-> interacts with the extension (e.g. clicking its toolbar icon or a button
-> in its panel), so it can request access to that specific site rather than
-> needing broad, always-on access to every open tab.
+> interacts with the extension, so it can connect a scan request to the tab
+> the user is looking at rather than needing broad, always-on page access.
+
+**`tabs`**
+> Lets the side panel read the active tab's URL and title so it can request
+> access to exactly that site's origin and show/revoke the corresponding
+> grant. It does not let the extension read or change page contents; the
+> content script still only runs after the user approves the separate
+> per-origin host permission prompt.
 
 **`scripting`**
 > Used to inject the extension's form-reading and form-filling code into a

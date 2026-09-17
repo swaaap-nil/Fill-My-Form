@@ -61,7 +61,7 @@ pending review is not a failure of this phase; an unrecorded one is.
 
 Drafted in `docs/store/listing.md`: short description, single-purpose
 statement, full description, data-handling disclosure, and one paragraph of
-justification per permission (`storage`, `sidePanel`, `activeTab`,
+justification per permission (`storage`, `sidePanel`, `activeTab`, `tabs`,
 `scripting`, the optional broad host permission pattern).
 
 Three screenshots captured at 1280×800 via

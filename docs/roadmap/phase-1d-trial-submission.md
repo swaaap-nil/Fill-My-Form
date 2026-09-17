@@ -20,8 +20,8 @@ or a single-purpose rejection is a schedule event rather than a lesson.
 
 ## Inline context
 
-The extension requests `storage`, `sidePanel`, `activeTab`, `scripting`, and
-`optional_host_permissions` for all `http`/`https`. That last one draws the most scrutiny, and
+The extension requests `storage`, `sidePanel`, `activeTab`, `tabs`, `scripting`,
+and `optional_host_permissions` for all `http`/`https`. That last one draws the most scrutiny, and
 the honest answer is unusually strong: **the extension ships with no host permissions at all.**
 `chrome://extensions` shows no site access after install. Access is requested per-origin at
 runtime, from a user gesture, and is revocable. Forms exist on arbitrary origins, which is why

@@ -65,8 +65,10 @@ it, rather than by trusting that it only happens locally. See
 
 ### No site access at install time
 
-The manifest ships with `activeTab` and **no** `host_permissions`. Access to a
-site is granted by the user, one origin at a time, through
+The manifest ships with `activeTab`, `tabs`, and **no** `host_permissions`.
+`tabs` lets the side panel read the active tab's URL so it can ask for the
+right origin; it does not grant page-content access. Access to a site is
+granted by the user, one origin at a time, through
 `requestSiteAccess()` in `src/lib/site-access.ts`, and the content script is
 registered for that origin only.
 

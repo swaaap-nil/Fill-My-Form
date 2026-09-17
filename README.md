@@ -155,9 +155,10 @@ More in [docs/architecture.md](./docs/architecture.md) and
 | Agent context containing personal data | Shared, non-personal website mappings |
 
 The extension requests **no site access at install time**. It ships with
-`activeTab` plus an empty host-permission list; access to a site is granted by
-the user, one origin at a time, and the content script is registered for that
-origin only (`src/lib/site-access.ts`).
+`activeTab`, `tabs`, and an empty host-permission list; `tabs` is used to read
+the active tab's URL so the extension can request access to exactly that origin.
+Access to a site is granted by the user, one origin at a time, and the content
+script is registered for that origin only (`src/lib/site-access.ts`).
 
 Full detail, including how each rule is enforced, in
 [docs/privacy.md](./docs/privacy.md).

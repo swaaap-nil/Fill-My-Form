@@ -38,7 +38,7 @@ describe("applyHostPermissionsPolicy", () => {
 describe("a WXT_E2E=1 build still fails scripts/check-release-manifest.ts", () => {
   it("evaluateManifest flags the e2e-only host_permissions", () => {
     const manifest: ManifestLike = {
-      permissions: ["storage", "sidePanel", "activeTab", "scripting"],
+      permissions: ["storage", "sidePanel", "activeTab", "tabs", "scripting"],
       content_scripts: [],
       content_security_policy: {
         extension_pages: "script-src 'self'; object-src 'self'",
@@ -52,7 +52,7 @@ describe("a WXT_E2E=1 build still fails scripts/check-release-manifest.ts", () =
 
   it("passes clean once the same manifest is built for release", () => {
     const manifest: ManifestLike = {
-      permissions: ["storage", "sidePanel", "activeTab", "scripting"],
+      permissions: ["storage", "sidePanel", "activeTab", "tabs", "scripting"],
       content_scripts: [],
       content_security_policy: {
         extension_pages: "script-src 'self'; object-src 'self'",

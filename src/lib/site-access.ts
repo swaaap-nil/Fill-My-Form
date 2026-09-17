@@ -57,6 +57,40 @@ export const toOriginPattern = (url: string): string =>
 const scriptIdFor = (origin: string) =>
   `${CONTENT_SCRIPT_ID}:${origin.replace(/[^a-zA-Z0-9]/g, "_")}`;
 
+type ChromePermissionsRequest = (
+  query: { origins: string[] },
+  callback: (granted: boolean) => void,
+) => void;
+
+const requestOriginsFromGesture = (
+  browser: SiteAccessBrowser,
+  origins: string[],
+): Promise<boolean> => {
+  const chromeLike = globalThis as typeof globalThis & {
+    chrome?: {
+      runtime?: { lastError?: { message?: string } };
+      permissions?: { request?: ChromePermissionsRequest };
+    };
+  };
+  const chromePermissions = chromeLike.chrome?.permissions;
+  const request = chromePermissions?.request;
+
+  if (request) {
+    return new Promise((resolve, reject) => {
+      request({ origins }, (granted) => {
+        const message = chromeLike.chrome?.runtime?.lastError?.message;
+        if (message) {
+          reject(new Error(message));
+          return;
+        }
+        resolve(granted);
+      });
+    });
+  }
+
+  return browser.permissions.request({ origins });
+};
+
 export interface SiteAccess {
   hasSiteAccess(url: string): Promise<boolean>;
   /**
@@ -109,7 +143,7 @@ export const createSiteAccess = (browser: SiteAccessBrowser): SiteAccess => {
     async requestSiteAccess(url, activeTabId) {
       const origin = toOriginPattern(url);
 
-      const granted = await browser.permissions.request({ origins: [origin] });
+      const granted = await requestOriginsFromGesture(browser, [origin]);
       if (!granted) return false;
 
       await registerForOrigin(origin);
