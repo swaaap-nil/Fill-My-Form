@@ -77,10 +77,17 @@ test("propose: scanning shows every field's proposal and fills nothing", async (
   await seedAnswer(panelPage, "Email address", "ananya@example.com");
   await grantAccess(formPage, panelPage);
 
+  await expect(
+    panelPage.getByRole("button", { name: "Scan this page" }),
+  ).toBeVisible();
   await formPage.bringToFront();
   await panelPage.getByRole("button", { name: "Scan this page" }).click();
 
-  await expect(panelPage.getByText("1 known field detected")).toBeVisible();
+  await expect(panelPage.getByText("1 answer detected")).toBeVisible();
+  await expect(panelPage.getByText("Last scanned just now")).toBeVisible();
+  await expect(
+    panelPage.getByRole("button", { name: "Rescan page" }),
+  ).toBeVisible();
   await openProposalDetails(panelPage);
   await expect(panelPage.getByText("contact.email")).toBeVisible();
 
@@ -127,8 +134,13 @@ test("untouched: the csrf field and the terms checkbox are never filled", async 
 
   await formPage.bringToFront();
   await panelPage.getByRole("button", { name: "Scan this page" }).click();
-  await expect(panelPage.getByText("1 known field detected")).toBeVisible();
+  await expect(panelPage.getByText("1 answer detected")).toBeVisible();
   await panelPage.getByRole("button", { name: "FillMyForm 😡" }).click();
+  await expect(panelPage.getByText("1 answer filled")).toBeVisible();
+  await expect(panelPage.getByText("Filled from last scan")).toBeVisible();
+  await expect(
+    panelPage.getByRole("button", { name: "Scan again" }),
+  ).toBeVisible();
 
   // csrf is a hidden field: 1a's extractor excludes it structurally, so it
   // was never a candidate and could not have been proposed, let alone filled.
@@ -152,7 +164,7 @@ test("restricted: the Aadhaar field is reported as restricted and never auto-fil
 
   await formPage.bringToFront();
   await panelPage.getByRole("button", { name: "Scan this page" }).click();
-  await expect(panelPage.getByText("1 known field detected")).toBeVisible();
+  await expect(panelPage.getByText("1 answer detected")).toBeVisible();
   await openProposalDetails(panelPage);
 
   // Reported distinctly, not merely "unknown": the restricted card names
@@ -228,8 +240,15 @@ test("privacy: fixture fills make no outbound network requests", async ({
 
   await formPage.bringToFront();
   await panelPage.getByRole("button", { name: "Scan this page" }).click();
-  await expect(panelPage.getByText("3 known fields detected")).toBeVisible();
+  await expect(panelPage.getByText("3 answers detected")).toBeVisible();
   await panelPage.getByRole("button", { name: "FillMyForm 😡" }).click();
+  await expect(panelPage.getByText("3 answers filled")).toBeVisible();
+  await expect(panelPage.getByText("Filled from last scan")).toBeVisible();
+  await formPage.bringToFront();
+  await panelPage.getByRole("button", { name: "Scan again" }).click();
+  await expect(panelPage.getByText("Last scanned just now")).toBeVisible();
+  await expect(panelPage.getByText("3 answers detected")).toBeVisible();
+  await expect(panelPage.getByText("3 answers filled")).toBeHidden();
 
   expect(externalRequests).toEqual([]);
 });

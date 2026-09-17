@@ -6,7 +6,7 @@ import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
 import { useSound } from "~/lib/sfx/react";
 
-export const Header = () => {
+export const Header = ({ action }: { readonly action?: React.ReactNode }) => {
   return (
     <header className="flex w-full items-center gap-3 rounded-lg border border-border bg-card/90 p-3 shadow-sm shadow-black/5 dark:shadow-black/20">
       <div className="flex min-w-0 items-center gap-2">
@@ -20,7 +20,10 @@ export const Header = () => {
           </p>
         </div>
       </div>
-      <SoundControl />
+      <div className="ml-auto flex shrink-0 items-center gap-2">
+        {action}
+        <SoundControl />
+      </div>
     </header>
   );
 };
@@ -47,7 +50,7 @@ const SoundControl = () => {
   };
 
   return (
-    <div className="ml-auto flex shrink-0 items-center gap-2">
+    <div className="flex shrink-0 items-center gap-2">
       {enabled && (
         <Label className="sr-only" htmlFor="sound-volume">
           Sound volume

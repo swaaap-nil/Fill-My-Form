@@ -1,4 +1,9 @@
-import { ChevronLeft } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronLeft,
+  LoaderCircle,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import type { Browser } from "wxt/browser";
 import { browser } from "wxt/browser";
@@ -7,7 +12,8 @@ import { Separator } from "~/components/ui/separator";
 import type { DecisionId, FieldProposal } from "~/lib/messaging";
 import { sendMessage } from "~/lib/messaging";
 import { useSound } from "~/lib/sfx/react";
-import { siteAccess } from "~/lib/site-access";
+import { siteAccess, toOriginPattern } from "~/lib/site-access";
+import { cn } from "~/lib/utils";
 import { AgentRunPanel } from "./agent-run-panel";
 import { ProposalCard } from "./proposal-card";
 
@@ -45,7 +51,26 @@ type ScanState =
       readonly proposals: readonly FieldProposal[];
     };
 
-type ProposalView = "summary" | "details";
+type ProposalView = "summary" | "answers" | "known";
+
+type FillStatus =
+  | { readonly kind: "ready" }
+  | { readonly kind: "filling"; readonly attemptedCount: number }
+  | { readonly kind: "filled"; readonly filledCount: number }
+  | {
+      readonly kind: "partial";
+      readonly attemptedCount: number;
+      readonly filledCount: number;
+    }
+  | { readonly kind: "failed"; readonly attemptedCount: number };
+
+type ScanUiState =
+  | "idle"
+  | "scanning"
+  | "results"
+  | "filled"
+  | "blocked"
+  | "failed";
 
 /**
  * The side panel's own `currentWindow` is unambiguous — it is attached to
@@ -60,43 +85,291 @@ const getActiveTab = () =>
     .query({ active: true, currentWindow: true })
     .then(([tab]) => tab);
 
-const pluralizeField = (count: number) =>
+const pluralizeAnswer = (count: number) =>
+  count === 1 ? "answer detected" : "answers detected";
+
+const pluralizePlainAnswer = (count: number) =>
+  count === 1 ? "answer" : "answers";
+
+const pluralizeFilledAnswer = (count: number) =>
+  count === 1 ? "answer filled" : "answers filled";
+
+const pluralizeKnownField = (count: number) =>
   count === 1 ? "known field detected" : "known fields detected";
 
-const ProposalSummaryCard = ({
+const findGrantedOriginForUrl = (
+  url: string | undefined,
+  grantedOrigins: readonly string[],
+) => {
+  if (!url) return undefined;
+
+  try {
+    const origin = toOriginPattern(url);
+    return grantedOrigins.find((grantedOrigin) => grantedOrigin === origin);
+  } catch {
+    return undefined;
+  }
+};
+
+const formatGrantedOrigin = (origin: string) => {
+  try {
+    return new URL(origin).host;
+  } catch {
+    return origin;
+  }
+};
+
+const SummaryCardShell = ({
+  testId,
+  onOpenDetails,
+  title,
+  subtitle,
+  className,
+  children,
+}: {
+  readonly testId: string;
+  readonly onOpenDetails: () => void;
+  readonly title: string;
+  readonly subtitle: string;
+  readonly className?: string;
+  readonly children: React.ReactNode;
+}) => (
+  <div
+    className={cn(
+      "flex flex-col gap-3 rounded-lg border border-primary/25 bg-card p-3 shadow-sm shadow-black/5 transition-all duration-300 motion-reduce:transition-none dark:shadow-black/20",
+      className,
+    )}
+  >
+    <button
+      type="button"
+      data-testid={testId}
+      className="cursor-pointer rounded-md text-left outline-none transition-colors hover:text-accent-foreground focus-visible:ring-3 focus-visible:ring-ring/40"
+      onClick={onOpenDetails}
+    >
+      <div className="min-w-0 rounded-md">
+        <p className="font-semibold text-sm">{title}</p>
+        <p className="text-muted-foreground text-xs">{subtitle}</p>
+      </div>
+    </button>
+    {children}
+  </div>
+);
+
+const ScanToolbar = ({
+  state,
+  grantedOrigin,
+  onScan,
+  onRevoke,
+}: {
+  readonly state: ScanUiState;
+  readonly grantedOrigin: string | undefined;
+  readonly onScan: () => void;
+  readonly onRevoke: (origin: string) => void;
+}) => {
+  const scanning = state === "scanning";
+  const hasScanResult = state === "results" || state === "filled";
+  const scanLabel =
+    state === "scanning"
+      ? "Scanning..."
+      : state === "results"
+        ? "Rescan page"
+        : state === "filled"
+          ? "Scan again"
+          : "Scan this page";
+  const statusLabel =
+    state === "filled" ? "Filled from last scan" : "Last scanned just now";
+
+  return (
+    <div className="flex min-h-[5.25rem] flex-col justify-center gap-2 rounded-lg border border-border bg-card p-3 shadow-sm shadow-black/5 transition-all duration-300 ease-out motion-reduce:transition-none dark:shadow-black/20">
+      {hasScanResult ? (
+        <div className="flex min-w-0 items-center justify-between gap-3 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:zoom-in-95">
+          <span className="min-w-0 truncate px-1 text-muted-foreground text-xs">
+            {statusLabel}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="motion-safe:active:scale-[0.99]"
+            onClick={onScan}
+          >
+            {scanLabel}
+          </Button>
+        </div>
+      ) : (
+        <Button
+          type="button"
+          disabled={scanning}
+          onClick={onScan}
+          className={cn(
+            "relative w-full overflow-hidden transition-all duration-300 ease-out motion-safe:active:scale-[0.99] motion-reduce:transition-none",
+            scanning &&
+              "before:absolute before:inset-0 before:-translate-x-full before:animate-[scan-shimmer_1.45s_ease-in-out_infinite] before:bg-linear-to-r before:from-transparent before:via-white/25 before:to-transparent before:content-[''] motion-reduce:before:animate-none",
+          )}
+        >
+          <span className="relative z-10 inline-flex items-center gap-1.5">
+            {scanning && <LoaderCircle className="size-4 animate-spin" />}
+            {scanLabel}
+          </span>
+        </Button>
+      )}
+      {grantedOrigin && (
+        <div className="flex min-w-0 items-center justify-between gap-2 px-1 text-muted-foreground text-xs transition-all duration-300 ease-out motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1 motion-reduce:transition-none">
+          <span className="min-w-0 truncate">
+            Access is on for{" "}
+            <span className="text-foreground">
+              {formatGrantedOrigin(grantedOrigin)}
+            </span>
+          </span>
+          <Button
+            type="button"
+            variant="link"
+            size="xs"
+            className="h-auto px-0 text-muted-foreground text-xs hover:text-primary"
+            onClick={() => onRevoke(grantedOrigin)}
+          >
+            Turn off
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const AnswersSummaryCard = ({
   count,
+  fillStatus,
   onOpenDetails,
   onFill,
 }: {
   readonly count: number;
+  readonly fillStatus: FillStatus;
   readonly onOpenDetails: () => void;
   readonly onFill: () => void;
 }) => {
-  const disabled = count === 0;
+  const filling = fillStatus.kind === "filling";
+  const filled = fillStatus.kind === "filled";
+  const partial = fillStatus.kind === "partial";
+  const failed = fillStatus.kind === "failed";
+  const disabled = filling || count === 0;
+  const title =
+    fillStatus.kind === "filling"
+      ? `Filling ${fillStatus.attemptedCount} ${pluralizePlainAnswer(
+          fillStatus.attemptedCount,
+        )}...`
+      : filled
+        ? `${fillStatus.filledCount} ${pluralizeFilledAnswer(
+            fillStatus.filledCount,
+          )}`
+        : partial
+          ? `${fillStatus.filledCount} of ${fillStatus.attemptedCount} answers filled`
+          : failed
+            ? "Could not fill answers"
+            : `${count} ${pluralizeAnswer(count)}`;
+  const subtitle = filled
+    ? "All detected answers were applied to the form."
+    : partial
+      ? "Some answers were applied. Open details to review what remains."
+      : failed
+        ? "Nothing was changed. Try again or open details to review."
+        : "Open details to review every detected proposal.";
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-primary/25 bg-card p-3 shadow-sm shadow-black/5 dark:shadow-black/20">
-      <button
-        type="button"
-        data-testid="known-fields-summary"
-        className="cursor-pointer rounded-md text-left outline-none transition-colors hover:text-accent-foreground focus-visible:ring-3 focus-visible:ring-ring/40"
-        onClick={onOpenDetails}
-      >
-        <div className="min-w-0 rounded-md">
-          <p className="font-semibold text-sm">
-            {count} {pluralizeField(count)}
-          </p>
-          <p className="text-muted-foreground text-xs">
-            Open details to review every detected proposal.
-          </p>
+    <SummaryCardShell
+      testId="answers-summary"
+      onOpenDetails={onOpenDetails}
+      title={title}
+      subtitle={subtitle}
+      className={cn(
+        filling && "scale-[0.995] border-primary/45 shadow-primary/10",
+        filled &&
+          "border-emerald-500/55 bg-emerald-50/70 shadow-emerald-500/15 dark:bg-emerald-950/20",
+        partial &&
+          "border-amber-500/55 bg-amber-50/70 shadow-amber-500/15 dark:bg-amber-950/20",
+        failed &&
+          "border-destructive/55 bg-destructive/5 shadow-destructive/10",
+      )}
+    >
+      {filled ? (
+        <div className="flex items-center justify-between gap-3 rounded-md border border-emerald-500/25 bg-white/70 px-2.5 py-2 shadow-xs motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 dark:bg-emerald-950/25">
+          <div className="flex min-w-0 items-center gap-2">
+            <span
+              className="grid size-7 shrink-0 place-items-center rounded-full bg-emerald-500 text-white shadow-sm shadow-emerald-500/30 motion-safe:animate-in motion-safe:zoom-in-50"
+              aria-hidden="true"
+            >
+              <CheckCircle2 className="size-4" />
+            </span>
+            <div className="min-w-0">
+              <p className="font-medium text-emerald-950 text-xs dark:text-emerald-100">
+                Applied to form
+              </p>
+              <p className="truncate text-[11px] text-emerald-800/75 dark:text-emerald-100/70">
+                Ready for a quick review.
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="xs"
+            className="border-emerald-500/35 bg-white/80 text-emerald-950 hover:bg-emerald-50 dark:bg-emerald-950/20 dark:text-emerald-100 dark:hover:bg-emerald-900/30"
+            onClick={onOpenDetails}
+          >
+            Review
+          </Button>
         </div>
-      </button>
-      <Button type="button" size="sm" disabled={disabled} onClick={onFill}>
-        FillMyForm 😡
-      </Button>
-    </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          {(filling || partial || failed) && (
+            <span
+              className={cn(
+                "grid size-6 place-items-center rounded-full transition-transform duration-300 motion-reduce:transition-none",
+                filling && "bg-primary/20 text-primary-foreground",
+                partial && "bg-amber-500 text-white",
+                failed && "bg-destructive text-destructive-foreground",
+              )}
+              aria-hidden="true"
+            >
+              {filling && <LoaderCircle className="size-4 animate-spin" />}
+              {partial && <AlertTriangle className="size-4" />}
+              {failed && <AlertTriangle className="size-4" />}
+            </span>
+          )}
+          <Button
+            type="button"
+            size="sm"
+            disabled={disabled}
+            onClick={onFill}
+            className="flex-1 motion-safe:active:scale-[0.99]"
+          >
+            {filling ? "Filling..." : "FillMyForm 😡"}
+          </Button>
+        </div>
+      )}
+    </SummaryCardShell>
   );
 };
+
+const KnownFieldsSummaryCard = ({
+  count,
+  onOpenDetails,
+  tabId,
+  scanVersion,
+}: {
+  readonly count: number;
+  readonly onOpenDetails: () => void;
+  readonly tabId: number | undefined;
+  readonly scanVersion: number;
+}) => (
+  <SummaryCardShell
+    testId="known-fields-summary"
+    onOpenDetails={onOpenDetails}
+    title={`${count} ${pluralizeKnownField(count)}`}
+    subtitle="Open details to review every detected proposal."
+  >
+    <AgentRunPanel key={scanVersion} tabId={tabId} />
+  </SummaryCardShell>
+);
 
 export const FillPanel = () => {
   const sound = useSound();
@@ -104,6 +377,8 @@ export const FillPanel = () => {
   const [proposalView, setProposalView] = useState<ProposalView>("summary");
   const [scanVersion, setScanVersion] = useState(0);
   const [confirmedIds, setConfirmedIds] = useState<Set<DecisionId>>(new Set());
+  const [fillStatus, setFillStatus] = useState<FillStatus>({ kind: "ready" });
+  const [scanUiState, setScanUiState] = useState<ScanUiState>("idle");
   const [grantedOrigins, setGrantedOrigins] = useState<readonly string[]>([]);
   const [activeTabId, setActiveTabId] = useState<number | undefined>();
   // Cached alongside `activeTabId` so `scan` can call
@@ -161,6 +436,8 @@ export const FillPanel = () => {
   }, [refreshAccessState, applyActiveTab]);
 
   const scan = async () => {
+    setScanUiState("scanning");
+    setFillStatus({ kind: "ready" });
     sound.startLoop("scan-page", "scanStarted");
     // The user gesture that fires this handler is what makes
     // `permissions.request()` (inside `siteAccess.requestSiteAccess`)
@@ -175,6 +452,7 @@ export const FillPanel = () => {
     // `requestSiteAccess` itself when access is missing.
     if (activeTabId === undefined || activeTabUrl === undefined) {
       setScanState({ kind: "not_granted" });
+      setScanUiState("blocked");
       sound.stopLoop("scan-page");
       sound.play("scanBlocked");
       return;
@@ -189,6 +467,7 @@ export const FillPanel = () => {
         await refreshAccessState();
         if (!granted) {
           setScanState({ kind: "not_granted" });
+          setScanUiState("blocked");
           sound.stopLoop("scan-page");
           sound.play("scanBlocked");
           return;
@@ -199,6 +478,7 @@ export const FillPanel = () => {
       if (!result.granted) {
         setActiveTabGranted(false);
         setScanState({ kind: "not_granted" });
+        setScanUiState("blocked");
         sound.stopLoop("scan-page");
         sound.play("scanBlocked");
         return;
@@ -207,6 +487,7 @@ export const FillPanel = () => {
       setProposalView("summary");
       setScanVersion((version) => version + 1);
       setScanState({ kind: "proposals", proposals: result.proposals });
+      setScanUiState("results");
       sound.stopLoop("scan-page");
       sound.play("scanSucceeded");
     } catch {
@@ -215,6 +496,7 @@ export const FillPanel = () => {
       // access is required and let the next scan click try again.
       setActiveTabGranted(false);
       setScanState({ kind: "not_granted" });
+      setScanUiState("failed");
       sound.stopLoop("scan-page");
       sound.play("scanFailed");
     }
@@ -226,6 +508,8 @@ export const FillPanel = () => {
       // Revoking the active tab's own origin must clear stale proposals
       // immediately, not just drop it from the granted-origins list.
       setScanState({ kind: "idle" });
+      setFillStatus({ kind: "ready" });
+      setScanUiState("idle");
       await refreshAccessState();
       sound.play("accessRevoked");
     } catch {
@@ -238,6 +522,7 @@ export const FillPanel = () => {
       sound.play("fillFailed");
       return;
     }
+    setFillStatus({ kind: "filling", attemptedCount: decisionIds.length });
     sound.startLoop("confirm-fill", "fillStarted");
     let outcome: "fillSucceeded" | "fillFailed" = "fillFailed";
     try {
@@ -247,8 +532,24 @@ export const FillPanel = () => {
       });
       const ok = new Set(results.filter((r) => r.ok).map((r) => r.decisionId));
       setConfirmedIds((prev) => new Set([...prev, ...ok]));
-      outcome = ok.size > 0 ? "fillSucceeded" : "fillFailed";
+      if (ok.size === decisionIds.length) {
+        setFillStatus({ kind: "filled", filledCount: ok.size });
+        setScanUiState("filled");
+        outcome = "fillSucceeded";
+      } else if (ok.size > 0) {
+        setFillStatus({
+          kind: "partial",
+          attemptedCount: decisionIds.length,
+          filledCount: ok.size,
+        });
+      } else {
+        setFillStatus({
+          kind: "failed",
+          attemptedCount: decisionIds.length,
+        });
+      }
     } catch {
+      setFillStatus({ kind: "failed", attemptedCount: decisionIds.length });
       outcome = "fillFailed";
     } finally {
       sound.stopLoop("confirm-fill");
@@ -256,52 +557,56 @@ export const FillPanel = () => {
     sound.play(outcome);
   };
 
-  const pendingDecisionIds: DecisionId[] =
+  const answerDetailProposals: FieldProposal[] =
     scanState.kind === "proposals"
-      ? scanState.proposals.flatMap((p) =>
-          (p.state === "pending" || p.state === "restricted") &&
-          !confirmedIds.has(p.decisionId)
-            ? [p.decisionId]
-            : [],
+      ? scanState.proposals.filter(
+          (p) => p.state === "pending" || p.state === "restricted",
         )
       : [];
 
+  const pendingAnswerProposals: FieldProposal[] =
+    scanState.kind === "proposals"
+      ? scanState.proposals.filter(
+          (p) =>
+            (p.state === "pending" || p.state === "restricted") &&
+            !confirmedIds.has(p.decisionId),
+        )
+      : [];
+
+  const knownNoAnswerProposals: FieldProposal[] =
+    scanState.kind === "proposals"
+      ? scanState.proposals.filter(
+          (p) => p.state === "no_value" || p.state === "ambiguous",
+        )
+      : [];
+
+  const answeredDecisionIds: DecisionId[] = pendingAnswerProposals.flatMap(
+    (p) =>
+      p.state === "pending" || p.state === "restricted" ? [p.decisionId] : [],
+  );
+
+  const detailsProposals: readonly FieldProposal[] =
+    proposalView === "answers"
+      ? answerDetailProposals
+      : proposalView === "known"
+        ? knownNoAnswerProposals
+        : [];
+
   const showProposalDetails =
-    scanState.kind === "proposals" && proposalView === "details";
+    scanState.kind === "proposals" &&
+    (proposalView === "answers" || proposalView === "known");
+  const activeGrantedOrigin = activeTabGranted
+    ? findGrantedOriginForUrl(activeTabUrl, grantedOrigins)
+    : undefined;
 
   return (
     <div className="flex w-full flex-col gap-4">
-      <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3 shadow-sm shadow-black/5 dark:shadow-black/20">
-        <Button type="button" onClick={scan}>
-          Scan this page
-        </Button>
-      </div>
-
-      {grantedOrigins.length > 0 && (
-        <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3">
-          <p className="font-medium text-xs">Sites you've granted access to</p>
-          {grantedOrigins.map((origin) => (
-            <div
-              key={origin}
-              className="flex items-center justify-between gap-2 rounded-md bg-muted/50 px-2 py-1.5 text-xs"
-            >
-              <span className="truncate text-muted-foreground">{origin}</span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="xs"
-                onClick={() => revoke(origin)}
-              >
-                Revoke
-              </Button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {scanState.kind === "proposals" && (
-        <AgentRunPanel key={scanVersion} tabId={activeTabId} />
-      )}
+      <ScanToolbar
+        state={scanUiState}
+        grantedOrigin={activeGrantedOrigin}
+        onScan={scan}
+        onRevoke={revoke}
+      />
 
       <Separator />
 
@@ -327,7 +632,7 @@ export const FillPanel = () => {
             <ChevronLeft className="size-4" />
             Back
           </Button>
-          {scanState.proposals.map((proposal) => (
+          {detailsProposals.map((proposal) => (
             <ProposalCard
               key={proposal.fieldId}
               proposal={proposal}
@@ -342,14 +647,26 @@ export const FillPanel = () => {
         </div>
       ) : (
         scanState.kind === "proposals" && (
-          <ProposalSummaryCard
-            count={pendingDecisionIds.length}
-            onOpenDetails={() => {
-              setProposalView("details");
-              sound.play("proposalDetailsOpened");
-            }}
-            onFill={() => confirm(pendingDecisionIds)}
-          />
+          <>
+            <AnswersSummaryCard
+              count={answeredDecisionIds.length}
+              fillStatus={fillStatus}
+              onOpenDetails={() => {
+                setProposalView("answers");
+                sound.play("proposalDetailsOpened");
+              }}
+              onFill={() => confirm(answeredDecisionIds)}
+            />
+            <KnownFieldsSummaryCard
+              count={knownNoAnswerProposals.length}
+              onOpenDetails={() => {
+                setProposalView("known");
+                sound.play("proposalDetailsOpened");
+              }}
+              tabId={activeTabId}
+              scanVersion={scanVersion}
+            />
+          </>
         )
       )}
     </div>

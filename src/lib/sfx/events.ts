@@ -12,7 +12,7 @@ export const SFX_EVENT_CUES = {
   scanBlocked: "blocked",
   scanFailed: "error",
   fillStarted: "processing",
-  fillSucceeded: "success",
+  fillSucceeded: "complete",
   fillFailed: "error",
   accessRevoked: "lock",
   agentStarted: "start",

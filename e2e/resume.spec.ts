@@ -82,7 +82,9 @@ test("resume: a run waiting on ask_user is persisted to session storage, not hel
   // stored value produces an `ask_user` pause.
   await panelPage.getByRole("button", { name: "Scan this page" }).click();
   await panelPage.getByRole("button", { name: "Fill with agent" }).click();
-  await expect(panelPage.getByRole("button", { name: "Answer" })).toBeVisible();
+  await expect(
+    panelPage.getByRole("button", { name: "Answer", exact: true }),
+  ).toBeVisible();
 
   const keysWhileWaiting = await readStoredRunKeys(context);
   expect(keysWhileWaiting.length).toBe(1);
@@ -105,7 +107,10 @@ test("resume: answering a question backed only by session storage writes the fie
   // "First name" is the first control on `simple.html` and the first field
   // `PLAN` ever considers, with nothing seeded for it — the run's very
   // first pause is always this question.
-  const answerButton = panelPage.getByRole("button", { name: "Answer" });
+  const answerButton = panelPage.getByRole("button", {
+    name: "Answer",
+    exact: true,
+  });
   await expect(answerButton).toBeVisible();
 
   // The pause survives purely in `chrome.storage.session` at this point —

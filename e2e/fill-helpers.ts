@@ -82,9 +82,9 @@ export const seedFile = async (
 export const grantAccess = async (formPage: Page, panelPage: Page) => {
   await formPage.bringToFront();
   const scanButton = panelPage.getByRole("button", { name: "Scan this page" });
-  const grantedList = panelPage.getByText("Sites you've granted access to");
+  const grantedAccess = panelPage.getByText("Access is on for");
 
-  if (await grantedList.isVisible({ timeout: 1000 }).catch(() => false)) {
+  if (await grantedAccess.isVisible({ timeout: 1000 }).catch(() => false)) {
     await formPage.reload({ waitUntil: "domcontentloaded" });
   } else if (await scanButton.isVisible({ timeout: 1000 }).catch(() => false)) {
     await scanButton.click();
@@ -92,7 +92,7 @@ export const grantAccess = async (formPage: Page, panelPage: Page) => {
 };
 
 export const openProposalDetails = async (panelPage: Page) => {
-  await panelPage.getByTestId("known-fields-summary").click();
+  await panelPage.getByTestId("answers-summary").click();
 };
 
 /**

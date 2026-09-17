@@ -244,6 +244,11 @@ export const OnboardingForm = () => {
       className="flex w-full flex-col gap-5"
       onSubmit={(event) => event.preventDefault()}
     >
+      <p className="rounded-lg border border-border bg-card p-3 text-muted-foreground text-sm shadow-sm shadow-black/5 dark:shadow-black/20">
+        You do not need to add everything here. Start on any form and Fill My
+        Form will ask only what it needs.
+      </p>
+
       {groupedStandard.map(([group, items]) => (
         <fieldset
           key={group}

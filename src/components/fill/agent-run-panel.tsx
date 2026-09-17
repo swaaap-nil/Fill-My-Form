@@ -14,7 +14,8 @@ import { useSound } from "~/lib/sfx/react";
  * the same page is not the end state; it is what "alongside" means until a
  * later phase decides which one the product actually ships.
  *
- * Placeholder styling — see docs/roadmap/_context.md.
+ * Nests inside the caller's own card shell (no border/heading of its own)
+ * so it can sit inside the "known fields" summary card in `FillPanel`.
  */
 
 interface AgentRunPanelProps {
@@ -116,12 +117,7 @@ export const AgentRunPanel = ({ tabId }: AgentRunPanelProps) => {
   };
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-primary/30 bg-accent/70 p-3">
-      {/* TODO(design): placeholder — see docs/roadmap/_context.md */}
-      <p className="font-semibold text-xs text-accent-foreground">
-        Agent loop (beta)
-      </p>
-
+    <>
       {!view && (
         <Button
           type="button"
@@ -206,6 +202,6 @@ export const AgentRunPanel = ({ tabId }: AgentRunPanelProps) => {
             {view.phase} — {view.status}
           </p>
         )}
-    </div>
+    </>
   );
 };

@@ -11,6 +11,7 @@ import "~/assets/styles/globals.css";
 
 interface LayoutProps {
   readonly children?: React.ReactNode;
+  readonly headerAction?: React.ReactNode;
   readonly loadingFallback?: React.ReactElement;
   readonly errorFallback?: React.ReactElement;
   readonly className?: string;
@@ -21,6 +22,7 @@ const systemDarkQuery = "(prefers-color-scheme: dark)";
 
 export const Layout = ({
   children,
+  headerAction,
   loadingFallback,
   errorFallback,
   className,
@@ -30,7 +32,9 @@ export const Layout = ({
       <ErrorBoundary fallback={errorFallback}>
         <Suspense fallback={loadingFallback}>
           <SoundProvider>
-            <LayoutContent className={className}>{children}</LayoutContent>
+            <LayoutContent className={className} headerAction={headerAction}>
+              {children}
+            </LayoutContent>
           </SoundProvider>
         </Suspense>
       </ErrorBoundary>
@@ -40,9 +44,11 @@ export const Layout = ({
 
 const LayoutContent = ({
   children,
+  headerAction,
   className,
 }: {
   readonly children?: React.ReactNode;
+  readonly headerAction?: React.ReactNode;
   readonly className?: string;
 }) => {
   const prefersDark = useSystemPrefersDark();
@@ -63,7 +69,7 @@ const LayoutContent = ({
           className,
         )}
       >
-        <Header />
+        <Header action={headerAction} />
         {children}
         <Footer />
       </div>

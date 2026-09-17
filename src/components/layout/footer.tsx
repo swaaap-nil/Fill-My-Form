@@ -1,4 +1,8 @@
+import { Lock } from "lucide-react";
 import { browser } from "wxt/browser";
+
+import { buttonVariants } from "~/components/ui/button";
+import { cn } from "~/lib/utils";
 
 /**
  * Deliberately minimal. The starter's footer promoted its own GitHub and
@@ -8,8 +12,21 @@ import { browser } from "wxt/browser";
 export const Footer = () => {
   return (
     <footer className="flex w-full justify-center">
-      <p className="text-center text-muted-foreground text-xs">
+      <p className="flex items-center justify-center gap-1 text-center text-muted-foreground text-xs">
         {browser.i18n.getMessage("privacyNote")}
+        <a
+          aria-label="Read the privacy policy"
+          className={cn(
+            buttonVariants({ size: "icon-xs", variant: "ghost" }),
+            "text-muted-foreground hover:text-foreground",
+          )}
+          href="https://getfillmyform.store/en/privacy/"
+          rel="noreferrer"
+          target="_blank"
+          title="Read the privacy policy"
+        >
+          <Lock className="size-3" />
+        </a>
       </p>
     </footer>
   );
