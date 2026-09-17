@@ -81,15 +81,13 @@ export const seedFile = async (
  */
 export const grantAccess = async (formPage: Page, panelPage: Page) => {
   await formPage.bringToFront();
-  const grantButton = panelPage.getByRole("button", {
-    name: "Grant access to this site",
-  });
   const scanButton = panelPage.getByRole("button", { name: "Scan this page" });
+  const grantedList = panelPage.getByText("Sites you've granted access to");
 
-  if (await grantButton.isVisible({ timeout: 1000 }).catch(() => false)) {
-    await grantButton.click();
-  } else if (await scanButton.isVisible({ timeout: 1000 }).catch(() => false)) {
+  if (await grantedList.isVisible({ timeout: 1000 }).catch(() => false)) {
     await formPage.reload({ waitUntil: "domcontentloaded" });
+  } else if (await scanButton.isVisible({ timeout: 1000 }).catch(() => false)) {
+    await scanButton.click();
   }
 };
 

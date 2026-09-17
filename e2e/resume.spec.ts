@@ -8,7 +8,7 @@ import { grantAccess, openPanel } from "./fill-helpers";
  * neither alone catches "the worker died while a question was pending".
  *
  * **If both tests in this file are hanging/timing out waiting on a button
- * click** ("Grant access to this site", "Answer"), this is very likely
+ * click** ("Scan this page", "Answer"), this is very likely
  * host resource starvation, not a bug here — see "Known flakiness" in
  * docs/testing.md before debugging the extension itself. Check `uptime`
  * and free memory first, and retry this file in isolation.

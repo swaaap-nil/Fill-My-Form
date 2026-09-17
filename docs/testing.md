@@ -171,10 +171,10 @@ with something like:
 Test timeout of Nms exceeded.
 Error: locator.click: Target page, context or browser has been closed
 Call log:
-  - waiting for getByRole('button', { name: 'Grant access to this site' })
+  - waiting for getByRole('button', { name: 'Scan this page' })
 ```
 
-(or waiting on "Scan this page" / "Confirm" instead). **Before treating this
+(or waiting on "Confirm" instead). **Before treating this
 as a regression, check the host's load first** (`uptime`, and on macOS `top
 -l 1` for free memory) — this exact failure was chased at length during Phase
 2 and traced to the *host machine* being memory- and CPU-starved (another

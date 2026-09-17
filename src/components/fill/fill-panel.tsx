@@ -18,14 +18,10 @@ import { ProposalCard } from "./proposal-card";
  * re-runs policy with `userConfirmed: true` in the background. See
  * `~/core/fill/driver` for why that split exists.
  *
- * **"Scan this page" does not exist as a button until the active tab's own
- * origin is granted.** Showing it earlier would invite a click that always
- * fails, and — more importantly — a visible "scan" affordance reads as
- * "this works now" regardless of whether it does. Only "Grant access to
- * this site" is shown before that; the runtime half of the privacy design
- * (`~/lib/site-access`) had zero UI callers before this phase, and a
- * reachable, deliberate grant action is the point, not a fallback
- * surfaced by accident.
+ * **"Scan this page" owns the permission prompt.** If the active tab's own
+ * origin is not granted yet, the scan click requests that one-origin grant
+ * before trying to read the page. That keeps the privacy boundary deliberate
+ * without making the user learn a separate grant-then-scan step.
  *
  * **Site access is called directly here, not through a background
  * message.** `chrome.permissions.request()` only succeeds inside the
@@ -66,7 +62,7 @@ export const FillPanel = () => {
   const [confirmedIds, setConfirmedIds] = useState<Set<DecisionId>>(new Set());
   const [grantedOrigins, setGrantedOrigins] = useState<readonly string[]>([]);
   const [activeTabId, setActiveTabId] = useState<number | undefined>();
-  // Cached alongside `activeTabId` so `grantAccess` can call
+  // Cached alongside `activeTabId` so `scan` can call
   // `permissions.request()` with no `await` ahead of it in the click
   // handler — see the comment there for why that matters in Firefox. Kept
   // fresh continuously (see the `tabs.onActivated`/`onUpdated` listeners
@@ -77,8 +73,8 @@ export const FillPanel = () => {
   const [activeTabUrl, setActiveTabUrl] = useState<string | undefined>();
   // Whether the *currently active tab's* origin has been granted — not
   // just whether the user has granted access to *some* site. "Scan this
-  // page" only ever means the active tab, so it stays hidden until that
-  // specific origin is granted, rather than as soon as any origin is.
+  // page" only ever means the active tab, so scan asks for that specific
+  // origin when needed rather than assuming any granted origin is enough.
   const [activeTabGranted, setActiveTabGranted] = useState(false);
 
   const applyActiveTab = useCallback(
@@ -121,29 +117,6 @@ export const FillPanel = () => {
   }, [refreshAccessState, applyActiveTab]);
 
   const scan = async () => {
-    if (activeTabId === undefined) {
-      setScanState({ kind: "not_granted" });
-      return;
-    }
-    try {
-      const result = await sendMessage("runFill", { tabId: activeTabId });
-      if (!result.granted) {
-        setScanState({ kind: "not_granted" });
-        return;
-      }
-      setConfirmedIds(new Set());
-      setScanVersion((version) => version + 1);
-      setScanState({ kind: "proposals", proposals: result.proposals });
-    } catch {
-      // No content script reachable in this tab — typically because access
-      // was granted after the tab was already open (see spike 2 in the
-      // phase 1c handback) and it has not been reloaded yet. Same recovery
-      // as an outright missing grant: ask for access again.
-      setScanState({ kind: "not_granted" });
-    }
-  };
-
-  const grantAccess = async () => {
     // The user gesture that fires this handler is what makes
     // `permissions.request()` (inside `siteAccess.requestSiteAccess`)
     // valid — it must run here, synchronously reachable from the click,
@@ -153,18 +126,48 @@ export const FillPanel = () => {
     // clears its "handling user input" flag as soon as control returns to
     // the event loop, so the same `await` there makes `permissions.request`
     // reject silently. `activeTabUrl`/`activeTabId` are cached from the
-    // last `refreshAccessState()` so this handler's first async call is
-    // `requestSiteAccess` itself.
-    if (activeTabUrl) {
-      await siteAccess.requestSiteAccess(activeTabUrl, activeTabId);
+    // last `refreshAccessState()` so this handler's first async call can be
+    // `requestSiteAccess` itself when access is missing.
+    if (activeTabId === undefined || activeTabUrl === undefined) {
+      setScanState({ kind: "not_granted" });
+      return;
     }
-    await refreshAccessState();
+
+    try {
+      if (!activeTabGranted) {
+        const granted = await siteAccess.requestSiteAccess(
+          activeTabUrl,
+          activeTabId,
+        );
+        await refreshAccessState();
+        if (!granted) {
+          setScanState({ kind: "not_granted" });
+          return;
+        }
+      }
+
+      const result = await sendMessage("runFill", { tabId: activeTabId });
+      if (!result.granted) {
+        setActiveTabGranted(false);
+        setScanState({ kind: "not_granted" });
+        return;
+      }
+      setConfirmedIds(new Set());
+      setScanVersion((version) => version + 1);
+      setScanState({ kind: "proposals", proposals: result.proposals });
+    } catch {
+      // No content script reachable in this tab, or the permission request
+      // failed. Same recovery as an outright missing grant: explain that
+      // access is required and let the next scan click try again.
+      setActiveTabGranted(false);
+      setScanState({ kind: "not_granted" });
+    }
   };
 
   const revoke = async (origin: string) => {
     await siteAccess.revokeSiteAccess(origin);
-    // Revoking the active tab's own origin must hide "Scan this page"
-    // again immediately, not just drop it from the granted-origins list.
+    // Revoking the active tab's own origin must clear stale proposals
+    // immediately, not just drop it from the granted-origins list.
     setScanState({ kind: "idle" });
     await refreshAccessState();
   };
@@ -191,15 +194,9 @@ export const FillPanel = () => {
   return (
     <div className="flex w-full flex-col gap-4">
       <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3 shadow-sm shadow-black/5 dark:shadow-black/20">
-        {activeTabGranted ? (
-          <Button type="button" onClick={scan}>
-            Scan this page
-          </Button>
-        ) : (
-          <Button type="button" variant="outline" onClick={grantAccess}>
-            Grant access to this site
-          </Button>
-        )}
+        <Button type="button" onClick={scan}>
+          Scan this page
+        </Button>
       </div>
 
       {grantedOrigins.length > 0 && (
@@ -224,7 +221,7 @@ export const FillPanel = () => {
         </div>
       )}
 
-      {activeTabGranted && scanState.kind === "proposals" && (
+      {scanState.kind === "proposals" && (
         <AgentRunPanel key={scanVersion} tabId={activeTabId} />
       )}
 
@@ -232,8 +229,8 @@ export const FillPanel = () => {
 
       {scanState.kind === "not_granted" && (
         <p className="text-muted-foreground text-sm">
-          This site hasn't been granted access yet — use "Grant access to this
-          site" above, then scan again.
+          This site needs access before it can be scanned. Use "Scan this page"
+          and approve the browser prompt to continue.
         </p>
       )}
 

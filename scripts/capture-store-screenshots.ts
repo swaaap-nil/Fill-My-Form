@@ -3,13 +3,12 @@
  * extension and the local fixture site.
  *
  * Uses the `build-e2e/chrome-mv3` build (`bun run build:chrome:e2e`)
- * because it has `localhost:4173` pre-granted, which lets the grant button
- * be clicked and land in its post-grant state without a native permission
- * bubble in the way — Playwright cannot drive that bubble, so the "grant
- * prompt" screenshot is really the panel immediately after granting
- * (origin visible in the "granted access to" list), not the OS-level
- * dialog itself. Note this limitation in the actual store listing if the
- * native bubble matters to a reviewer.
+ * because it has `localhost:4173` pre-granted, which lets the scan button
+ * exercise the post-grant flow without a native permission bubble in the
+ * way — Playwright cannot drive that bubble, so the permission part is
+ * represented by the granted-origin list rather than the OS-level dialog.
+ * Note this limitation in the actual store listing if the native bubble
+ * matters to a reviewer.
  *
  * Run with the fixture site already up (`bun dev:site` in another
  * terminal) or let this script assume `bun test:e2e`'s webServer isn't
@@ -91,9 +90,7 @@ async function main() {
 
     await panelPage.getByRole("button", { name: "Fill this page" }).click();
     await formPage.bringToFront();
-    await panelPage
-      .getByRole("button", { name: "Grant access to this site" })
-      .click();
+    await panelPage.getByRole("button", { name: "Scan this page" }).click();
     await panelPage.waitForTimeout(300);
 
     await panelPage.screenshot({
