@@ -150,6 +150,30 @@ describe("tier 3: exact alias", () => {
     expect(result.candidates[0]?.conceptKey).toBe("documents.signature");
     expect(result.candidates[0]?.tier).toBe(MatchTier.ALIAS);
   });
+
+  it("resolves passport country to the shared country concept", () => {
+    const result = resolve(field({ label: "Passport Country" }), ontology);
+    expect(result.certainty).toBe(Certainty.KNOWN);
+    expect(result.candidates[0]?.conceptKey).toBe("contact.address.country");
+    expect(result.candidates[0]?.tier).toBe(MatchTier.ALIAS);
+  });
+
+  it("resolves country of residence to the address country concept", () => {
+    const result = resolve(field({ label: "Country of Residence" }), ontology);
+    expect(result.certainty).toBe(Certainty.KNOWN);
+    expect(result.candidates[0]?.conceptKey).toBe("contact.address.country");
+    expect(result.candidates[0]?.tier).toBe(MatchTier.ALIAS);
+  });
+
+  it("resolves Twitter / X profile labels to a social profile URL concept", () => {
+    const result = resolve(
+      field({ kind: FieldKind.URL, label: "Twitter / X profile" }),
+      ontology,
+    );
+    expect(result.certainty).toBe(Certainty.KNOWN);
+    expect(result.candidates[0]?.conceptKey).toBe("contact.twitter_url");
+    expect(result.candidates[0]?.tier).toBe(MatchTier.ALIAS);
+  });
 });
 
 describe("tier 4: placeholder containment", () => {

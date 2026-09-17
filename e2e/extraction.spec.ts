@@ -353,6 +353,13 @@ test("supabase.html extracts a form-like ATS application container", async ({
   });
   expect(conceptByLabel.get("Resume")).toBe("documents.resume");
 
+  expect(conceptByLabel.get("Passport Country")).toBe(
+    "contact.address.country",
+  );
+  expect(conceptByLabel.get("Country of Residence")).toBe(
+    "contact.address.country",
+  );
+  expect(conceptByLabel.get("Twitter / X profile")).toBe("contact.twitter_url");
   expect(conceptByLabel.get("Github Profile")).toBe("contact.github_url");
   expect(conceptByLabel.get("Linkedin")).toBe("contact.linkedin_url");
 });

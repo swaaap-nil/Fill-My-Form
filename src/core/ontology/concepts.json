@@ -397,7 +397,12 @@
     "expects": "text",
     "autocomplete": ["country-name", "country"],
     "aliases": {
-      "en": ["country"],
+      "en": [
+        "country",
+        "country of residence",
+        "residence country",
+        "passport country"
+      ],
       "hi": ["देश"]
     }
   },
@@ -466,6 +471,26 @@
     "aliases": {
       "en": ["github", "github url", "github profile"],
       "hi": ["गिटहब प्रोफाइल"]
+    }
+  },
+  {
+    "key": "contact.twitter_url",
+    "label": "Twitter / X profile",
+    "sensitivity": "personal",
+    "volatility": "slow",
+    "expects": "url",
+    "aliases": {
+      "en": [
+        "twitter",
+        "twitter url",
+        "twitter profile",
+        "x",
+        "x url",
+        "x profile",
+        "twitter / x profile",
+        "twitter x profile"
+      ],
+      "hi": ["ट्विटर प्रोफाइल", "एक्स प्रोफाइल"]
     }
   },
   {
