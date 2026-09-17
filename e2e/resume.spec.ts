@@ -81,7 +81,7 @@ test("resume: a run waiting on ask_user is persisted to session storage, not hel
   // No onboarding answers seeded: the first known-concept field with no
   // stored value produces an `ask_user` pause.
   await panelPage.getByRole("button", { name: "Scan this page" }).click();
-  await panelPage.getByRole("button", { name: "Fill with agent" }).click();
+  await panelPage.getByRole("button", { name: "Answer now" }).click();
   await expect(
     panelPage.getByRole("button", { name: "Answer", exact: true }),
   ).toBeVisible();
@@ -102,7 +102,7 @@ test("resume: answering a question backed only by session storage writes the fie
 
   await formPage.bringToFront();
   await panelPage.getByRole("button", { name: "Scan this page" }).click();
-  await panelPage.getByRole("button", { name: "Fill with agent" }).click();
+  await panelPage.getByRole("button", { name: "Answer now" }).click();
 
   // "First name" is the first control on `simple.html` and the first field
   // `PLAN` ever considers, with nothing seeded for it — the run's very

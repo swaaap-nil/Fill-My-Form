@@ -116,6 +116,7 @@ interface Messages {
   extractFullForm(): { forms: readonly Form[] };
   fillField(data: FillFieldPayload): { ok: boolean };
   uploadFile(data: UploadFilePayload): { ok: boolean };
+  showFillFeedback(data: { filledCount: number }): { ok: boolean };
   verifyField(data: {
     fieldId: FieldId;
     expectedValue: string;

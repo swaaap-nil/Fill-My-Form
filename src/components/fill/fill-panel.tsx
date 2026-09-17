@@ -53,6 +53,7 @@ type ScanState =
     };
 
 type ProposalView = "summary" | "answers" | "known";
+type ProposalViewTransition = "none" | "forward" | "back";
 
 type FillStatus =
   | { readonly kind: "ready" }
@@ -365,7 +366,7 @@ const AnswersSummaryCard = ({
             onClick={onFill}
             className="flex-1 motion-safe:active:scale-[0.99]"
           >
-            {filling ? "Filling..." : "FillMyForm 😡"}
+            {filling ? "Filling..." : "Fill My Form 😡"}
           </Button>
         </div>
       )}
@@ -398,6 +399,8 @@ export const FillPanel = () => {
   const sound = useSound();
   const [scanState, setScanState] = useState<ScanState>({ kind: "idle" });
   const [proposalView, setProposalView] = useState<ProposalView>("summary");
+  const [proposalViewTransition, setProposalViewTransition] =
+    useState<ProposalViewTransition>("none");
   const [scanVersion, setScanVersion] = useState(0);
   const [confirmedIds, setConfirmedIds] = useState<Set<DecisionId>>(new Set());
   const [fillStatus, setFillStatus] = useState<FillStatus>({ kind: "ready" });
@@ -508,6 +511,7 @@ export const FillPanel = () => {
       }
       setConfirmedIds(new Set());
       setProposalView("summary");
+      setProposalViewTransition("none");
       setScanVersion((version) => version + 1);
       setScanState({ kind: "proposals", proposals: result.proposals });
       setScanUiState("results");
@@ -614,6 +618,12 @@ export const FillPanel = () => {
       : proposalView === "known"
         ? knownNoAnswerProposals
         : [];
+  const proposalViewMotionClass =
+    proposalViewTransition === "forward"
+      ? "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-right-4 motion-safe:duration-200 motion-safe:ease-out"
+      : proposalViewTransition === "back"
+        ? "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-left-4 motion-safe:duration-200 motion-safe:ease-out"
+        : "";
 
   const showProposalDetails =
     scanState.kind === "proposals" &&
@@ -641,13 +651,19 @@ export const FillPanel = () => {
       )}
 
       {scanState.kind === "proposals" && showProposalDetails ? (
-        <div className="flex flex-col gap-2">
+        <div
+          className={cn(
+            "flex flex-col gap-2 motion-reduce:animate-none",
+            proposalViewMotionClass,
+          )}
+        >
           <Button
             type="button"
             variant="ghost"
             size="sm"
             className="self-start"
             onClick={() => {
+              setProposalViewTransition("back");
               setProposalView("summary");
               sound.play("proposalDetailsClosed");
             }}
@@ -670,11 +686,17 @@ export const FillPanel = () => {
         </div>
       ) : (
         scanState.kind === "proposals" && (
-          <>
+          <div
+            className={cn(
+              "flex flex-col gap-4 motion-reduce:animate-none",
+              proposalViewMotionClass,
+            )}
+          >
             <AnswersSummaryCard
               count={answeredDecisionIds.length}
               fillStatus={fillStatus}
               onOpenDetails={() => {
+                setProposalViewTransition("forward");
                 setProposalView("answers");
                 sound.play("proposalDetailsOpened");
               }}
@@ -683,13 +705,14 @@ export const FillPanel = () => {
             <KnownFieldsSummaryCard
               count={knownNoAnswerProposals.length}
               onOpenDetails={() => {
+                setProposalViewTransition("forward");
                 setProposalView("known");
                 sound.play("proposalDetailsOpened");
               }}
               tabId={activeTabId}
               scanVersion={scanVersion}
             />
-          </>
+          </div>
         )
       )}
     </div>

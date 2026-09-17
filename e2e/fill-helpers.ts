@@ -96,7 +96,7 @@ export const openProposalDetails = async (panelPage: Page) => {
 };
 
 /**
- * Drives the Phase 2 agent loop (`AgentRunPanel`'s "Fill with agent") to
+ * Drives the Phase 2 agent loop (`AgentRunPanel`'s "Answer now") to
  * completion by repeatedly clicking Confirm.
  *
  * The background answers a review confirmation synchronously and often
@@ -113,7 +113,7 @@ export const driveAgentToCompletion = async (
   maxClicks = 15,
 ) => {
   await panelPage.getByRole("button", { name: "Scan this page" }).click();
-  await panelPage.getByRole("button", { name: "Fill with agent" }).click();
+  await panelPage.getByRole("button", { name: "Answer now" }).click();
 
   for (let i = 0; i < maxClicks; i++) {
     const confirmButton = panelPage

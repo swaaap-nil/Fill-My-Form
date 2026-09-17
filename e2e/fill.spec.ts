@@ -123,7 +123,7 @@ test("summary cards: card surface opens details without stealing fill clicks", a
   await expect(panelPage.getByText("identity.first_name")).toBeVisible();
   await panelPage.getByRole("button", { name: "Back" }).click();
 
-  await panelPage.getByRole("button", { name: "FillMyForm 😡" }).click();
+  await panelPage.getByRole("button", { name: "Fill My Form 😡" }).click();
   await expect(panelPage.getByText("1 answer filled")).toBeVisible();
   await expect(panelPage.getByRole("button", { name: "Back" })).toBeHidden();
   await expect(formPage.getByLabel("Email address")).toHaveValue(
@@ -170,7 +170,8 @@ test("untouched: the csrf field and the terms checkbox are never filled", async 
   await formPage.bringToFront();
   await panelPage.getByRole("button", { name: "Scan this page" }).click();
   await expect(panelPage.getByText("1 answer detected")).toBeVisible();
-  await panelPage.getByRole("button", { name: "FillMyForm 😡" }).click();
+  await panelPage.getByRole("button", { name: "Fill My Form 😡" }).click();
+  await expect(formPage.getByText("1 field updated")).toBeVisible();
   await expect(panelPage.getByText("1 answer filled")).toBeVisible();
   await expect(panelPage.getByText("Filled from last scan")).toBeVisible();
   await expect(
@@ -276,7 +277,7 @@ test("privacy: fixture fills make no outbound network requests", async ({
   await formPage.bringToFront();
   await panelPage.getByRole("button", { name: "Scan this page" }).click();
   await expect(panelPage.getByText("3 answers detected")).toBeVisible();
-  await panelPage.getByRole("button", { name: "FillMyForm 😡" }).click();
+  await panelPage.getByRole("button", { name: "Fill My Form 😡" }).click();
   await expect(panelPage.getByText("3 answers filled")).toBeVisible();
   await expect(panelPage.getByText("Filled from last scan")).toBeVisible();
   await formPage.bringToFront();

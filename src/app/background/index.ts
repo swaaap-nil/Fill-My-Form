@@ -387,6 +387,16 @@ const main = () => {
       }),
     );
 
+    const filledCount = results.filter((result) => result.ok).length;
+    if (filledCount > 0) {
+      await sendMessage("showFillFeedback", { filledCount }, tabId).catch(
+        (error: unknown) =>
+          logger.warn("could not show fill feedback", {
+            errorCode: String(error),
+          }),
+      );
+    }
+
     return { results };
   });
 
