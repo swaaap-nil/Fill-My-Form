@@ -2,7 +2,12 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { deflateSync } from "node:zlib";
 import { expect, test } from "./fill-fixtures";
-import { grantAccess, openPanel, seedFile } from "./fill-helpers";
+import {
+  grantAccess,
+  openPanel,
+  openProposalDetails,
+  seedFile,
+} from "./fill-helpers";
 
 const writeFixture = async (path: string, bytes: Uint8Array) => {
   await mkdir(dirname(path), { recursive: true });
@@ -101,6 +106,7 @@ test("files: a saved resume PDF uploads on simple.html", async ({
 
   await formPage.bringToFront();
   await panelPage.getByRole("button", { name: "Scan this page" }).click();
+  await openProposalDetails(panelPage);
   await expect(panelPage.getByText("documents.resume")).toBeVisible();
   await panelPage
     .getByRole("button", { name: "Confirm", exact: true })
@@ -129,6 +135,7 @@ test("files: an oversized photo is transformed before upload", async ({
 
   await formPage.bringToFront();
   await panelPage.getByRole("button", { name: "Scan this page" }).click();
+  await openProposalDetails(panelPage);
   await expect(panelPage.getByText("documents.photo")).toBeVisible();
   await panelPage.getByRole("button", { name: "Confirm", exact: true }).click();
 

@@ -1,3 +1,4 @@
+import { ChevronLeft } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import type { Browser } from "wxt/browser";
 import { browser } from "wxt/browser";
@@ -43,6 +44,8 @@ type ScanState =
       readonly proposals: readonly FieldProposal[];
     };
 
+type ProposalView = "summary" | "details";
+
 /**
  * The side panel's own `currentWindow` is unambiguous — it is attached to
  * a specific window — unlike the background service worker, which has no
@@ -56,8 +59,47 @@ const getActiveTab = () =>
     .query({ active: true, currentWindow: true })
     .then(([tab]) => tab);
 
+const pluralizeField = (count: number) =>
+  count === 1 ? "known field detected" : "known fields detected";
+
+const ProposalSummaryCard = ({
+  count,
+  onOpenDetails,
+  onFill,
+}: {
+  readonly count: number;
+  readonly onOpenDetails: () => void;
+  readonly onFill: () => void;
+}) => {
+  const disabled = count === 0;
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-primary/25 bg-card p-3 shadow-sm shadow-black/5 dark:shadow-black/20">
+      <button
+        type="button"
+        data-testid="known-fields-summary"
+        className="cursor-pointer rounded-md text-left outline-none transition-colors hover:text-accent-foreground focus-visible:ring-3 focus-visible:ring-ring/40"
+        onClick={onOpenDetails}
+      >
+        <div className="min-w-0 rounded-md">
+          <p className="font-semibold text-sm">
+            {count} {pluralizeField(count)}
+          </p>
+          <p className="text-muted-foreground text-xs">
+            Open details to review every detected proposal.
+          </p>
+        </div>
+      </button>
+      <Button type="button" size="sm" disabled={disabled} onClick={onFill}>
+        FillMyForm 😡
+      </Button>
+    </div>
+  );
+};
+
 export const FillPanel = () => {
   const [scanState, setScanState] = useState<ScanState>({ kind: "idle" });
+  const [proposalView, setProposalView] = useState<ProposalView>("summary");
   const [scanVersion, setScanVersion] = useState(0);
   const [confirmedIds, setConfirmedIds] = useState<Set<DecisionId>>(new Set());
   const [grantedOrigins, setGrantedOrigins] = useState<readonly string[]>([]);
@@ -153,6 +195,7 @@ export const FillPanel = () => {
         return;
       }
       setConfirmedIds(new Set());
+      setProposalView("summary");
       setScanVersion((version) => version + 1);
       setScanState({ kind: "proposals", proposals: result.proposals });
     } catch {
@@ -185,11 +228,15 @@ export const FillPanel = () => {
   const pendingDecisionIds: DecisionId[] =
     scanState.kind === "proposals"
       ? scanState.proposals.flatMap((p) =>
-          p.state === "pending" && !confirmedIds.has(p.decisionId)
+          (p.state === "pending" || p.state === "restricted") &&
+          !confirmedIds.has(p.decisionId)
             ? [p.decisionId]
             : [],
         )
       : [];
+
+  const showProposalDetails =
+    scanState.kind === "proposals" && proposalView === "details";
 
   return (
     <div className="flex w-full flex-col gap-4">
@@ -234,33 +281,39 @@ export const FillPanel = () => {
         </p>
       )}
 
-      {scanState.kind === "proposals" && (
-        <>
-          {pendingDecisionIds.length > 1 && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => confirm(pendingDecisionIds)}
-            >
-              Confirm all ({pendingDecisionIds.length})
-            </Button>
-          )}
-          <div className="flex flex-col gap-2">
-            {scanState.proposals.map((proposal) => (
-              <ProposalCard
-                key={proposal.fieldId}
-                proposal={proposal}
-                onConfirm={(decisionId) => confirm([decisionId])}
-                confirmed={
-                  (proposal.state === "pending" ||
-                    proposal.state === "restricted") &&
-                  confirmedIds.has(proposal.decisionId)
-                }
-              />
-            ))}
-          </div>
-        </>
+      {scanState.kind === "proposals" && showProposalDetails ? (
+        <div className="flex flex-col gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="self-start"
+            onClick={() => setProposalView("summary")}
+          >
+            <ChevronLeft className="size-4" />
+            Back
+          </Button>
+          {scanState.proposals.map((proposal) => (
+            <ProposalCard
+              key={proposal.fieldId}
+              proposal={proposal}
+              onConfirm={(decisionId) => confirm([decisionId])}
+              confirmed={
+                (proposal.state === "pending" ||
+                  proposal.state === "restricted") &&
+                confirmedIds.has(proposal.decisionId)
+              }
+            />
+          ))}
+        </div>
+      ) : (
+        scanState.kind === "proposals" && (
+          <ProposalSummaryCard
+            count={pendingDecisionIds.length}
+            onOpenDetails={() => setProposalView("details")}
+            onFill={() => confirm(pendingDecisionIds)}
+          />
+        )
       )}
     </div>
   );

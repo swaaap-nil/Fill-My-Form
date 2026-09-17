@@ -91,6 +91,10 @@ export const grantAccess = async (formPage: Page, panelPage: Page) => {
   }
 };
 
+export const openProposalDetails = async (panelPage: Page) => {
+  await panelPage.getByTestId("known-fields-summary").click();
+};
+
 /**
  * Drives the Phase 2 agent loop (`AgentRunPanel`'s "Fill with agent") to
  * completion by repeatedly clicking Confirm.

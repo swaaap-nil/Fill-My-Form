@@ -3,6 +3,7 @@ import { expect, test } from "./fill-fixtures";
 import {
   grantAccess,
   openPanel,
+  openProposalDetails,
   seedAnswer,
   seedAnswers,
 } from "./fill-helpers";
@@ -79,9 +80,9 @@ test("propose: scanning shows every field's proposal and fills nothing", async (
   await formPage.bringToFront();
   await panelPage.getByRole("button", { name: "Scan this page" }).click();
 
-  // 12 in-scope controls on simple.html (csrf is never a candidate).
-  const cards = panelPage.locator('[class*="rounded-md"][class*="border"]');
-  await expect(cards.first()).toBeVisible();
+  await expect(panelPage.getByText("1 known field detected")).toBeVisible();
+  await openProposalDetails(panelPage);
+  await expect(panelPage.getByText("contact.email")).toBeVisible();
 
   // The assertion that proves policy is on the path: proposing is not filling.
   await expect(formPage.getByLabel("Email address")).toHaveValue("");
@@ -101,6 +102,7 @@ test("confirm: confirming a proposal writes the value into the page", async ({
 
   await formPage.bringToFront();
   await panelPage.getByRole("button", { name: "Scan this page" }).click();
+  await openProposalDetails(panelPage);
 
   await panelPage
     .getByRole("button", { name: "Confirm", exact: true })
@@ -125,14 +127,8 @@ test("untouched: the csrf field and the terms checkbox are never filled", async 
 
   await formPage.bringToFront();
   await panelPage.getByRole("button", { name: "Scan this page" }).click();
-  const confirmButtons = panelPage.getByRole("button", {
-    name: "Confirm",
-    exact: true,
-  });
-  const count = await confirmButtons.count();
-  for (let i = 0; i < count; i++) {
-    await confirmButtons.nth(i).click();
-  }
+  await expect(panelPage.getByText("1 known field detected")).toBeVisible();
+  await panelPage.getByRole("button", { name: "FillMyForm 😡" }).click();
 
   // csrf is a hidden field: 1a's extractor excludes it structurally, so it
   // was never a candidate and could not have been proposed, let alone filled.
@@ -156,6 +152,8 @@ test("restricted: the Aadhaar field is reported as restricted and never auto-fil
 
   await formPage.bringToFront();
   await panelPage.getByRole("button", { name: "Scan this page" }).click();
+  await expect(panelPage.getByText("1 known field detected")).toBeVisible();
+  await openProposalDetails(panelPage);
 
   // Reported distinctly, not merely "unknown": the restricted card names
   // the concept and requires its own confirm click.
@@ -194,6 +192,7 @@ test("onboarding round trip: a value typed in onboarding appears as a proposal w
 
   await formPage.bringToFront();
   await panelPage.getByRole("button", { name: "Scan this page" }).click();
+  await openProposalDetails(panelPage);
 
   await expect(panelPage.getByText("identity.first_name")).toBeVisible();
   await expect(panelPage.getByText(/source: user_provided/i)).toBeVisible();
@@ -229,14 +228,8 @@ test("privacy: fixture fills make no outbound network requests", async ({
 
   await formPage.bringToFront();
   await panelPage.getByRole("button", { name: "Scan this page" }).click();
-  const confirmButtons = panelPage.getByRole("button", {
-    name: "Confirm",
-    exact: true,
-  });
-  const count = await confirmButtons.count();
-  for (let i = 0; i < count; i++) {
-    await confirmButtons.nth(i).click();
-  }
+  await expect(panelPage.getByText("3 known fields detected")).toBeVisible();
+  await panelPage.getByRole("button", { name: "FillMyForm 😡" }).click();
 
   expect(externalRequests).toEqual([]);
 });
