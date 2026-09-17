@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { deflateSync } from "node:zlib";
+import type { Page } from "@playwright/test";
 import { expect, test } from "./fill-fixtures";
 import {
   grantAccess,
@@ -80,6 +81,58 @@ const png = (width: number, height: number): Uint8Array => {
   ]);
 };
 
+const answerForQuestion = (question: string): string => {
+  if (question.includes("Email")) return "ananya@example.com";
+  if (question.includes("Mobile") || question.includes("Phone"))
+    return "9876543210";
+  if (question.includes("Date of birth")) return "2000-01-01";
+  if (question.includes("Passing Year")) return "2016";
+  if (question.includes("degree")) return "btech";
+  if (question.includes("College")) return "Example College";
+  if (question.includes("Last name")) return "Rao";
+  return "Ananya";
+};
+
+const advanceAgentToFileQuestion = async (panelPage: Page) => {
+  await panelPage.getByRole("button", { name: "Scan this page" }).click();
+  await panelPage.getByRole("button", { name: "Answer now" }).click();
+
+  for (let i = 0; i < 20; i++) {
+    if (await panelPage.getByText("Browse or drag a file here").isVisible()) {
+      return;
+    }
+
+    const confirmButton = panelPage
+      .getByRole("button", { name: "Confirm", exact: true })
+      .first();
+    if (await confirmButton.isVisible().catch(() => false)) {
+      await confirmButton.click({ timeout: 3000 }).catch(() => {});
+      continue;
+    }
+
+    const answerButton = panelPage.getByRole("button", {
+      name: "Answer",
+      exact: true,
+    });
+    if (await answerButton.isVisible().catch(() => false)) {
+      const question =
+        (await panelPage
+          .getByText(/^What should go in/)
+          .first()
+          .textContent()) ?? "";
+      await panelPage
+        .getByPlaceholder("Your answer")
+        .fill(answerForQuestion(question));
+      await answerButton.click({ timeout: 3000 }).catch(() => {});
+      continue;
+    }
+
+    await panelPage.waitForTimeout(250);
+  }
+
+  throw new Error("Agent did not reach a file question.");
+};
+
 test("files: a saved resume PDF uploads on simple.html", async ({
   context,
   extensionId,
@@ -117,6 +170,38 @@ test("files: a saved resume PDF uploads on simple.html", async ({
     .locator("#resume")
     .evaluate((el) => (el as HTMLInputElement).files?.[0]?.name);
   expect(selectedName).toBe("resume.pdf");
+});
+
+test("files: agent asks for browsing or drag-and-drop when a needed file is missing", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const pdfPath = testInfo.outputPath("resume-from-question.pdf");
+  await writeFixture(
+    pdfPath,
+    new TextEncoder().encode("%PDF-1.4\n% agent-file-question\n"),
+  );
+
+  const formPage = await context.newPage();
+  await formPage.goto("/simple.html");
+
+  const panelPage = await openPanel(context, extensionId);
+  await grantAccess(formPage, panelPage);
+
+  await formPage.bringToFront();
+  await advanceAgentToFileQuestion(panelPage);
+
+  await expect(panelPage.getByText("Browse or drag a file here")).toBeVisible();
+  await expect(panelPage.getByPlaceholder("Your answer")).toHaveCount(0);
+
+  await panelPage.locator('input[type="file"]').setInputFiles(pdfPath);
+  await expect(panelPage.getByText("resume-from-question.pdf")).toBeVisible();
+  await panelPage.getByRole("button", { name: "Answer", exact: true }).click();
+
+  const selectedName = await formPage
+    .locator("#resume")
+    .evaluate((el) => (el as HTMLInputElement).files?.[0]?.name);
+  expect(selectedName).toBe("resume-from-question.pdf");
 });
 
 test("files: an oversized photo is transformed before upload", async ({

@@ -16,6 +16,7 @@ import {
 import { Certainty, isTerminal } from "~/core/agent/types";
 import { confirmDecision, planFill } from "~/core/fill/driver";
 import type { DecisionId, PendingDecision } from "~/core/fill/types";
+import { FieldKind } from "~/core/form/types";
 import { createLogger } from "~/core/logging";
 import { resolve } from "~/core/matching/resolve";
 import { deriveFreshnessHorizon } from "~/core/memory/freshness";
@@ -210,8 +211,37 @@ const toRunView = (snapshot: RunSnapshot): RunView => ({
   phase: snapshot.run.state.phase,
   status: snapshot.run.state.status,
   pendingQuestion: snapshot.run.state.pendingQuestion,
+  pendingInput: pendingInputFor(snapshot),
   review: currentReview(snapshot),
 });
+
+const pendingInputFor = (
+  snapshot: RunSnapshot,
+): RunView["pendingInput"] | undefined => {
+  if (
+    snapshot.run.state.status !== "waiting_for_user" ||
+    snapshot.pendingDecision?.action.type !== "ask_user" ||
+    !snapshot.cursor
+  ) {
+    return undefined;
+  }
+
+  const field = snapshot.fields.find(
+    (candidate) => candidate.id === snapshot.cursor,
+  );
+  if (!field || field.kind !== FieldKind.FILE) return { kind: "text" };
+
+  const accept = field.constraints.find(
+    (constraint) => constraint.kind === "accept",
+  );
+  return {
+    kind: "file",
+    fieldId: field.id,
+    label: field.label,
+    accept: accept?.value,
+    constraints: field.constraints,
+  };
+};
 
 /** Drives a run and persists the result, clearing the snapshot once terminal. */
 const driveAndPersist = async (

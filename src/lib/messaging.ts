@@ -1,8 +1,13 @@
 import { defineExtensionMessaging } from "@webext-core/messaging";
 import type { AgentPhase, AgentStatus } from "~/core/agent/types";
 import type { DecisionId, FieldProposal } from "~/core/fill/types";
-import type { FieldId, Form } from "~/core/form/types";
-import type { MemoryItem, MemoryKey, MemoryValue } from "~/core/memory/types";
+import type { FieldConstraint, FieldId, Form } from "~/core/form/types";
+import type {
+  FileReference,
+  MemoryItem,
+  MemoryKey,
+  MemoryValue,
+} from "~/core/memory/types";
 import type {
   FillFieldPayload,
   UploadFilePayload,
@@ -68,6 +73,15 @@ export interface RunView {
   readonly phase: AgentPhase;
   readonly status: AgentStatus;
   readonly pendingQuestion?: string;
+  readonly pendingInput?:
+    | { readonly kind: "text" }
+    | {
+        readonly kind: "file";
+        readonly fieldId: FieldId;
+        readonly label?: string;
+        readonly accept?: readonly string[];
+        readonly constraints: readonly FieldConstraint[];
+      };
   readonly review: {
     readonly fieldId: FieldId;
     readonly value: string;
@@ -103,7 +117,7 @@ interface Messages {
   // `chrome.storage.session`, see `~/lib/agent-runs`) as far as it can go.
   startRun(data: { tabId: number }): { started: boolean; view: RunView | null };
   getRunState(data: { tabId: number }): { view: RunView | null };
-  answerRunQuestion(data: { tabId: number; value: string }): {
+  answerRunQuestion(data: { tabId: number; value: string | FileReference }): {
     ok: boolean;
     view: RunView | null;
   };

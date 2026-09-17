@@ -710,6 +710,14 @@ const retryAct = async (
         ports,
       );
     }
+    const field = snapshot.fields.find((f) => f.id === fieldId);
+    if (
+      field &&
+      field.kind === FieldKind.FILE &&
+      isFileReference(answered.value)
+    ) {
+      return performFileUpload(snapshot, field, answered.value, ports);
+    }
     return performFill(snapshot, fieldId, String(answered.value), ports);
   }
 
@@ -1012,7 +1020,7 @@ export const drive = async (
 export const answerQuestion = async (
   snapshot: RunSnapshot,
   ports: LoopPorts,
-  value: string,
+  value: string | FileReference,
 ): Promise<RunSnapshot> => {
   if (snapshot.run.state.status !== AgentStatus.WAITING_FOR_USER)
     return snapshot;
@@ -1051,7 +1059,7 @@ export const answerQuestion = async (
   const values = concept
     ? applyValueToMatchedConcept(snapshot, concept.key, {
         value,
-        displayValue: value,
+        displayValue: displayValueOf(value),
         conceptKey: concept.key,
         sensitivity: concept.sensitivity,
         confirmedInRun: true,

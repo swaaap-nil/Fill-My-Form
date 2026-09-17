@@ -467,6 +467,47 @@ describe("loop: ask_user for a known concept with no stored value", () => {
     );
     expect(askSteps).toHaveLength(1);
   });
+
+  it("asks for a file reference and uploads it once answered", async () => {
+    const resumeRef: FileReference = {
+      kind: "file_ref",
+      id: "resume-answer",
+      name: "resume.pdf",
+      mimeType: "application/pdf",
+      sizeBytes: 2048,
+      createdAt: "2026-01-01T00:00:00.000Z",
+    };
+    const page: FakePage = {
+      fields: [
+        makeField({
+          id: "resume",
+          kind: "file",
+          label: "Upload resume",
+          constraints: [{ kind: "accept", value: [".pdf"] }],
+        }),
+      ],
+      values: {},
+    };
+    const ports = buildPorts(page, alwaysAllow);
+
+    let snapshot = createRun(ports, "https://example.com", 1);
+    snapshot = await drive(snapshot, ports);
+
+    expect(snapshot.run.state.status).toBe(AgentStatus.WAITING_FOR_USER);
+    expect(snapshot.run.state.pendingQuestion).toContain("Upload resume");
+
+    snapshot = await answerQuestion(snapshot, ports, resumeRef);
+    snapshot = await drive(snapshot, ports);
+
+    expect(snapshot.run.state.status).toBe(AgentStatus.COMPLETED);
+    expect(page.values.resume).toBe("resume.pdf");
+
+    const stored = await ports.memory.get(
+      DEFAULT_PROFILE_ID,
+      "documents.resume",
+    );
+    expect(stored?.value).toEqual(resumeRef);
+  });
 });
 
 describe("loop: unknown/ambiguous fields are skipped, never asked about", () => {
