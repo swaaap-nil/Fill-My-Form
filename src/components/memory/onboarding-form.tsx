@@ -7,6 +7,7 @@ import { concepts } from "~/core/ontology";
 import { Sensitivity } from "~/core/ontology/types";
 import { createIndexedDbFileReferenceStore } from "~/lib/files/adapters";
 import { sendMessage } from "~/lib/messaging";
+import { useSound } from "~/lib/sfx/react";
 import { LocalDataControls } from "./local-data-controls";
 
 /**
@@ -73,6 +74,7 @@ const groupByPrefix = <T extends { key: string }>(
 };
 
 export const OnboardingForm = () => {
+  const sound = useSound();
   const [values, setValues] = useState<Record<string, string>>({});
   const [fileRefs, setFileRefs] = useState<Record<string, FileReference>>({});
   const [savedKeys, setSavedKeys] = useState<Set<string>>(new Set());
@@ -119,15 +121,22 @@ export const OnboardingForm = () => {
     value: string | FileReference,
     label: string,
     version: number,
-  ) => {
+    playOutcome = true,
+  ): Promise<boolean> => {
     setFieldStatus(key, "saving");
     try {
       await sendMessage("recordOnboardingAnswer", { key, value, label });
-      if (saveVersions.current[key] !== version) return;
+      if (saveVersions.current[key] !== version) return false;
       setSavedKeys((prev) => new Set(prev).add(key));
       setFieldStatus(key, "saved");
+      if (playOutcome) sound.play("onboardingSaveSucceeded");
+      return true;
     } catch {
-      if (saveVersions.current[key] === version) setFieldStatus(key, "error");
+      if (saveVersions.current[key] === version) {
+        setFieldStatus(key, "error");
+        if (playOutcome) sound.play("onboardingSaveFailed");
+      }
+      return false;
     }
   };
 
@@ -157,16 +166,22 @@ export const OnboardingForm = () => {
     saveVersions.current[key] = nextVersion;
     clearTimeout(saveTimers.current[key]);
     setFieldStatus(key, "saving");
+    sound.startLoop(`file-tagging:${key}`, "fileTagging");
+    let saved = false;
 
     try {
       const store = await createIndexedDbFileReferenceStore();
       const ref = await store.save(file);
       setFileRefs((prev) => ({ ...prev, [key]: ref }));
-      await recordField(key, ref, label, nextVersion);
+      saved = await recordField(key, ref, label, nextVersion, false);
     } catch {
-      if (saveVersions.current[key] === nextVersion)
+      if (saveVersions.current[key] === nextVersion) {
         setFieldStatus(key, "error");
+      }
+    } finally {
+      sound.stopLoop(`file-tagging:${key}`);
     }
+    sound.play(saved ? "onboardingSaveSucceeded" : "onboardingSaveFailed");
   };
 
   const renderStatus = (key: string) => {
@@ -210,6 +225,7 @@ export const OnboardingForm = () => {
             value={values[concept.key] ?? ""}
             onChange={(e) => {
               const value = e.target.value;
+              sound.play("onboardingTyping");
               setValues((prev) => ({
                 ...prev,
                 [concept.key]: value,

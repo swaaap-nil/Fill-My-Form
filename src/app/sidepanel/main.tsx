@@ -6,6 +6,7 @@ import { Layout } from "~/components/layout/layout";
 import { OnboardingForm } from "~/components/memory/onboarding-form";
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
+import { useSound } from "~/lib/sfx/react";
 
 /**
  * No tab primitive exists yet in `src/components/ui/`, so this is two
@@ -18,6 +19,13 @@ type View = (typeof View)[keyof typeof View];
 
 const SidePanel = () => {
   const [view, setView] = useState<View>(View.FILL);
+  const sound = useSound();
+
+  const selectView = (nextView: View) => {
+    if (nextView === view) return;
+    setView(nextView);
+    sound.play("sidepanelViewSwitch");
+  };
 
   return (
     <Layout>
@@ -27,7 +35,7 @@ const SidePanel = () => {
             type="button"
             variant={view === View.FILL ? "default" : "ghost"}
             size="sm"
-            onClick={() => setView(View.FILL)}
+            onClick={() => selectView(View.FILL)}
           >
             Current page
           </Button>
@@ -35,7 +43,7 @@ const SidePanel = () => {
             type="button"
             variant={view === View.ONBOARDING ? "default" : "ghost"}
             size="sm"
-            onClick={() => setView(View.ONBOARDING)}
+            onClick={() => selectView(View.ONBOARDING)}
           >
             My information
           </Button>

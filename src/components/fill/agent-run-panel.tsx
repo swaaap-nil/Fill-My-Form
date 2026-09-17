@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { AgentStatus } from "~/core/agent/types";
 import type { RunView } from "~/lib/messaging";
 import { sendMessage } from "~/lib/messaging";
+import { useSound } from "~/lib/sfx/react";
 
 /**
  * The Phase 2 agent loop, alongside (not replacing) the straight-line
@@ -21,17 +22,47 @@ interface AgentRunPanelProps {
 }
 
 export const AgentRunPanel = ({ tabId }: AgentRunPanelProps) => {
+  const sound = useSound();
   const [view, setView] = useState<RunView | null>(null);
   const [answer, setAnswer] = useState("");
   const [busy, setBusy] = useState(false);
+  const lastAttentionRunId = useRef<string | null>(null);
+
+  const playRunStateCue = (nextView: RunView | null) => {
+    if (!nextView) return;
+    if (nextView.status === AgentStatus.COMPLETED) {
+      sound.play("agentCompleted");
+      return;
+    }
+    if (nextView.status === AgentStatus.FAILED) {
+      sound.play("agentFailed");
+      return;
+    }
+    if (
+      nextView.status === AgentStatus.WAITING_FOR_USER &&
+      lastAttentionRunId.current !== nextView.runId
+    ) {
+      lastAttentionRunId.current = nextView.runId;
+      sound.play("agentNeedsAttention");
+    }
+  };
 
   const start = async () => {
     if (tabId === undefined) return;
     setBusy(true);
+    sound.startLoop("agent-run", "agentBusy");
     try {
       const result = await sendMessage("startRun", { tabId });
       setView(result.view);
+      sound.stopLoop("agent-run");
+      if (result.started) sound.play("agentStarted");
+      else sound.play("scanBlocked");
+      playRunStateCue(result.view);
+    } catch {
+      sound.stopLoop("agent-run");
+      sound.play("agentFailed");
     } finally {
+      sound.stopLoop("agent-run");
       setBusy(false);
     }
   };
@@ -39,6 +70,7 @@ export const AgentRunPanel = ({ tabId }: AgentRunPanelProps) => {
   const submitAnswer = async () => {
     if (tabId === undefined || busy || !answer.trim()) return;
     setBusy(true);
+    sound.startLoop("agent-run", "agentBusy");
     try {
       const result = await sendMessage("answerRunQuestion", {
         tabId,
@@ -46,7 +78,14 @@ export const AgentRunPanel = ({ tabId }: AgentRunPanelProps) => {
       });
       setView(result.view);
       setAnswer("");
+      sound.stopLoop("agent-run");
+      sound.play(result.ok ? "agentAnswerSent" : "agentFailed");
+      playRunStateCue(result.view);
+    } catch {
+      sound.stopLoop("agent-run");
+      sound.play("agentFailed");
     } finally {
+      sound.stopLoop("agent-run");
       setBusy(false);
     }
   };
@@ -54,10 +93,24 @@ export const AgentRunPanel = ({ tabId }: AgentRunPanelProps) => {
   const respondToReview = async (approve: boolean) => {
     if (tabId === undefined) return;
     setBusy(true);
+    sound.startLoop("agent-run", "agentBusy");
     try {
       const result = await sendMessage("confirmRunReview", { tabId, approve });
       setView(result.view);
+      sound.stopLoop("agent-run");
+      sound.play(
+        result.ok
+          ? approve
+            ? "agentReviewConfirmed"
+            : "agentReviewSkipped"
+          : "agentFailed",
+      );
+      playRunStateCue(result.view);
+    } catch {
+      sound.stopLoop("agent-run");
+      sound.play("agentFailed");
     } finally {
+      sound.stopLoop("agent-run");
       setBusy(false);
     }
   };

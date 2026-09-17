@@ -6,6 +6,7 @@ import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import type { DecisionId, FieldProposal } from "~/lib/messaging";
 import { sendMessage } from "~/lib/messaging";
+import { useSound } from "~/lib/sfx/react";
 import { siteAccess } from "~/lib/site-access";
 import { AgentRunPanel } from "./agent-run-panel";
 import { ProposalCard } from "./proposal-card";
@@ -98,6 +99,7 @@ const ProposalSummaryCard = ({
 };
 
 export const FillPanel = () => {
+  const sound = useSound();
   const [scanState, setScanState] = useState<ScanState>({ kind: "idle" });
   const [proposalView, setProposalView] = useState<ProposalView>("summary");
   const [scanVersion, setScanVersion] = useState(0);
@@ -159,6 +161,7 @@ export const FillPanel = () => {
   }, [refreshAccessState, applyActiveTab]);
 
   const scan = async () => {
+    sound.startLoop("scan-page", "scanStarted");
     // The user gesture that fires this handler is what makes
     // `permissions.request()` (inside `siteAccess.requestSiteAccess`)
     // valid — it must run here, synchronously reachable from the click,
@@ -172,6 +175,8 @@ export const FillPanel = () => {
     // `requestSiteAccess` itself when access is missing.
     if (activeTabId === undefined || activeTabUrl === undefined) {
       setScanState({ kind: "not_granted" });
+      sound.stopLoop("scan-page");
+      sound.play("scanBlocked");
       return;
     }
 
@@ -184,6 +189,8 @@ export const FillPanel = () => {
         await refreshAccessState();
         if (!granted) {
           setScanState({ kind: "not_granted" });
+          sound.stopLoop("scan-page");
+          sound.play("scanBlocked");
           return;
         }
       }
@@ -192,37 +199,61 @@ export const FillPanel = () => {
       if (!result.granted) {
         setActiveTabGranted(false);
         setScanState({ kind: "not_granted" });
+        sound.stopLoop("scan-page");
+        sound.play("scanBlocked");
         return;
       }
       setConfirmedIds(new Set());
       setProposalView("summary");
       setScanVersion((version) => version + 1);
       setScanState({ kind: "proposals", proposals: result.proposals });
+      sound.stopLoop("scan-page");
+      sound.play("scanSucceeded");
     } catch {
       // No content script reachable in this tab, or the permission request
       // failed. Same recovery as an outright missing grant: explain that
       // access is required and let the next scan click try again.
       setActiveTabGranted(false);
       setScanState({ kind: "not_granted" });
+      sound.stopLoop("scan-page");
+      sound.play("scanFailed");
     }
   };
 
   const revoke = async (origin: string) => {
-    await siteAccess.revokeSiteAccess(origin);
-    // Revoking the active tab's own origin must clear stale proposals
-    // immediately, not just drop it from the granted-origins list.
-    setScanState({ kind: "idle" });
-    await refreshAccessState();
+    try {
+      await siteAccess.revokeSiteAccess(origin);
+      // Revoking the active tab's own origin must clear stale proposals
+      // immediately, not just drop it from the granted-origins list.
+      setScanState({ kind: "idle" });
+      await refreshAccessState();
+      sound.play("accessRevoked");
+    } catch {
+      sound.play("scanFailed");
+    }
   };
 
   const confirm = async (decisionIds: readonly DecisionId[]) => {
-    if (activeTabId === undefined) return;
-    const { results } = await sendMessage("confirmFill", {
-      decisionIds,
-      tabId: activeTabId,
-    });
-    const ok = new Set(results.filter((r) => r.ok).map((r) => r.decisionId));
-    setConfirmedIds((prev) => new Set([...prev, ...ok]));
+    if (activeTabId === undefined || decisionIds.length === 0) {
+      sound.play("fillFailed");
+      return;
+    }
+    sound.startLoop("confirm-fill", "fillStarted");
+    let outcome: "fillSucceeded" | "fillFailed" = "fillFailed";
+    try {
+      const { results } = await sendMessage("confirmFill", {
+        decisionIds,
+        tabId: activeTabId,
+      });
+      const ok = new Set(results.filter((r) => r.ok).map((r) => r.decisionId));
+      setConfirmedIds((prev) => new Set([...prev, ...ok]));
+      outcome = ok.size > 0 ? "fillSucceeded" : "fillFailed";
+    } catch {
+      outcome = "fillFailed";
+    } finally {
+      sound.stopLoop("confirm-fill");
+    }
+    sound.play(outcome);
   };
 
   const pendingDecisionIds: DecisionId[] =
@@ -288,7 +319,10 @@ export const FillPanel = () => {
             variant="ghost"
             size="sm"
             className="self-start"
-            onClick={() => setProposalView("summary")}
+            onClick={() => {
+              setProposalView("summary");
+              sound.play("proposalDetailsClosed");
+            }}
           >
             <ChevronLeft className="size-4" />
             Back
@@ -310,7 +344,10 @@ export const FillPanel = () => {
         scanState.kind === "proposals" && (
           <ProposalSummaryCard
             count={pendingDecisionIds.length}
-            onOpenDetails={() => setProposalView("details")}
+            onOpenDetails={() => {
+              setProposalView("details");
+              sound.play("proposalDetailsOpened");
+            }}
             onFill={() => confirm(pendingDecisionIds)}
           />
         )

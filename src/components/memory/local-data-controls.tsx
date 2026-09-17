@@ -5,6 +5,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { sendMessage } from "~/lib/messaging";
+import { useSound } from "~/lib/sfx/react";
 
 const WIPE_CONFIRMATION = "delete my data";
 
@@ -27,45 +28,63 @@ export const LocalDataControls = ({
 }: {
   readonly onDataChanged: () => void;
 }) => {
+  const sound = useSound();
   const fileInput = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState("");
   const [confirmingWipe, setConfirmingWipe] = useState(false);
   const [wipeText, setWipeText] = useState("");
 
   const exportData = async () => {
-    const { data } = await sendMessage("exportLocalData", undefined);
-    const blob = new Blob([JSON.stringify(data, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `fill-my-form-data-${data.exportedAt.slice(0, 10)}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-    setStatus(message("localDataExported"));
+    try {
+      const { data } = await sendMessage("exportLocalData", undefined);
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `fill-my-form-data-${data.exportedAt.slice(0, 10)}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      setStatus(message("localDataExported"));
+      sound.play("localDataExported");
+    } catch {
+      sound.play("localDataImportFailed");
+    }
   };
 
   const importData = async (file: File | undefined) => {
     if (!file) return;
-    const payload = JSON.parse(await file.text()) as unknown;
-    const result = await sendMessage("importLocalData", { payload });
-    setStatus(
-      result.ok
-        ? message("localDataImported")
-        : message("localDataImportFailed"),
-    );
-    if (result.ok) onDataChanged();
-    if (fileInput.current) fileInput.current.value = "";
+    try {
+      const payload = JSON.parse(await file.text()) as unknown;
+      const result = await sendMessage("importLocalData", { payload });
+      setStatus(
+        result.ok
+          ? message("localDataImported")
+          : message("localDataImportFailed"),
+      );
+      sound.play(result.ok ? "localDataImported" : "localDataImportFailed");
+      if (result.ok) onDataChanged();
+    } catch {
+      setStatus(message("localDataImportFailed"));
+      sound.play("localDataImportFailed");
+    } finally {
+      if (fileInput.current) fileInput.current.value = "";
+    }
   };
 
   const wipeData = async () => {
     if (wipeText !== WIPE_CONFIRMATION) return;
-    await sendMessage("wipeLocalData", undefined);
-    setConfirmingWipe(false);
-    setWipeText("");
-    setStatus(message("localDataDeleted"));
-    onDataChanged();
+    try {
+      await sendMessage("wipeLocalData", undefined);
+      setConfirmingWipe(false);
+      setWipeText("");
+      setStatus(message("localDataDeleted"));
+      onDataChanged();
+      sound.play("localDataWiped");
+    } catch {
+      sound.play("localDataWipeFailed");
+    }
   };
 
   return (
@@ -88,7 +107,10 @@ export const LocalDataControls = ({
           type="button"
           size="sm"
           variant="destructive"
-          onClick={() => setConfirmingWipe(true)}
+          onClick={() => {
+            setConfirmingWipe(true);
+            sound.play("wipePromptOpened");
+          }}
         >
           <Trash2 className="size-4" />
           {message("localDataWipe")}
@@ -125,7 +147,10 @@ export const LocalDataControls = ({
               type="button"
               size="sm"
               variant="outline"
-              onClick={() => setConfirmingWipe(false)}
+              onClick={() => {
+                setConfirmingWipe(false);
+                sound.play("wipePromptCancelled");
+              }}
             >
               {message("localDataCancel")}
             </Button>

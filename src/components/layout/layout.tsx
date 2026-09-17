@@ -5,6 +5,7 @@ import { Suspense } from "~/components/common/suspense";
 import { Footer } from "~/components/layout/footer";
 import { Header } from "~/components/layout/header";
 import { Toaster } from "~/components/ui/sonner";
+import { SoundProvider } from "~/lib/sfx/react";
 import { cn } from "~/lib/utils";
 import "~/assets/styles/globals.css";
 
@@ -28,7 +29,9 @@ export const Layout = ({
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary fallback={errorFallback}>
         <Suspense fallback={loadingFallback}>
-          <LayoutContent className={className}>{children}</LayoutContent>
+          <SoundProvider>
+            <LayoutContent className={className}>{children}</LayoutContent>
+          </SoundProvider>
         </Suspense>
       </ErrorBoundary>
     </QueryClientProvider>
