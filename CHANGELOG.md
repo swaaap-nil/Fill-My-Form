@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.2.0](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.1.1...v1.2.0) (2026-09-17)
+
+
+### Features
+
+* add file upload prompts to agent run ([67e7a9e](https://github.com/swaaap-nil/Fill-My-Form/commit/67e7a9ea6fa0ef679c92147993f3a81e8413cb7e))
+* add fill feedback animations ([08b787e](https://github.com/swaaap-nil/Fill-My-Form/commit/08b787e5b04f50ad7a6061f47765c0951f4bf4d2))
+* add passport country and Twitter profile aliases ([573a4ba](https://github.com/swaaap-nil/Fill-My-Form/commit/573a4ba8e2a6ba022ec81d0bf84c64fff1b5ebfb))
+* add semantic UI sound effects ([68358bb](https://github.com/swaaap-nil/Fill-My-Form/commit/68358bbb49f4e6e6a43a8eca6b1d410d780786c7))
+* collapse known field proposals ([0f35f22](https://github.com/swaaap-nil/Fill-My-Form/commit/0f35f22e72735a4227cdbcbbd02e9fb212294bdc))
+* fold site access into scan action ([e9e07eb](https://github.com/swaaap-nil/Fill-My-Form/commit/e9e07ebb27a354525ba84e5d0ecf78e0a533ac25))
+* improve side panel fill workflow UX ([0bc77de](https://github.com/swaaap-nil/Fill-My-Form/commit/0bc77de9581d6fed55fc5250723535521a0267db))
+* make summary cards feel clickable ([0d8f19a](https://github.com/swaaap-nil/Fill-My-Form/commit/0d8f19af8daa47855df0d2cc4ba902cc194781e9))
+
+
+### Bug Fixes
+
+* restore unpacked permission prompt ([ac59d15](https://github.com/swaaap-nil/Fill-My-Form/commit/ac59d150bdbd7da962a604adee8e5c9e30332f3a))
+
 ## [1.1.1](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.1.0...v1.1.1) (2026-09-15)
 
 
