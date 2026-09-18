@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import { browser } from "wxt/browser";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { formatBytes } from "~/core/files/byte-units";
 import type {
   FileInspection,
   PreparationSpec,
@@ -41,12 +42,6 @@ const PRESETS = {
 } as const;
 
 type Preset = keyof typeof PRESETS;
-
-const formatBytes = (bytes: number) => {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-};
 
 export const FilePreparationTool = () => {
   const [store, setStore] = useState<FileReferenceStore>();

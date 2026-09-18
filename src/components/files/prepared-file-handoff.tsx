@@ -9,17 +9,12 @@ import {
 } from "lucide-react";
 import { type DragEvent, useEffect, useState } from "react";
 import { Button } from "~/components/ui/button";
+import { formatBytes } from "~/core/files/byte-units";
 import type { PreparedArtifact } from "~/core/files/preparation";
 import type { FileReferenceStore } from "~/lib/files/adapters";
 import { cn } from "~/lib/utils";
 
 type DragState = "loading" | "ready" | "dragging" | "finished" | "failed";
-
-const formatBytes = (bytes: number) => {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-};
 
 const formatExpiry = (expiresAt?: string) => {
   if (!expiresAt) return "temporary copy";
