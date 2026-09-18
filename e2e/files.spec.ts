@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { deflateSync } from "node:zlib";
-import type { Page } from "@playwright/test";
+import type { BrowserContext, Page } from "@playwright/test";
 import { expect, test } from "./fill-fixtures";
 import {
   grantAccess,
@@ -91,6 +91,18 @@ const answerForQuestion = (question: string): string => {
   if (question.includes("College")) return "Example College";
   if (question.includes("Last name")) return "Rao";
   return "Ananya";
+};
+
+/**
+ * The editor runs in its own extension window. Match it by URL rather than
+ * taking the next `page` event: the popup is not necessarily the only page the
+ * context opens, and a mis-matched one fails far from the cause.
+ */
+const waitForEditorPage = async (context: BrowserContext): Promise<Page> => {
+  const isEditor = (page: Page) => page.url().includes("editor.html");
+  const existing = context.pages().find(isEditor);
+  if (existing) return existing;
+  return context.waitForEvent("page", { predicate: isEditor });
 };
 
 const advanceAgentToFileQuestion = async (panelPage: Page) => {
@@ -319,4 +331,86 @@ test("files: the aspect lock derives the other dimension", async ({
   await expect(panelPage.getByLabel("Height", { exact: true })).toHaveValue(
     "500",
   );
+});
+
+test("files: the editor window opens and its crop cannot leave the image", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const photoPath = testInfo.outputPath("editor-photo.png");
+  await writeFixture(photoPath, png(640, 480));
+
+  const panelPage = await openPanel(context, extensionId);
+  await panelPage.getByRole("button", { name: "Prepare file" }).click();
+  await panelPage.locator('input[type="file"]').setInputFiles(photoPath);
+  await expect(panelPage.getByText("editor-photo.png")).toBeVisible();
+
+  await panelPage.getByRole("button", { name: "Edit image" }).click();
+  const editorPage = await waitForEditorPage(context);
+  await editorPage.waitForLoadState("domcontentloaded");
+
+  await expect(editorPage.getByTestId("editor-root")).toBeVisible();
+  await expect(
+    editorPage.getByRole("button", { name: "Apply crop" }),
+  ).toBeVisible();
+
+  const stage = editorPage.locator("cropper-canvas");
+  await expect(stage).toBeVisible();
+
+  // The regression test for the reported bug. Drag the selection hard past the
+  // top-left of the picture; it must stay inside it. Before the clamp, the box
+  // could be pulled off the image and the export gained blank strips.
+  const box = await stage.boundingBox();
+  if (!box) throw new Error("The crop stage did not render.");
+  await editorPage.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await editorPage.mouse.down();
+  await editorPage.mouse.move(box.x - 600, box.y - 600, { steps: 12 });
+  await editorPage.mouse.up();
+
+  const containment = await editorPage.evaluate(() => {
+    const image = document.querySelector("cropper-image");
+    const selection = document.querySelector("cropper-selection");
+    if (!image || !selection) return undefined;
+    const imageRect = image.getBoundingClientRect();
+    const selectionRect = selection.getBoundingClientRect();
+    return {
+      left: selectionRect.left - imageRect.left,
+      top: selectionRect.top - imageRect.top,
+      right: imageRect.right - selectionRect.right,
+      bottom: imageRect.bottom - selectionRect.bottom,
+    };
+  });
+  if (!containment) throw new Error("The cropper elements did not render.");
+
+  // A pixel of slack for sub-pixel layout rounding.
+  expect(containment.left).toBeGreaterThan(-1);
+  expect(containment.top).toBeGreaterThan(-1);
+  expect(containment.right).toBeGreaterThan(-1);
+  expect(containment.bottom).toBeGreaterThan(-1);
+
+  await editorPage.getByRole("button", { name: "Apply crop" }).click();
+  await expect(panelPage.getByText("Ready to upload")).toBeVisible();
+});
+
+test("files: cancelling the editor leaves the panel untouched", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const photoPath = testInfo.outputPath("cancel-photo.png");
+  await writeFixture(photoPath, png(320, 240));
+
+  const panelPage = await openPanel(context, extensionId);
+  await panelPage.getByRole("button", { name: "Prepare file" }).click();
+  await panelPage.locator('input[type="file"]').setInputFiles(photoPath);
+  await expect(panelPage.getByText("cancel-photo.png")).toBeVisible();
+
+  await panelPage.getByRole("button", { name: "Edit image" }).click();
+  const editorPage = await waitForEditorPage(context);
+  await editorPage.waitForLoadState("domcontentloaded");
+  await editorPage.getByRole("button", { name: "Cancel" }).click();
+
+  await expect(panelPage.getByText("Ready to upload")).toHaveCount(0);
+  await expect(
+    panelPage.getByRole("button", { name: "Prepare temporary copy" }),
+  ).toBeVisible();
 });

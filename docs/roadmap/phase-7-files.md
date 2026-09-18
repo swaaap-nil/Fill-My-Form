@@ -42,6 +42,14 @@ making that literally true took three things that did not exist at first:
   to downscaling in 0.85 steps down to a 64px floor. Sizing is therefore a negotiation between
   dimensions and bytes, and the result reports which lever moved.
 
+**Cropping needs a window, not a panel.** Chrome frames the side panel, so a dialog inside it is
+clipped to the panel's width — the reason the first cropper was a 176px-tall strip whose selection
+could be dragged clean off the image. The editor is now a separate extension window
+(`src/app/editor`), handing its result back through `chrome.storage.session`. Cropper.js v2 has no
+bounding option of its own, so the selection is clamped by refusing out-of-bounds `change` events
+against `rectContains` — a rule that lives in `src/core/files/geometry.ts` and is unit-tested
+without a browser. See [architecture.md](../architecture.md) for the window handshake.
+
 **Prepared output explains itself.** `PreparedArtifact.validation` carries what actually happened
 — the crop applied, the encoder quality chosen, how many downscale steps were needed, the DPI
 written — rather than a fixed list of reassurances. A failure names the lever that ran out, so

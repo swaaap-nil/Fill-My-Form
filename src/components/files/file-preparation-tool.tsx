@@ -6,7 +6,7 @@ import {
   LoaderCircle,
   RefreshCcw,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { browser } from "wxt/browser";
 import { Button } from "~/components/ui/button";
 import { formatBytes } from "~/core/files/byte-units";
@@ -20,6 +20,17 @@ import {
   createIndexedDbFileReferenceStore,
   type FileReferenceStore,
 } from "~/lib/files/adapters";
+import {
+  clearEditorSession,
+  loadEditorSession,
+  purgeStaleEditorSessions,
+  updateEditorSession,
+  watchEditorSession,
+} from "~/lib/files/editor-session";
+import {
+  focusPreparationEditor,
+  openPreparationEditor,
+} from "~/lib/files/editor-window";
 import { createBrowserFilePreparationRegistry } from "~/lib/files/preparation-registry";
 import { cn } from "~/lib/utils";
 import { PreparationSettings } from "./preparation-settings";
@@ -42,14 +53,23 @@ export const FilePreparationTool = () => {
   const [preparedUrl, setPreparedUrl] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const [editing, setEditing] = useState<{
+    sessionId: string;
+    windowId?: number;
+  }>();
+  const editorWatch = useRef<(() => void) | null>(null);
 
   const settings = usePreparationSettings(inspection);
+  const { setValues } = settings;
 
   useEffect(() => {
     let active = true;
     void storePromise.then((nextStore) => {
       if (active) setStore(nextStore);
     });
+    // Sessions whose window is gone, or that were left open while the panel
+    // was closed, have nothing coming back for them.
+    void purgeStaleEditorSessions();
     return () => {
       active = false;
     };
@@ -62,6 +82,88 @@ export const FilePreparationTool = () => {
     },
     [preparedUrl, sourceUrl],
   );
+
+  useEffect(() => () => editorWatch.current?.(), []);
+
+  /**
+   * The editor window's result comes back through `storage.session`. The panel
+   * may have been closed when it was written, so this also reconciles whatever
+   * the session already says rather than relying on catching the change live.
+   */
+  const adoptEditorResult = useCallback(
+    async (sessionId: string) => {
+      const session = await loadEditorSession(sessionId);
+      if (!session || session.status === "open") return;
+
+      if (session.status === "saved" && session.derivedId) {
+        const store = await storePromise;
+        const record = await store.get(session.derivedId);
+        if (record) {
+          if (preparedUrl) URL.revokeObjectURL(preparedUrl);
+          setPrepared({
+            original: original ?? record.ref,
+            derived: record.ref,
+            blob: record.blob,
+            name: record.ref.name,
+            mimeType: record.ref.mimeType,
+            sizeBytes: record.ref.sizeBytes,
+            transformed: true,
+            inspection: {
+              kind: "image",
+              name: record.ref.name,
+              mimeType: record.ref.mimeType,
+              sizeBytes: record.ref.sizeBytes,
+            },
+            validation: ["Prepared in the image editor"],
+          });
+          setPreparedUrl(URL.createObjectURL(record.blob));
+          setValues(session.values);
+        }
+      } else if (session.status === "failed") {
+        setError(session.reason ?? "The image editor could not finish.");
+      }
+
+      editorWatch.current?.();
+      editorWatch.current = null;
+      setEditing(undefined);
+      await clearEditorSession(sessionId);
+    },
+    [storePromise, preparedUrl, original, setValues],
+  );
+
+  const openEditor = async () => {
+    if (!original) return;
+    // A second click focuses the window that is already open rather than
+    // opening a rival copy of the same edit.
+    if (editing?.windowId !== undefined) {
+      if (await focusPreparationEditor(editing.windowId)) return;
+    }
+    setError(undefined);
+    const opened = await openPreparationEditor({
+      originalId: original.id,
+      values: settings.values,
+    });
+    setEditing(opened);
+
+    editorWatch.current?.();
+    editorWatch.current = watchEditorSession(opened.sessionId, (session) => {
+      if (session.status !== "open") void adoptEditorResult(opened.sessionId);
+    });
+
+    // The guarantee behind the editor's best-effort `pagehide` write: if the
+    // window is closed with the X, the panel notices and closes the session
+    // itself.
+    if (opened.windowId !== undefined) {
+      const onRemoved = (closedId: number) => {
+        if (closedId !== opened.windowId) return;
+        browser.windows.onRemoved.removeListener(onRemoved);
+        void updateEditorSession(opened.sessionId, {
+          status: "cancelled",
+        }).then(() => adoptEditorResult(opened.sessionId));
+      };
+      browser.windows.onRemoved.addListener(onRemoved);
+    }
+  };
 
   const selectFile = async (file: File | undefined) => {
     if (!file) return;
@@ -255,11 +357,10 @@ export const FilePreparationTool = () => {
                   variant="outline"
                   size="sm"
                   className="w-fit font-normal"
-                  disabled
-                  title="The full editor arrives in the next change"
+                  onClick={() => void openEditor()}
                 >
                   <Crop className="size-3.5" />
-                  Edit image
+                  {editing ? "Editing in window" : "Edit image"}
                 </Button>
               </div>
             </div>

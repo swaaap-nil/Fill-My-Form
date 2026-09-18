@@ -6,7 +6,7 @@ Dependencies point inward. `src/core` is the domain; everything else depends on
 it and it depends on nothing.
 
 ```
-  src/app          WXT entrypoints (background, sidepanel, content, popup)
+  src/app          WXT entrypoints (background, sidepanel, content, editor, options)
   src/components   React
         │
         ▼
@@ -80,6 +80,38 @@ Everything DOM-shaped is an adapter outside `src/core`:
 
 The pattern is the same each time: `src/core` declares the interface, `src/lib`
 or an entrypoint implements it, and composition happens at the top.
+
+### The image editor is its own window
+
+`src/app/editor` is a second user-facing surface, and it exists for a reason
+worth writing down: **Chrome renders the side panel inside a frame it controls,
+so nothing the panel draws can escape it.** A modal there is still a few hundred
+pixels wide, which is no use for framing a photo. The editor is therefore a
+separate extension window (`windows.create({ type: "popup" })`), sized properly.
+It needs no new permission — `chrome.windows` requires none.
+
+Two documents then have to agree on what is being edited and what came back:
+
+- **Only identifiers cross.** The original is already in the shared
+  `form-agent-files` IndexedDB and both documents are the same extension
+  origin, so the handshake carries its id. A blob URL would not work — those are
+  scoped to the document that created them.
+- **The rendezvous is `chrome.storage.session`, not messaging.**
+  `runtime.sendMessage` is point-to-point and rejects when no receiver exists,
+  and there is no receiver exactly when it matters: the side panel closes as
+  soon as the user clicks the editor window, which is the first thing opening it
+  asks them to do. A result posted to a closed panel would vanish. Storage has
+  the right lifetime, and `onChanged` fires in every context — including a panel
+  that opens *after* the write, so the live path and the reconcile-on-mount path
+  are one piece of code.
+- **The rules are in core.** `src/core/files/editor-session.ts` holds the status
+  machine and staleness; `src/lib/files/editor-session.ts` is the storage
+  adapter. Same split as `agent-runs`.
+
+A window that is closed with the X still has to settle its session. The editor
+writes `cancelled` on `pagehide` as a best effort, but the guarantee is the
+panel's `windows.onRemoved` listener, with an age backstop for when the panel
+was closed too.
 
 ## What is deliberately absent
 

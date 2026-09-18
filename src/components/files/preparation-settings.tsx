@@ -39,6 +39,9 @@ export const PreparationSettings = ({
   readonly className?: string;
 }) => {
   const { values, setValue, setDimension, setLengthUnit, setPreset } = settings;
+  // The rail is about 20rem wide, so two-word labels wrap and "Optional"
+  // truncates to "Opt". Shorter wording beats a cramped column.
+  const isRail = layout === "rail";
   const isImage = inspection.kind === "image";
   const outputMimeType =
     values.format === "keep" ? inspection.mimeType : values.format;
@@ -204,14 +207,16 @@ export const PreparationSettings = ({
             htmlFor="prepare-max-size"
             className="flex min-w-0 flex-1 flex-col gap-1 text-xs"
           >
-            <span className="text-muted-foreground">Max file size</span>
+            <span className="text-muted-foreground">
+              {isRail ? "Max size" : "Max file size"}
+            </span>
             <Input
               id="prepare-max-size"
               type="number"
               min="0"
               step="any"
               inputMode="decimal"
-              placeholder="Optional"
+              placeholder={isRail ? "Any" : "Optional"}
               value={values.maxSizeValue}
               onChange={(event) => setValue("maxSizeValue", event.target.value)}
             />
@@ -230,14 +235,16 @@ export const PreparationSettings = ({
             htmlFor="prepare-min-size"
             className="flex min-w-0 flex-1 flex-col gap-1 text-xs"
           >
-            <span className="text-muted-foreground">Min file size</span>
+            <span className="text-muted-foreground">
+              {isRail ? "Min size" : "Min file size"}
+            </span>
             <Input
               id="prepare-min-size"
               type="number"
               min="0"
               step="any"
               inputMode="decimal"
-              placeholder="Optional"
+              placeholder={isRail ? "Any" : "Optional"}
               value={values.minSizeValue}
               onChange={(event) => setValue("minSizeValue", event.target.value)}
             />
