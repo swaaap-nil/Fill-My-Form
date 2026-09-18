@@ -261,3 +261,62 @@ test("files: standalone preparation tool creates a temporary image copy", async 
     panelPage.getByRole("link", { name: "Download prepared copy" }),
   ).toBeVisible();
 });
+
+test("files: physical units and a size limit in MB reach the prepared copy", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const photoPath = testInfo.outputPath("units-photo.png");
+  await writeFixture(photoPath, png(640, 480));
+
+  const panelPage = await openPanel(context, extensionId);
+  await panelPage.getByRole("button", { name: "Prepare file" }).click();
+  await panelPage.locator('input[type="file"]').setInputFiles(photoPath);
+  await expect(panelPage.getByText("units-photo.png")).toBeVisible();
+
+  // A preset states its requirement in the unit the paperwork uses. The
+  // conversion to pixels is the thing worth pinning: it only works because a
+  // DPI is carried alongside the millimetres.
+  await panelPage.getByRole("combobox", { name: "Preset" }).click();
+  await panelPage.getByRole("option", { name: "Passport / ID photo" }).click();
+  await expect(
+    panelPage.getByText("35 × 45 mm at 300 DPI = 413 × 531 px"),
+  ).toBeVisible();
+
+  // The limit is expressible in MB, which the old KB-only field could not do.
+  await panelPage.getByLabel("Max file size").fill("2");
+  await panelPage.getByRole("combobox").nth(3).click();
+  await panelPage.getByRole("option", { name: "MB", exact: true }).click();
+
+  await panelPage
+    .getByRole("button", { name: "Prepare temporary copy" })
+    .click();
+  await expect(panelPage.getByText("Ready to upload")).toBeVisible();
+  await expect(
+    panelPage.getByText("Drag this passport / id photo to your form"),
+  ).toBeVisible();
+  await expect(panelPage.getByText("413 × 531px")).toBeVisible();
+});
+
+test("files: the aspect lock derives the other dimension", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const photoPath = testInfo.outputPath("lock-photo.png");
+  await writeFixture(photoPath, png(640, 480));
+
+  const panelPage = await openPanel(context, extensionId);
+  await panelPage.getByRole("button", { name: "Prepare file" }).click();
+  await panelPage.locator('input[type="file"]').setInputFiles(photoPath);
+  await expect(panelPage.getByText("lock-photo.png")).toBeVisible();
+
+  await panelPage.getByRole("checkbox", { name: "Lock aspect ratio" }).click();
+  await panelPage.getByRole("textbox", { name: "Aspect ratio" }).fill("4:5");
+  await panelPage.getByLabel("Width", { exact: true }).fill("400");
+
+  // Typing one side fills the other. Without the lock the export would keep
+  // the source's own height and silently stretch the image.
+  await expect(panelPage.getByLabel("Height", { exact: true })).toHaveValue(
+    "500",
+  );
+});
