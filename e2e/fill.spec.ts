@@ -84,7 +84,7 @@ test("propose: scanning shows every field's proposal and fills nothing", async (
   await panelPage.getByRole("button", { name: "Scan this page" }).click();
 
   await expect(panelPage.getByText("1 answer detected")).toBeVisible();
-  await expect(panelPage.getByText("Last scanned just now")).toBeVisible();
+  await expect(panelPage.getByText(/^Last scanned .+/)).toBeVisible();
   await expect(
     panelPage.getByRole("button", { name: "Rescan page" }),
   ).toBeVisible();
@@ -315,7 +315,7 @@ test("privacy: fixture fills make no outbound network requests", async ({
   await expect(panelPage.getByText("Filled from last scan")).toBeVisible();
   await formPage.bringToFront();
   await panelPage.getByRole("button", { name: "Scan again" }).click();
-  await expect(panelPage.getByText("Last scanned just now")).toBeVisible();
+  await expect(panelPage.getByText(/^Last scanned .+/)).toBeVisible();
   await expect(panelPage.getByText("3 answers detected")).toBeVisible();
   await expect(panelPage.getByText("3 answers filled")).toBeHidden();
 

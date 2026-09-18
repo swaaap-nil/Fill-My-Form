@@ -130,6 +130,36 @@ const formatGrantedOrigin = (origin: string) => {
   }
 };
 
+const formatScanTimestamp = (scannedAt: Date | undefined) => {
+  if (!scannedAt) return "Last scanned";
+
+  const elapsedSeconds = Math.max(
+    0,
+    Math.floor((Date.now() - scannedAt.getTime()) / 1000),
+  );
+  const formatter = new Intl.RelativeTimeFormat(undefined, {
+    numeric: "always",
+    style: "long",
+  });
+
+  if (elapsedSeconds < 60) {
+    return `Last scanned ${formatter.format(-elapsedSeconds, "second")}`;
+  }
+
+  const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+  if (elapsedMinutes < 60) {
+    return `Last scanned ${formatter.format(-elapsedMinutes, "minute")}`;
+  }
+
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
+  if (elapsedHours < 24) {
+    return `Last scanned ${formatter.format(-elapsedHours, "hour")}`;
+  }
+
+  const elapsedDays = Math.floor(elapsedHours / 24);
+  return `Last scanned ${formatter.format(-elapsedDays, "day")}`;
+};
+
 const SummaryCardShell = ({
   testId,
   onOpenDetails,
@@ -191,11 +221,13 @@ const SummaryCardShell = ({
 const ScanToolbar = ({
   state,
   grantedOrigin,
+  scannedAt,
   onScan,
   onRevoke,
 }: {
   readonly state: ScanUiState;
   readonly grantedOrigin: string | undefined;
+  readonly scannedAt: Date | undefined;
   readonly onScan: () => void;
   readonly onRevoke: (origin: string) => void;
 }) => {
@@ -210,7 +242,9 @@ const ScanToolbar = ({
           ? "Scan again"
           : "Scan this page";
   const statusLabel =
-    state === "filled" ? "Filled from last scan" : "Last scanned just now";
+    state === "filled"
+      ? "Filled from last scan"
+      : formatScanTimestamp(scannedAt);
 
   return (
     <div className="flex min-h-[5.25rem] flex-col justify-center gap-2 rounded-lg border border-border bg-card p-3 shadow-sm shadow-black/5 transition-all duration-300 ease-out motion-reduce:transition-none dark:shadow-black/20">
@@ -627,6 +661,8 @@ export const FillPanel = () => {
   const [confirmedIds, setConfirmedIds] = useState<Set<DecisionId>>(new Set());
   const [fillStatus, setFillStatus] = useState<FillStatus>({ kind: "ready" });
   const [scanUiState, setScanUiState] = useState<ScanUiState>("idle");
+  const [lastScannedAt, setLastScannedAt] = useState<Date>();
+  const [, setClockTick] = useState(0);
   const [grantedOrigins, setGrantedOrigins] = useState<readonly string[]>([]);
   const [activeTabId, setActiveTabId] = useState<number | undefined>();
   // Cached alongside `activeTabId` so `scan` can call
@@ -682,6 +718,16 @@ export const FillPanel = () => {
       browser.tabs.onUpdated.removeListener(handleUpdated);
     };
   }, [refreshAccessState, applyActiveTab]);
+
+  useEffect(() => {
+    if (!lastScannedAt) return undefined;
+
+    const interval = window.setInterval(() => {
+      setClockTick((tick) => tick + 1);
+    }, 1000);
+
+    return () => window.clearInterval(interval);
+  }, [lastScannedAt]);
 
   const scan = async () => {
     setScanUiState("scanning");
@@ -740,6 +786,7 @@ export const FillPanel = () => {
         proposals: result.proposals,
         uploadIntents: result.uploadIntents,
       });
+      setLastScannedAt(new Date());
       setScanUiState("results");
       sound.stopLoop("scan-page");
       sound.play("scanSucceeded");
@@ -763,6 +810,7 @@ export const FillPanel = () => {
       setScanState({ kind: "idle" });
       setFillStatus({ kind: "ready" });
       setScanUiState("idle");
+      setLastScannedAt(undefined);
       await refreshAccessState();
       sound.play("accessRevoked");
     } catch {
@@ -866,6 +914,7 @@ export const FillPanel = () => {
       <ScanToolbar
         state={scanUiState}
         grantedOrigin={activeGrantedOrigin}
+        scannedAt={lastScannedAt}
         onScan={scan}
         onRevoke={revoke}
       />
