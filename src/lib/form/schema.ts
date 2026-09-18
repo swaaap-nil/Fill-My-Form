@@ -51,8 +51,37 @@ const fieldConstraintSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("pattern"), value: z.string() }),
   z.object({ kind: z.literal("step"), value: z.number() }),
   z.object({ kind: z.literal("accept"), value: z.array(z.string()) }),
+  z.object({
+    kind: z.literal("dimensions"),
+    value: z.object({ width: z.number(), height: z.number() }),
+    bound: z.enum(["min", "max"]),
+  }),
+  z.object({
+    kind: z.literal("aspectRatio"),
+    value: z.object({ min: z.number(), max: z.number() }),
+  }),
+  z.object({
+    kind: z.literal("fileSizeRangeBytes"),
+    value: z.object({ min: z.number().optional(), max: z.number().optional() }),
+  }),
+  z.object({
+    kind: z.literal("occupancyPercent"),
+    value: z.object({ min: z.number(), max: z.number() }),
+  }),
   z.object({ kind: z.literal("maxFileSizeBytes"), value: z.number() }),
 ]);
+
+const uploadIntentSchema = z.object({
+  id: z.string(),
+  kind: z.enum(["photo", "signature", "document", "unknown"]),
+  label: z.string().optional(),
+  description: z.string().optional(),
+  requirements: z.array(z.string()),
+  constraints: z.array(fieldConstraintSchema),
+  confidence: z.enum(["high", "medium", "low"]),
+  actionability: z.enum(["automatic", "user_assisted", "information_only"]),
+  hasNativeTarget: z.boolean(),
+});
 
 export const formFieldSchema = z.object({
   id: z.string(),
@@ -77,6 +106,7 @@ export const formSchema = z.object({
   method: z.enum(["get", "post"]).optional(),
   submitLabel: z.string().optional(),
   fields: z.array(formFieldSchema),
+  uploadIntents: z.array(uploadIntentSchema).optional(),
 });
 
 export const inspectFormOutputSchema = z.object({

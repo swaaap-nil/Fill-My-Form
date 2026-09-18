@@ -54,7 +54,44 @@ export type FieldConstraint =
   | { readonly kind: "step"; readonly value: number }
   /** `accept` on a file input, e.g. [".pdf", "image/*"]. */
   | { readonly kind: "accept"; readonly value: readonly string[] }
+  | {
+      readonly kind: "dimensions";
+      readonly value: { readonly width: number; readonly height: number };
+      readonly bound: "min" | "max";
+    }
+  | {
+      readonly kind: "aspectRatio";
+      readonly value: { readonly min: number; readonly max: number };
+    }
+  | {
+      readonly kind: "fileSizeRangeBytes";
+      readonly value: { readonly min?: number; readonly max?: number };
+    }
+  | {
+      readonly kind: "occupancyPercent";
+      readonly value: { readonly min: number; readonly max: number };
+    }
   | { readonly kind: "maxFileSizeBytes"; readonly value: number };
+
+export type UploadIntentKind = "photo" | "signature" | "document" | "unknown";
+export type UploadIntentConfidence = "high" | "medium" | "low";
+export type UploadActionability =
+  | "automatic"
+  | "user_assisted"
+  | "information_only";
+
+/** A visible upload requirement, including custom controls without file inputs. */
+export interface UploadIntent {
+  readonly id: string;
+  readonly kind: UploadIntentKind;
+  readonly label?: string;
+  readonly description?: string;
+  readonly requirements: readonly string[];
+  readonly constraints: readonly FieldConstraint[];
+  readonly confidence: UploadIntentConfidence;
+  readonly actionability: UploadActionability;
+  readonly hasNativeTarget: boolean;
+}
 
 /**
  * The cheap projection handed to the agent first. Progressive disclosure
@@ -92,10 +129,12 @@ export interface FormSummary {
   readonly method?: "get" | "post";
   readonly submitLabel?: string;
   readonly fields: readonly FieldSummary[];
+  readonly uploadIntents?: readonly UploadIntent[];
 }
 
 export interface Form extends Omit<FormSummary, "fields"> {
   readonly fields: readonly FormField[];
+  readonly uploadIntents?: readonly UploadIntent[];
 }
 
 /**

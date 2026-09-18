@@ -1,3 +1,4 @@
+import Cropper from "cropperjs";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -5,11 +6,16 @@ import {
   ChevronRight,
   LoaderCircle,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Browser } from "wxt/browser";
 import { browser } from "wxt/browser";
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
+import type { UploadIntent } from "~/core/form/types";
+import {
+  createBrowserFileComplianceAdapter,
+  createIndexedDbFileReferenceStore,
+} from "~/lib/files/adapters";
 import type { DecisionId, FieldProposal } from "~/lib/messaging";
 import { sendMessage } from "~/lib/messaging";
 import { useSound } from "~/lib/sfx/react";
@@ -50,6 +56,7 @@ type ScanState =
   | {
       readonly kind: "proposals";
       readonly proposals: readonly FieldProposal[];
+      readonly uploadIntents: readonly UploadIntent[];
     };
 
 type ProposalView = "summary" | "answers" | "known";
@@ -395,6 +402,182 @@ const KnownFieldsSummaryCard = ({
   </SummaryCardShell>
 );
 
+const UploadIntentItem = ({
+  intent,
+  onPrepare,
+  output,
+  error,
+}: {
+  readonly intent: UploadIntent;
+  readonly onPrepare: (file: File) => Promise<void>;
+  readonly output?: {
+    readonly url: string;
+    readonly name: string;
+    readonly size: number;
+  };
+  readonly error?: string;
+}) => {
+  const imageRef = useRef<HTMLImageElement>(null);
+  const cropperRef = useRef<Cropper | null>(null);
+  const [sourceUrl, setSourceUrl] = useState<string>();
+  const [sourceFile, setSourceFile] = useState<File>();
+
+  useEffect(() => {
+    if (!sourceUrl || !imageRef.current) return;
+    const cropper = new Cropper(imageRef.current);
+    cropperRef.current = cropper;
+    return () => {
+      cropper.destroy();
+      cropperRef.current = null;
+    };
+  }, [sourceUrl]);
+
+  const prepareCropped = async () => {
+    if (!sourceFile) return;
+    const selection = cropperRef.current?.getCropperSelection();
+    const canvas = selection ? await selection.$toCanvas() : undefined;
+    if (!canvas) return onPrepare(sourceFile);
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, sourceFile.type || "image/jpeg", 0.95),
+    );
+    if (!blob) return;
+    await onPrepare(
+      new File([blob], sourceFile.name, {
+        type: sourceFile.type || "image/jpeg",
+      }),
+    );
+  };
+
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-border p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="font-medium text-sm">{intent.label ?? "Upload"}</p>
+          <p className="text-muted-foreground text-xs">
+            {intent.kind} ·{" "}
+            {intent.actionability === "automatic"
+              ? "native upload available"
+              : "choose the prepared copy on the page"}
+          </p>
+        </div>
+        <input
+          className="max-w-32 text-xs"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          aria-label={`Choose ${intent.label ?? "upload"}`}
+          onChange={(event) => {
+            const file = event.currentTarget.files?.[0];
+            if (!file) return;
+            if (sourceUrl) URL.revokeObjectURL(sourceUrl);
+            setSourceFile(file);
+            setSourceUrl(URL.createObjectURL(file));
+          }}
+        />
+      </div>
+      {sourceUrl && (
+        <>
+          <div className="h-48 overflow-hidden rounded border bg-muted">
+            <img
+              ref={imageRef}
+              src={sourceUrl}
+              alt="Selected upload preview"
+              className="block max-h-full max-w-full"
+            />
+          </div>
+          <Button type="button" size="sm" onClick={() => void prepareCropped()}>
+            Prepare compliant copy
+          </Button>
+        </>
+      )}
+      <p className="line-clamp-4 text-muted-foreground text-xs">
+        {intent.description}
+      </p>
+      {output && (
+        <a
+          className="text-primary text-xs underline"
+          href={output.url}
+          download={output.name}
+        >
+          Download prepared {output.name} ({Math.ceil(output.size / 1024)} KB)
+        </a>
+      )}
+      {error && <p className="text-destructive text-xs">{error}</p>}
+    </div>
+  );
+};
+
+const UploadIntentsCard = ({
+  intents,
+}: {
+  readonly intents: readonly UploadIntent[];
+}) => {
+  const [prepared, setPrepared] = useState<
+    Record<
+      string,
+      { readonly url: string; readonly name: string; readonly size: number }
+    >
+  >({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const prepare = async (intent: UploadIntent, file: File) => {
+    setErrors((current) => ({ ...current, [intent.id]: "" }));
+    try {
+      const store = await createIndexedDbFileReferenceStore();
+      const original = await store.save(file);
+      const adapter = createBrowserFileComplianceAdapter(store);
+      const output = await adapter.prepareLocalFile(
+        original,
+        intent.constraints,
+      );
+      if (!output) {
+        setErrors((current) => ({
+          ...current,
+          [intent.id]: "This file could not satisfy the detected requirements.",
+        }));
+        return;
+      }
+      const previous = prepared[intent.id];
+      if (previous) URL.revokeObjectURL(previous.url);
+      setPrepared((current) => ({
+        ...current,
+        [intent.id]: {
+          url: URL.createObjectURL(output.blob),
+          name: output.name,
+          size: output.blob.size,
+        },
+      }));
+    } catch {
+      setErrors((current) => ({
+        ...current,
+        [intent.id]: "Local preparation failed.",
+      }));
+    }
+  };
+
+  return (
+    <section className="flex flex-col gap-3 rounded-lg border border-primary/25 bg-card p-3 shadow-sm">
+      <div>
+        <p className="font-semibold text-sm">
+          {intents.length} upload{" "}
+          {intents.length === 1 ? "requirement" : "requirements"} detected
+        </p>
+        <p className="text-muted-foreground text-xs">
+          Original files stay unchanged. Prepared copies expire automatically.
+        </p>
+      </div>
+      {intents.map((intent) => (
+        <UploadIntentItem
+          key={intent.id}
+          intent={intent}
+          output={prepared[intent.id]}
+          error={errors[intent.id]}
+          onPrepare={(file) => prepare(intent, file)}
+        />
+      ))}
+    </section>
+  );
+};
+
 export const FillPanel = () => {
   const sound = useSound();
   const [scanState, setScanState] = useState<ScanState>({ kind: "idle" });
@@ -513,7 +696,11 @@ export const FillPanel = () => {
       setProposalView("summary");
       setProposalViewTransition("none");
       setScanVersion((version) => version + 1);
-      setScanState({ kind: "proposals", proposals: result.proposals });
+      setScanState({
+        kind: "proposals",
+        proposals: result.proposals,
+        uploadIntents: result.uploadIntents,
+      });
       setScanUiState("results");
       sound.stopLoop("scan-page");
       sound.play("scanSucceeded");
@@ -712,6 +899,9 @@ export const FillPanel = () => {
               tabId={activeTabId}
               scanVersion={scanVersion}
             />
+            {scanState.uploadIntents.length > 0 && (
+              <UploadIntentsCard intents={scanState.uploadIntents} />
+            )}
           </div>
         )
       )}

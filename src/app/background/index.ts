@@ -71,7 +71,10 @@ const getLocalDataStore = (): Promise<PersistentLocalDataStore> => {
 
 let fileStore: Promise<FileReferenceStore> | undefined;
 const getFileStore = (): Promise<FileReferenceStore> => {
-  fileStore ??= createIndexedDbFileReferenceStore();
+  fileStore ??= createIndexedDbFileReferenceStore().then(async (store) => {
+    await store.purgeExpired();
+    return store;
+  });
   return fileStore;
 };
 
@@ -170,7 +173,7 @@ const buildLoopPorts = async (tabId: number): Promise<LoopPorts> => {
         input.constraints as Parameters<typeof files.prepareLocalFile>[1],
       );
       if (!prepared) return { ok: false };
-      return sendMessage(
+      const result = await sendMessage(
         "uploadFile",
         {
           decisionId: crypto.randomUUID(),
@@ -179,6 +182,10 @@ const buildLoopPorts = async (tabId: number): Promise<LoopPorts> => {
         },
         tabId,
       );
+      if (result.ok && prepared.temporaryRef) {
+        await files.cleanupPreparedFile(prepared.temporaryRef);
+      }
+      return result;
     },
   });
 
@@ -279,11 +286,11 @@ const main = () => {
     const memoryStore = await getLocalDataStore();
     const tab = await browser.tabs.get(data.tabId);
     if (!tab.url) {
-      return { granted: false, proposals: [] };
+      return { granted: false, proposals: [], uploadIntents: [] };
     }
 
     const granted = await siteAccess.hasSiteAccess(tab.url);
-    if (!granted) return { granted: false, proposals: [] };
+    if (!granted) return { granted: false, proposals: [], uploadIntents: [] };
 
     const { forms } = await sendMessage(
       "extractFullForm",
@@ -291,6 +298,7 @@ const main = () => {
       data.tabId,
     );
     const fields = forms.flatMap((form) => form.fields);
+    const uploadIntents = forms.flatMap((form) => form.uploadIntents ?? []);
     const origin = new URL(tab.url).origin;
 
     const { proposals, decisions } = await planFill(
@@ -338,7 +346,7 @@ const main = () => {
       pendingDecisions.set(decisionId, decision);
     }
 
-    return { granted: true, proposals };
+    return { granted: true, proposals, uploadIntents };
   });
 
   onMessage("confirmFill", async ({ data }) => {
@@ -371,6 +379,9 @@ const main = () => {
               tabId,
             );
             ok = result.ok;
+            if (ok && prepared.temporaryRef) {
+              await files.cleanupPreparedFile(prepared.temporaryRef);
+            }
           }
         } else {
           const result = await sendMessage(

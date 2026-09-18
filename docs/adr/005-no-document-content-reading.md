@@ -39,8 +39,11 @@ and the same alias tiers as any text concept. The agent learns which file
 answers the field and never opens it.
 
 Making a file *fit* a form — crop to 35×45mm, recompress under 100 KB — stays
-allowed, because it is pixel and byte work that never interprets meaning. It runs
-on canvas in the tab, and the original is not modified.
+allowed only as an explicit user-requested local preparation action. It is pixel
+and byte work that never interprets meaning. Cropper.js and Compressor.js run in
+the extension page, write a separate derived artifact, and never mutate the
+original. Derived artifacts expire after 24 hours and are removed after a
+successful upload.
 
 `MemorySource.IMPORTED_DOCUMENT` ("extracted from a document the user supplied")
 encodes the capability this ADR refuses, and is removed.

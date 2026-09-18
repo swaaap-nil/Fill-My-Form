@@ -1,7 +1,12 @@
 import { defineExtensionMessaging } from "@webext-core/messaging";
 import type { AgentPhase, AgentStatus } from "~/core/agent/types";
 import type { DecisionId, FieldProposal } from "~/core/fill/types";
-import type { FieldConstraint, FieldId, Form } from "~/core/form/types";
+import type {
+  FieldConstraint,
+  FieldId,
+  Form,
+  UploadIntent,
+} from "~/core/form/types";
 import type {
   FileReference,
   MemoryItem,
@@ -55,6 +60,7 @@ export {
 export interface RunFillResult {
   readonly granted: boolean;
   readonly proposals: readonly FieldProposal[];
+  readonly uploadIntents: readonly UploadIntent[];
 }
 
 export interface ConfirmFillOutcome {

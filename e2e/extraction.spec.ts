@@ -220,6 +220,50 @@ test("radio groups without fieldsets use the shared question label", async ({
   ]);
 });
 
+test("row-labelled Material-style controls use the row prompt, not proxy text", async ({
+  page,
+}) => {
+  await page.setContent(`
+    <form>
+      <div class="row">
+        <span>Nationality</span>
+        <div>
+          <div tabindex="0" role="combobox" aria-labelledby="nationality" id="nationality">
+            <em>Select Country</em>
+          </div>
+          <input aria-hidden="true" tabindex="-1" name="nationality" value="-1">
+        </div>
+      </div>
+      <div class="row">
+        <span>Category</span>
+        <div role="radiogroup">
+          <label><input type="radio" name="category" value="1">GEN</label>
+          <label><input type="radio" name="category" value="2">OBC-NCL</label>
+        </div>
+      </div>
+      <div class="row">
+        <span>Person with Disability (PwD)</span>
+        <div role="radiogroup">
+          <label><input type="radio" name="pwd" value="true">Yes</label>
+          <label><input type="radio" name="pwd" value="false">No</label>
+        </div>
+      </div>
+    </form>
+  `);
+  await injectExtractor(page);
+
+  const full = await observeFull(page);
+  const fields = full[0]?.fields ?? [];
+
+  expect(fields).toHaveLength(3);
+  expect(fields.map((field) => field.label)).toEqual([
+    "Nationality",
+    "Category",
+    "Person with Disability (PwD)",
+  ]);
+  expect(fields.some((field) => field.name === "nationality")).toBe(false);
+});
+
 test("ibps-like.html labels the file field from the upload prompt, not picker chrome", async ({
   page,
 }) => {
@@ -362,6 +406,77 @@ test("supabase.html extracts a form-like ATS application container", async ({
   expect(conceptByLabel.get("Twitter / X profile")).toBe("contact.twitter_url");
   expect(conceptByLabel.get("Github Profile")).toBe("contact.github_url");
   expect(conceptByLabel.get("Linkedin")).toBe("contact.linkedin_url");
+});
+
+test("GATE.html extracts Material-style application fields as known concepts", async ({
+  page,
+}) => {
+  await page.route("**/*", (route) => {
+    const url = new URL(route.request().url());
+    return url.hostname === "localhost"
+      ? route.continue()
+      : route.abort("blockedbyclient");
+  });
+  await page.goto("/GATE.html", { waitUntil: "domcontentloaded" });
+  await injectExtractor(page);
+
+  const full = await observeFull(page);
+  const fields = full[0]?.fields ?? [];
+  const conceptKeys = new Set(
+    fields
+      .map((field) => resolveMatch(field, ontology).candidates[0]?.conceptKey)
+      .filter(Boolean),
+  );
+
+  expect(fields.length).toBeGreaterThan(0);
+  expect([...conceptKeys]).toEqual(
+    expect.arrayContaining([
+      "identity.nationality",
+      "identity.category",
+      "identity.disability_status",
+    ]),
+  );
+  const uploadIntents = full[0]?.uploadIntents ?? [];
+  expect(uploadIntents.map((intent) => intent.kind)).toEqual(
+    expect.arrayContaining(["photo", "signature"]),
+  );
+  expect(uploadIntents.every((intent) => !intent.hasNativeTarget)).toBe(true);
+});
+
+test("custom upload controls expose requirements without becoming fillable fields", async ({
+  page,
+}) => {
+  await page.setContent(`
+    <form>
+      <section>
+        <button type="button">Upload Photograph</button>
+        <p>Upload JPEG/JPG/PNG with minimum pixel resolution 200 x 260 and maximum pixel resolution 530 x 690. File size should be between 5 KB and 600 KB.</p>
+      </section>
+      <section>
+        <button type="button">Upload Signature</button>
+        <p>Upload JPEG/JPG file with minimum pixel resolution 250 x 80 and maximum pixel resolution 580 x 180. Aspect ratio 1 : R must be between 2.75 and 3.75.</p>
+      </section>
+    </form>
+  `);
+  await injectExtractor(page);
+
+  const form = (await observeFull(page))[0];
+  const intents = form?.uploadIntents ?? [];
+  expect(form?.fields).toEqual([]);
+  expect(intents.map((intent) => intent.kind)).toEqual(["photo", "signature"]);
+  expect(intents[0]?.actionability).toBe("user_assisted");
+  expect(intents[0]?.constraints).toEqual(
+    expect.arrayContaining([
+      { kind: "dimensions", bound: "min", value: { width: 200, height: 260 } },
+      { kind: "dimensions", bound: "max", value: { width: 530, height: 690 } },
+      { kind: "fileSizeRangeBytes", value: { min: 5120, max: 614400 } },
+    ]),
+  );
+  expect(intents[1]?.constraints).toEqual(
+    expect.arrayContaining([
+      { kind: "aspectRatio", value: { min: 2.75, max: 3.75 } },
+    ]),
+  );
 });
 
 test("extracting a 500-field page stays within budget", async ({ page }) => {

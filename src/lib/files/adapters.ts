@@ -1,6 +1,8 @@
+import Compressor from "compressorjs";
 import {
   acceptsFileReference,
   type FileComplianceAdapter,
+  fileSizeRangeBytes,
   maxFileSizeBytes,
   type PrepareFileResult,
 } from "~/core/files/types";
@@ -8,7 +10,7 @@ import type { FieldConstraint } from "~/core/form/types";
 import type { FileReference } from "~/core/memory/types";
 
 const DB_NAME = "form-agent-files";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const FILE_STORE = "files";
 
 interface StoredFileRecord {
@@ -19,9 +21,16 @@ interface StoredFileRecord {
 
 export interface FileReferenceStore {
   save(file: File, now?: string): Promise<FileReference>;
+  saveDerived(
+    file: File,
+    source: FileReference,
+    now?: string,
+    ttlMs?: number,
+  ): Promise<FileReference>;
   get(refId: string): Promise<StoredFileRecord | null>;
   delete(refId: string): Promise<void>;
   list(): Promise<FileReference[]>;
+  purgeExpired(now?: string): Promise<number>;
 }
 
 export interface BrowserPreparedFile {
@@ -31,6 +40,7 @@ export interface BrowserPreparedFile {
   readonly mimeType: string;
   readonly transformed: boolean;
   readonly originalSizeBytes: number;
+  readonly temporaryRef?: FileReference;
 }
 
 export interface BrowserFileUploadAdapter {
@@ -77,6 +87,30 @@ export const createIndexedDbFileReferenceStore = async (
         mimeType: file.type || "application/octet-stream",
         sizeBytes: file.size,
         createdAt: now,
+        artifactKind: "original",
+      };
+      const transaction = db.transaction(FILE_STORE, "readwrite");
+      transaction.objectStore(FILE_STORE).put({ id: ref.id, ref, blob: file });
+      await transactionDone(transaction);
+      return ref;
+    },
+
+    async saveDerived(
+      file,
+      source,
+      now = new Date().toISOString(),
+      ttlMs = 24 * 60 * 60 * 1000,
+    ) {
+      const ref: FileReference = {
+        kind: "file_ref",
+        id: crypto.randomUUID(),
+        name: file.name,
+        mimeType: file.type || "application/octet-stream",
+        sizeBytes: file.size,
+        createdAt: now,
+        artifactKind: "derived",
+        derivedFrom: source.id,
+        expiresAt: new Date(Date.parse(now) + ttlMs).toISOString(),
       };
       const transaction = db.transaction(FILE_STORE, "readwrite");
       transaction.objectStore(FILE_STORE).put({ id: ref.id, ref, blob: file });
@@ -109,20 +143,34 @@ export const createIndexedDbFileReferenceStore = async (
       );
       return records.map((record) => record.ref);
     },
+
+    async purgeExpired(now = new Date().toISOString()) {
+      const records = await requestToPromise(
+        db
+          .transaction(FILE_STORE, "readonly")
+          .objectStore(FILE_STORE)
+          .getAll() as IDBRequest<StoredFileRecord[]>,
+      );
+      const expired = records.filter(
+        (record) => record.ref.expiresAt && record.ref.expiresAt <= now,
+      );
+      if (!expired.length) return 0;
+      const transaction = db.transaction(FILE_STORE, "readwrite");
+      for (const record of expired)
+        transaction.objectStore(FILE_STORE).delete(record.id);
+      await transactionDone(transaction);
+      return expired.length;
+    },
   };
 };
 
-const blobForImage = async (
-  image: ImageBitmap,
-  type: string,
-  quality: number,
-): Promise<Blob | null> => {
-  const canvas = new OffscreenCanvas(image.width, image.height);
-  const context = canvas.getContext("2d");
-  if (!context) return null;
-  context.drawImage(image, 0, 0);
-  return canvas.convertToBlob({ type, quality });
-};
+const compressImage = (
+  blob: Blob,
+  options: Compressor.Options,
+): Promise<Blob> =>
+  new Promise((resolve, reject) => {
+    new Compressor(blob, { ...options, success: resolve, error: reject });
+  });
 
 const recompressedImageType = (mimeType: string): string =>
   mimeType === "image/webp" ? "image/webp" : "image/jpeg";
@@ -139,6 +187,7 @@ export const createBrowserFileComplianceAdapter = (
     ref: FileReference,
     constraints: readonly FieldConstraint[],
   ): Promise<BrowserPreparedFile | null>;
+  cleanupPreparedFile(ref: FileReference): Promise<void>;
 } => {
   const prepareLocalFile = async (
     ref: FileReference,
@@ -149,33 +198,90 @@ export const createBrowserFileComplianceAdapter = (
     const record = await store.get(ref.id);
     if (!record) return null;
 
-    const maxBytes = maxFileSizeBytes(constraints);
-    if (!maxBytes || record.blob.size <= maxBytes) {
+    const maxBytes =
+      maxFileSizeBytes(constraints) ?? fileSizeRangeBytes(constraints)?.max;
+    const minBytes = fileSizeRangeBytes(constraints)?.min;
+    const dimensionConstraints = constraints.filter(
+      (c) => c.kind === "dimensions",
+    );
+    const image = record.ref.mimeType.startsWith("image/")
+      ? await createImageBitmap(record.blob)
+      : null;
+    const tooSmall =
+      image &&
+      dimensionConstraints.some(
+        (constraint) =>
+          constraint.kind === "dimensions" &&
+          constraint.bound === "min" &&
+          (image.width < constraint.value.width ||
+            image.height < constraint.value.height),
+      );
+    if (tooSmall) {
+      image?.close();
+      return null;
+    }
+    if (
+      (!maxBytes || record.blob.size <= maxBytes) &&
+      (!minBytes || record.blob.size >= minBytes)
+    ) {
+      image?.close();
+      const temporaryFile = new File([record.blob], ref.name, {
+        type: ref.mimeType,
+      });
+      const temporaryRef = await store.saveDerived(temporaryFile, ref);
       return {
         ref,
-        blob: record.blob,
-        name: ref.name,
-        mimeType: ref.mimeType,
+        blob: temporaryFile,
+        name: temporaryFile.name,
+        mimeType: temporaryFile.type,
         transformed: false,
         originalSizeBytes: ref.sizeBytes,
+        temporaryRef,
       };
     }
 
-    if (!ref.mimeType.startsWith("image/")) return null;
-
-    const image = await createImageBitmap(record.blob);
+    if (!image) return null;
     const outputType = recompressedImageType(ref.mimeType);
+    const maxDimension = dimensionConstraints.find(
+      (constraint) =>
+        constraint.kind === "dimensions" && constraint.bound === "max",
+    );
+    const maxWidth =
+      maxDimension?.kind === "dimensions"
+        ? maxDimension.value.width
+        : undefined;
+    const maxHeight =
+      maxDimension?.kind === "dimensions"
+        ? maxDimension.value.height
+        : undefined;
     try {
       for (const quality of [0.85, 0.72, 0.6, 0.48, 0.36, 0.25]) {
-        const blob = await blobForImage(image, outputType, quality);
-        if (blob && blob.size <= maxBytes) {
+        const blob = await compressImage(record.blob, {
+          quality,
+          mimeType: outputType,
+          maxWidth,
+          maxHeight,
+          strict: true,
+        });
+        if (
+          blob &&
+          (!maxBytes || blob.size <= maxBytes) &&
+          (!minBytes || blob.size >= minBytes)
+        ) {
+          const temporaryFile = new File(
+            [blob],
+            recompressedImageName(ref.name, outputType),
+            { type: outputType },
+          );
+          const temporaryRef = await store.saveDerived(temporaryFile, ref);
           return {
             ref,
             blob,
-            name: recompressedImageName(ref.name, outputType),
+            name: temporaryFile.name,
             mimeType: outputType,
             transformed: true,
             originalSizeBytes: ref.sizeBytes,
+            temporaryRef,
           };
         }
       }
@@ -210,6 +316,9 @@ export const createBrowserFileComplianceAdapter = (
       };
     },
     prepareLocalFile,
+    cleanupPreparedFile: async (ref) => {
+      if (ref.artifactKind === "derived") await store.delete(ref.id);
+    },
   };
 };
 

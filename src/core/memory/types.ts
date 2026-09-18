@@ -50,6 +50,9 @@ export interface FileReference {
   readonly mimeType: string;
   readonly sizeBytes: number;
   readonly createdAt: string;
+  readonly artifactKind?: "original" | "derived";
+  readonly derivedFrom?: string;
+  readonly expiresAt?: string;
 }
 
 export type MemoryValue =
@@ -73,7 +76,12 @@ export const isFileReference = (value: unknown): value is FileReference => {
     typeof ref.sizeBytes === "number" &&
     Number.isFinite(ref.sizeBytes) &&
     ref.sizeBytes >= 0 &&
-    typeof ref.createdAt === "string"
+    typeof ref.createdAt === "string" &&
+    (ref.artifactKind === undefined ||
+      ref.artifactKind === "original" ||
+      ref.artifactKind === "derived") &&
+    (ref.derivedFrom === undefined || typeof ref.derivedFrom === "string") &&
+    (ref.expiresAt === undefined || typeof ref.expiresAt === "string")
   );
 };
 

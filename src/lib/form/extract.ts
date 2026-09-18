@@ -76,6 +76,7 @@ import type {
   FormOption,
   FormSummary,
   PageObservation,
+  UploadIntent,
 } from "../../core/form/types";
 import { FieldKind as Kind } from "../../core/form/types";
 
@@ -129,6 +130,9 @@ const isSkipped = (el: Candidate): boolean => {
   }
   if (el.disabled) return true;
   if ("readOnly" in el && el.readOnly) return true;
+  if (el.getAttribute("aria-hidden") === "true" && el.tabIndex < 0) {
+    return true;
+  }
   return isInvisible(el);
 };
 
@@ -139,6 +143,9 @@ const textOf = (el: Element | null | undefined): string | undefined => {
 
 const isFileInput = (el: Element): el is HTMLInputElement =>
   el instanceof HTMLInputElement && el.type === "file";
+
+const isAriaWidget = (el: Element): el is HTMLElement =>
+  el.getAttribute("role") === "combobox";
 
 const normaliseUiText = (text: string): string =>
   text
@@ -166,6 +173,31 @@ const meaningfulLabelText = (
   return isGenericFilePickerText(el, text) ? undefined : text;
 };
 
+const labelledByText = (doc: Document, el: Element): string | undefined => {
+  const labelledBy = el.getAttribute("aria-labelledby");
+  if (!labelledBy) return undefined;
+
+  const text = labelledBy
+    .split(/\s+/)
+    .map((id) => doc.getElementById(id))
+    .filter(
+      (labelled): labelled is HTMLElement => !!labelled && labelled !== el,
+    )
+    .map((labelled) => textOf(labelled))
+    .filter((t): t is string => !!t)
+    .join(" ");
+  return meaningfulLabelText(el, text) || undefined;
+};
+
+const ariaLabelText = (doc: Document, el: Element): string | undefined => {
+  const ariaLabel = meaningfulLabelText(
+    el,
+    el.getAttribute("aria-label")?.trim(),
+  );
+  if (ariaLabel) return ariaLabel;
+  return labelledByText(doc, el);
+};
+
 /** Nearest ancestor `<fieldset>`, if the control is grouped inside one. */
 const fieldsetOf = (el: Element): HTMLFieldSetElement | null =>
   el.closest("fieldset");
@@ -186,24 +218,8 @@ const resolveLabel = (doc: Document, el: Element): string | undefined => {
   const wrappingText = meaningfulLabelText(el, textOf(wrapping));
   if (wrappingText) return wrappingText;
 
-  const ariaLabel = meaningfulLabelText(
-    el,
-    el.getAttribute("aria-label")?.trim(),
-  );
+  const ariaLabel = ariaLabelText(doc, el);
   if (ariaLabel) return ariaLabel;
-
-  const labelledBy = el.getAttribute("aria-labelledby");
-  if (labelledBy) {
-    const text = meaningfulLabelText(
-      el,
-      labelledBy
-        .split(/\s+/)
-        .map((id) => textOf(doc.getElementById(id)))
-        .filter((t): t is string => !!t)
-        .join(" "),
-    );
-    if (text) return text;
-  }
 
   const precedingText = meaningfulLabelText(el, precedingSiblingText(el));
   if (precedingText) return precedingText;
@@ -268,6 +284,13 @@ const resolveUnfieldedGroupLabel = (
   first: HTMLInputElement,
   members: readonly HTMLInputElement[],
 ): string | undefined => {
+  const groupWidget = first.closest('[role="radiogroup"], [role="group"]');
+  if (groupWidget) {
+    const label =
+      ariaLabelText(doc, groupWidget) ?? precedingAncestorText(groupWidget);
+    if (label) return label;
+  }
+
   const common = commonAncestor(members);
   if (common) {
     const memberIds = new Set(members.map((m) => m.id).filter(Boolean));
@@ -508,9 +531,6 @@ interface RadioOrCheckboxGroup {
 
 type Grouped = GroupedCandidate | WidgetSingle | RadioOrCheckboxGroup;
 
-const isAriaWidget = (el: Element): el is HTMLElement =>
-  el.getAttribute("role") === "combobox";
-
 /**
  * Walks a form's controls in document order, folding radio groups (always)
  * and checkbox groups (when more than one control shares the name) into a
@@ -620,6 +640,143 @@ const isWidgetSkipped = (el: HTMLElement): boolean =>
 
 /** What a `FieldId` was derived from — a single element, or a whole group. */
 export type FieldElements = Element | readonly Element[];
+
+const uploadControlText = (el: Element): string | undefined =>
+  textOf(el) ?? el.getAttribute("aria-label")?.trim() ?? undefined;
+
+const uploadKindOf = (text: string): UploadIntent["kind"] => {
+  const value = normaliseUiText(text);
+  if (/signature|sign\b|handwritten|autograph|pen\b/.test(value))
+    return "signature";
+  if (
+    /photograph|photo\b|picture|portrait|headshot|camera\b|face image/.test(
+      value,
+    )
+  )
+    return "photo";
+  if (/document|certificate|resume|cv\b|pdf\b|proof|upload/.test(value))
+    return "document";
+  return "unknown";
+};
+
+const isUploadControl = (el: Element): boolean => {
+  const text = uploadControlText(el);
+  return (
+    !!text &&
+    /upload|choose file|browse|attach|photograph|photo\b|signature|camera\b|scan/i.test(
+      text,
+    )
+  );
+};
+
+const bytesForUnit = (value: number, unit: string): number =>
+  value * (unit.toLowerCase() === "mb" ? 1024 * 1024 : 1024);
+
+const uploadConstraintsOf = (text: string): FieldConstraint[] => {
+  const constraints: FieldConstraint[] = [];
+  const formats = Array.from(
+    text.matchAll(/\b(jpe?g|png|webp|gif|pdf)\b/gi),
+  ).map((match) => `.${match[1]?.toLowerCase()}`);
+  if (formats.length)
+    constraints.push({ kind: "accept", value: [...new Set(formats)] });
+
+  for (const match of text.matchAll(
+    /(minimum|maximum|min|max)[^\d]{0,40}(\d{2,5})\s*[x×]\s*(\d{2,5})/gi,
+  )) {
+    constraints.push({
+      kind: "dimensions",
+      bound: /min/i.test(match[1] ?? "") ? "min" : "max",
+      value: { width: Number(match[2]), height: Number(match[3]) },
+    });
+  }
+
+  const aspect = text.match(
+    /aspect ratio[^\d]{0,60}(\d+(?:\.\d+)?)\s*[:/]\s*[a-z]\b[^\d]{0,60}(?:between|from)\s*(\d+(?:\.\d+)?)\s*(?:and|to)\s*(\d+(?:\.\d+)?)/i,
+  );
+  if (aspect)
+    constraints.push({
+      kind: "aspectRatio",
+      value: { min: Number(aspect[2]), max: Number(aspect[3]) },
+    });
+
+  const range = text.match(
+    /(?:file size|size)[^\d]{0,40}(?:between|from)?\s*(\d+(?:\.\d+)?)\s*(KB|MB)[^\d]{0,20}(?:and|to|-)\s*(\d+(?:\.\d+)?)\s*(KB|MB)/i,
+  );
+  if (range) {
+    constraints.push({
+      kind: "fileSizeRangeBytes",
+      value: {
+        min: bytesForUnit(Number(range[1]), range[2] ?? "KB"),
+        max: bytesForUnit(Number(range[3]), range[4] ?? "KB"),
+      },
+    });
+  }
+
+  const occupancy = text.match(
+    /(?:occupy|cover)[^\d]{0,20}(\d+)\s*[-–]\s*(\d+)\s*%/i,
+  );
+  if (occupancy)
+    constraints.push({
+      kind: "occupancyPercent",
+      value: { min: Number(occupancy[1]), max: Number(occupancy[2]) },
+    });
+  return constraints;
+};
+
+const uploadSectionOf = (el: Element): Element => {
+  let current = el.parentElement;
+  let best = current ?? el;
+  while (current && current !== el.ownerDocument.body) {
+    const text = textOf(current) ?? "";
+    if (
+      text.length <= 2400 &&
+      /file size|pixel resolution|aspect ratio|JPEG|JPG|PNG/i.test(text)
+    )
+      return current;
+    if (text.length <= 2400 && /upload|choose file|browse/i.test(text))
+      best = current;
+    current = current.parentElement;
+  }
+  return best;
+};
+
+const extractUploadIntents = (
+  form: Element,
+  formIndex: number,
+): UploadIntent[] => {
+  const controls = Array.from(
+    form.querySelectorAll<Element>('button, [role="button"], label'),
+  ).filter(
+    (el) =>
+      !(el instanceof HTMLElement) || (!isInvisible(el) && isUploadControl(el)),
+  );
+  const seen = new Set<Element>();
+  return controls.flatMap((control, index) => {
+    const section = uploadSectionOf(control);
+    if (seen.has(section)) return [];
+    seen.add(section);
+    const label = uploadControlText(control);
+    const description = textOf(section);
+    if (!label || !description) return [];
+    const kind = uploadKindOf(`${label} ${description}`);
+    const constraints = uploadConstraintsOf(description);
+    const hasNativeTarget = !!section.querySelector('input[type="file"]');
+    return [
+      {
+        id: `upload-${formIndex}-${index}`,
+        kind,
+        label,
+        description,
+        requirements: [description],
+        constraints,
+        confidence:
+          kind === "unknown" ? "low" : constraints.length ? "high" : "medium",
+        actionability: hasNativeTarget ? "automatic" : "user_assisted",
+        hasNativeTarget,
+      },
+    ];
+  });
+};
 
 const extractForm = (
   doc: Document,
@@ -746,6 +903,7 @@ const extractForm = (
       form instanceof HTMLFormElement && form.method === "get" ? "get" : "post",
     submitLabel: submitLabelOf(form),
     fields,
+    uploadIntents: extractUploadIntents(form, formIndex),
   };
 };
 
@@ -851,6 +1009,7 @@ const toSummary = (form: Form): FormSummary => ({
     required: f.required,
     hasValue: f.hasValue,
   })),
+  uploadIntents: form.uploadIntents ?? [],
 });
 
 /** The cheap `PageObservation` the agent sees at OBSERVE. */
