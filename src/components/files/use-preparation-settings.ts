@@ -16,13 +16,11 @@ import type { LengthUnit } from "~/core/files/units";
 
 /**
  * The preparation form's state, in one place, shared by the side panel and the
- * editor window so the settings UI is written once.
+ * editor window so output settings and crop edits can be handed between them.
  *
- * Every transition that is more than "store what was typed" — the aspect lock,
+ * Every transition that is more than "store what was typed" — crop ratio,
  * unit conversion, applying a preset — is delegated to the pure functions in
- * `~/core/files/preparation-form`. The component holds no rules of its own, and
- * nothing mutates a ref during render the way the previous implementation did
- * to keep the ratio in sync.
+ * `~/core/files/preparation-form`. The component holds no rules of its own.
  */
 export const usePreparationSettings = (inspection?: FileInspection) => {
   const [values, setValues] = useState<PreparationFormValues>(

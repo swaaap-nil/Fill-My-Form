@@ -11,6 +11,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { SelectField } from "~/components/ui/select";
 import { formatBytes } from "~/core/files/byte-units";
 import type { EditorSession } from "~/core/files/editor-session";
 import type { CropRect, FileInspection } from "~/core/files/preparation";
@@ -25,18 +26,28 @@ import {
 } from "~/lib/files/editor-session";
 import { ImagePreparationAdapter } from "~/lib/files/image-preparation-adapter";
 import { CropStage, type CropStageHandle } from "./crop-stage";
-import { PreparationSettings } from "./preparation-settings";
+import { FileMetadataCards } from "./file-metadata-cards";
 import { usePreparationSettings } from "./use-preparation-settings";
 
 type Phase = "loading" | "ready" | "saving" | "done" | "error";
 
+const CROP_RATIO_OPTIONS = [
+  { value: "original", label: "Original" },
+  { value: "free", label: "Free" },
+  { value: "1:1", label: "1:1 square" },
+  { value: "4:5", label: "4:5 portrait" },
+  { value: "3:4", label: "3:4 portrait" },
+  { value: "2:3", label: "2:3 portrait" },
+  { value: "16:9", label: "16:9 landscape" },
+  { value: "9:16", label: "9:16 vertical" },
+  { value: "custom", label: "Custom" },
+] as const;
+
 /**
- * The editor window: image on the left, settings and crop numbers on the right.
- *
- * It reuses `<PreparationSettings>` verbatim, in its `rail` layout, so the side
- * panel and this window cannot disagree about what the fields mean. The extra
- * surface here is only what needs the room — the large stage and the transform
- * controls.
+ * The editor window focuses on crop geometry and transforms. Final output
+ * settings stay in the side panel, but the chosen values are still carried
+ * through here so applying a crop can render the prepared copy at the intended
+ * size and format.
  */
 export const ImageEditor = ({ sessionId }: { readonly sessionId: string }) => {
   const [phase, setPhase] = useState<Phase>("loading");
@@ -50,6 +61,29 @@ export const ImageEditor = ({ sessionId }: { readonly sessionId: string }) => {
 
   const settings = usePreparationSettings(inspection);
   const { setValues } = settings;
+  const originalCropRatioInput =
+    inspection?.width && inspection.height
+      ? `${inspection.width}:${inspection.height}`
+      : "";
+
+  const selectedCropRatio = useMemo(() => {
+    if (!settings.values.lockAspect) return "free";
+    if (
+      originalCropRatioInput &&
+      settings.values.aspectRatioInput === originalCropRatioInput
+    ) {
+      return "original";
+    }
+    return CROP_RATIO_OPTIONS.some(
+      (option) => option.value === settings.values.aspectRatioInput,
+    )
+      ? settings.values.aspectRatioInput
+      : "custom";
+  }, [
+    originalCropRatioInput,
+    settings.values.aspectRatioInput,
+    settings.values.lockAspect,
+  ]);
 
   const lockedRatio = useMemo(
     () =>
@@ -57,6 +91,39 @@ export const ImageEditor = ({ sessionId }: { readonly sessionId: string }) => {
         ? resolveLockedRatio(settings.values)
         : undefined,
     [settings.values],
+  );
+
+  const setCropRatio = useCallback(
+    (next: string) => {
+      setValues((current) => {
+        if (next === "free") {
+          return { ...current, lockAspect: false, aspectRatioInput: "" };
+        }
+        if (next === "original") {
+          return {
+            ...current,
+            lockAspect: Boolean(originalCropRatioInput),
+            aspectRatioInput: originalCropRatioInput,
+          };
+        }
+        if (next === "custom") {
+          return { ...current, lockAspect: true };
+        }
+        return { ...current, lockAspect: true, aspectRatioInput: next };
+      });
+    },
+    [originalCropRatioInput, setValues],
+  );
+
+  const setCustomCropRatio = useCallback(
+    (next: string) => {
+      setValues((current) => ({
+        ...current,
+        lockAspect: true,
+        aspectRatioInput: next,
+      }));
+    },
+    [setValues],
   );
 
   useEffect(() => {
@@ -245,33 +312,65 @@ export const ImageEditor = ({ sessionId }: { readonly sessionId: string }) => {
         </div>
 
         <aside className="flex w-full shrink-0 flex-col gap-3 overflow-y-auto border-border border-t bg-card p-4 lg:w-80 lg:border-t-0 lg:border-l">
-          <div className="min-w-0">
-            <p className="truncate font-medium text-sm">{inspection.name}</p>
-            <p className="text-muted-foreground text-xs">
-              {formatBytes(inspection.sizeBytes)}
-              {inspection.width &&
-                inspection.height &&
-                ` · ${inspection.width} × ${inspection.height} px`}
+          <div className="min-w-0 rounded-md border border-primary/20 bg-primary/5 p-3">
+            <FileMetadataCards inspection={inspection} />
+            <p className="mt-2 truncate text-muted-foreground text-xs">
+              {inspection.name}
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            {(["x", "y", "width", "height"] as const).map((key) => (
-              <label
-                key={key}
-                htmlFor={`crop-${key}`}
-                className="flex min-w-0 flex-col gap-1 text-xs"
-              >
-                <span className="text-muted-foreground capitalize">{key}</span>
-                <Input
-                  id={`crop-${key}`}
-                  type="number"
-                  inputMode="numeric"
-                  value={crop ? `${Math.round(crop[key])}` : ""}
-                  onChange={(event) => setCropField(key, event.target.value)}
-                />
-              </label>
-            ))}
+          <div className="flex flex-col gap-2">
+            <p className="font-medium text-foreground text-xs">Crop box</p>
+            <p className="text-muted-foreground text-xs">
+              Choose the shape the form needs, then drag the box over the part
+              to keep.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <SelectField
+                id="crop-ratio"
+                label="Crop ratio"
+                value={selectedCropRatio}
+                onValueChange={setCropRatio}
+                options={CROP_RATIO_OPTIONS}
+                className={
+                  selectedCropRatio === "custom" ? undefined : "col-span-2"
+                }
+              />
+              {selectedCropRatio === "custom" && (
+                <label
+                  htmlFor="crop-ratio-custom"
+                  className="flex min-w-0 flex-col gap-1 text-xs"
+                >
+                  <span className="text-muted-foreground">Custom ratio</span>
+                  <Input
+                    id="crop-ratio-custom"
+                    placeholder="4:5"
+                    value={settings.values.aspectRatioInput}
+                    onChange={(event) => setCustomCropRatio(event.target.value)}
+                  />
+                </label>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {(["x", "y", "width", "height"] as const).map((key) => (
+                <label
+                  key={key}
+                  htmlFor={`crop-${key}`}
+                  className="flex min-w-0 flex-col gap-1 text-xs"
+                >
+                  <span className="text-muted-foreground capitalize">
+                    {key}
+                  </span>
+                  <Input
+                    id={`crop-${key}`}
+                    type="number"
+                    inputMode="numeric"
+                    value={crop ? `${Math.round(crop[key])}` : ""}
+                    onChange={(event) => setCropField(key, event.target.value)}
+                  />
+                </label>
+              ))}
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-1">
@@ -339,12 +438,6 @@ export const ImageEditor = ({ sessionId }: { readonly sessionId: string }) => {
               <Maximize className="size-4" />
             </Button>
           </div>
-
-          <PreparationSettings
-            inspection={inspection}
-            settings={settings}
-            layout="rail"
-          />
         </aside>
       </div>
 

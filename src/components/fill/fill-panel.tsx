@@ -443,7 +443,6 @@ const UploadIntentItem = ({
   onPrepare,
   output,
   error,
-  onShowCurrentPage,
 }: {
   readonly intent: UploadIntent;
   readonly onPrepare: (file: File) => Promise<void>;
@@ -456,7 +455,6 @@ const UploadIntentItem = ({
     readonly mimeType: string;
   };
   readonly error?: string;
-  readonly onShowCurrentPage?: () => void;
 }) => {
   const [sourceUrl, setSourceUrl] = useState<string>();
   const [sourceFile, setSourceFile] = useState<File>();
@@ -524,7 +522,6 @@ const UploadIntentItem = ({
           store={output.store}
           downloadUrl={output.url}
           label={intent.label ?? intent.kind}
-          onShowCurrentPage={onShowCurrentPage}
         />
       )}
       {error && <p className="text-destructive text-xs">{error}</p>}
@@ -551,16 +548,6 @@ const UploadIntentsCard = ({
     >
   >({});
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const showCurrentPage = async () => {
-    const [tab] = await browser.tabs.query({
-      active: true,
-      currentWindow: true,
-    });
-    if (tab?.id !== undefined) {
-      await browser.tabs.update(tab.id, { active: true });
-    }
-  };
 
   useEffect(
     () => () => {
@@ -643,7 +630,6 @@ const UploadIntentsCard = ({
           intent={intent}
           output={prepared[intent.id]}
           error={errors[intent.id]}
-          onShowCurrentPage={() => void showCurrentPage()}
           onPrepare={(file) => prepare(intent, file)}
         />
       ))}

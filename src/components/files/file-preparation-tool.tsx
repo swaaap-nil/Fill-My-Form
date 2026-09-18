@@ -9,7 +9,6 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { browser } from "wxt/browser";
 import { Button } from "~/components/ui/button";
-import { formatBytes } from "~/core/files/byte-units";
 import type {
   FileInspection,
   PreparedArtifact,
@@ -33,6 +32,7 @@ import {
 } from "~/lib/files/editor-window";
 import { createBrowserFilePreparationRegistry } from "~/lib/files/preparation-registry";
 import { cn } from "~/lib/utils";
+import { FileMetadataCards } from "./file-metadata-cards";
 import { PreparationSettings } from "./preparation-settings";
 import { PreparedFileHandoff } from "./prepared-file-handoff";
 import { usePreparationSettings } from "./use-preparation-settings";
@@ -240,16 +240,6 @@ export const FilePreparationTool = () => {
     settings.resetFor(undefined);
   };
 
-  const showCurrentPage = async () => {
-    const [tab] = await browser.tabs.query({
-      active: true,
-      currentWindow: true,
-    });
-    if (tab?.id !== undefined) {
-      await browser.tabs.update(tab.id, { active: true });
-    }
-  };
-
   return (
     <div className="flex w-full flex-col gap-4">
       {/* Once a file is chosen the details card below carries the heading's
@@ -314,16 +304,10 @@ export const FilePreparationTool = () => {
               ) : (
                 <FileImage className="size-5 shrink-0 text-primary" />
               )}
-              <div className="min-w-0">
-                <p className="truncate font-medium text-sm">
+              <div className="min-w-0 space-y-2">
+                <FileMetadataCards inspection={inspection} />
+                <p className="truncate text-muted-foreground text-xs">
                   {inspection.name}
-                </p>
-                <p className="text-muted-foreground text-xs">
-                  {formatBytes(inspection.sizeBytes)}
-                  {inspection.width &&
-                    inspection.height &&
-                    ` · ${inspection.width} × ${inspection.height} px`}
-                  {inspection.dpi && ` · ${Math.round(inspection.dpi.x)} DPI`}
                 </p>
               </div>
             </div>
@@ -352,6 +336,9 @@ export const FilePreparationTool = () => {
                     ? `Cropped to ${Math.round(settings.values.crop.width)} × ${Math.round(settings.values.crop.height)} px`
                     : "Using the whole image"}
                 </p>
+                <p className="text-muted-foreground text-xs">
+                  Crop selects the part of the picture you want to keep.
+                </p>
                 <Button
                   type="button"
                   variant="outline"
@@ -366,12 +353,12 @@ export const FilePreparationTool = () => {
             </div>
           )}
 
-          <PreparationSettings
-            inspection={inspection}
-            settings={settings}
-            layout="column"
-          />
+          <PreparationSettings inspection={inspection} settings={settings} />
 
+          <p className="text-muted-foreground text-xs">
+            This creates a new upload-ready copy. Your original file stays
+            unchanged.
+          </p>
           <Button type="button" disabled={busy} onClick={() => void prepare()}>
             {busy ? (
               <>
@@ -390,15 +377,13 @@ export const FilePreparationTool = () => {
           artifact={prepared}
           store={store}
           downloadUrl={preparedUrl}
-          // The preset names the thing being dragged ("drag this signature to
-          // your form"). Custom names nothing, so fall back to the generic
-          // noun rather than saying "drag this custom to your form".
+          // The preset names the preview for screen readers. Custom names
+          // nothing, so fall back to the generic noun.
           label={
             settings.values.presetId === CUSTOM_PRESET_ID
               ? undefined
               : presetById(settings.values.presetId)?.label.toLowerCase()
           }
-          onShowCurrentPage={() => void showCurrentPage()}
         />
       )}
     </div>

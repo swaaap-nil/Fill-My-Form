@@ -3,7 +3,7 @@
  *
  * Every field arrives as a string, because that is what an `<input>` holds
  * mid-keystroke: `"3"` on the way to `"35"`, `""` when cleared, `"4:"` on the
- * way to `"4:5"`. Coercion, unit conversion and the aspect lock all happen
+ * way to `"4:5"`. Coercion, unit conversion and crop-ratio parsing all happen
  * here rather than in a component, so the rules are unit-tested without a DOM
  * and shared verbatim by the side panel and the editor window.
  *
@@ -13,7 +13,7 @@
  * argues with you while you are still typing is worse than one that waits.
  */
 
-import { applyAspectLock, parseAspectRatio, ratioOf } from "./aspect-ratio";
+import { parseAspectRatio, ratioOf } from "./aspect-ratio";
 import {
   type ByteUnit,
   formatInUnit,
@@ -97,11 +97,19 @@ export const effectiveDpi = (
 /** Seeds the form from a freshly inspected file. */
 export const preparationFormValuesFrom = (
   inspection: FileInspection,
-): PreparationFormValues => ({
-  ...emptyPreparationFormValues,
-  dpiValue: inspection.dpi ? `${Math.round(inspection.dpi.x)}` : "",
-  pageEnd: inspection.pageCount ? `${inspection.pageCount}` : "",
-});
+): PreparationFormValues => {
+  const sourceRatio =
+    inspection.width && inspection.height
+      ? `${inspection.width}:${inspection.height}`
+      : "";
+  return {
+    ...emptyPreparationFormValues,
+    lockAspect: Boolean(sourceRatio),
+    aspectRatioInput: sourceRatio,
+    dpiValue: inspection.dpi ? `${Math.round(inspection.dpi.x)}` : "",
+    pageEnd: inspection.pageCount ? `${inspection.pageCount}` : "",
+  };
+};
 
 /**
  * Applies a preset without discarding what the preset does not mention.
@@ -143,44 +151,19 @@ export const applyPreset = (
 };
 
 /**
- * Edits one dimension, propagating the other through the lock. Returning the
- * whole next state — rather than mutating a ref during render, as the old
- * component did — is what makes the lock a property of the transition
- * instead of a side effect that races the next keystroke.
+ * Edits one final output dimension. When only one side is set, the adapter
+ * later derives the other from the crop's shape, so this must not silently
+ * rewrite the neighbouring field while the user is editing resize settings.
  */
 export const setDimension = (
   values: PreparationFormValues,
   edited: "width" | "height",
   next: string,
 ): PreparationFormValues => {
-  const base: PreparationFormValues = {
+  return {
     ...values,
     presetId: CUSTOM_PRESET_ID,
     ...(edited === "width" ? { widthValue: next } : { heightValue: next }),
-  };
-
-  if (!values.lockAspect) return base;
-
-  const ratio = resolveLockedRatio(base);
-  if (ratio === undefined) return base;
-
-  const locked = applyAspectLock(
-    edited,
-    numberOrUndefined(base.widthValue),
-    numberOrUndefined(base.heightValue),
-    ratio,
-  );
-
-  return {
-    ...base,
-    widthValue:
-      locked.width === undefined
-        ? base.widthValue
-        : formatLength(locked.width, base.lengthUnit),
-    heightValue:
-      locked.height === undefined
-        ? base.heightValue
-        : formatLength(locked.height, base.lengthUnit),
   };
 };
 
@@ -213,24 +196,16 @@ export const setLengthUnit = (
 };
 
 /**
- * The ratio the lock should hold, in priority order: an explicit `4:5` the
- * user typed, else whatever the current width and height imply, else the
- * shape of the crop selection. Returns `undefined` when there is nothing to
- * infer from, in which case the lock simply has no effect yet.
+ * The ratio the crop box should hold, in priority order: an explicit `4:5` the
+ * user picked or typed, else the shape of the current crop selection. Final
+ * output dimensions are deliberately not a fallback here; resize dimensions and
+ * crop shape are separate concepts.
  */
 export const resolveLockedRatio = (
   values: PreparationFormValues,
 ): number | undefined => {
   const typed = parseAspectRatio(values.aspectRatioInput);
   if (typed !== undefined) return typed;
-
-  const width = numberOrUndefined(values.widthValue);
-  const height = numberOrUndefined(values.heightValue);
-  const fromDimensions =
-    width !== undefined && height !== undefined
-      ? ratioOf(width, height)
-      : undefined;
-  if (fromDimensions !== undefined) return fromDimensions;
 
   return values.crop
     ? ratioOf(values.crop.width, values.crop.height)
@@ -288,7 +263,7 @@ export const resolvePreparationSpec = (
 
   if (values.lockAspect && lockedAspectRatio === undefined) {
     issues.push(
-      "Set a width and height, or an aspect ratio like 4:5, for the lock to hold.",
+      "Choose a crop ratio like 4:5, or switch the crop ratio back to Free.",
     );
   }
 

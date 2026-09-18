@@ -114,15 +114,15 @@ describe("resolvePreparationSpec", () => {
     expect(spec.outputMimeType).toBe("image/png");
   });
 
-  it("sets lockedAspectRatio only when the lock is on", () => {
+  it("sets lockedAspectRatio only when a crop ratio is chosen", () => {
     const unlocked = resolvePreparationSpec(
-      values({ widthValue: "400", heightValue: "500" }),
+      values({ aspectRatioInput: "4:5" }),
       image,
     );
     expect(unlocked.spec.lockedAspectRatio).toBeUndefined();
 
     const locked = resolvePreparationSpec(
-      values({ widthValue: "400", heightValue: "500", lockAspect: true }),
+      values({ aspectRatioInput: "4:5", lockAspect: true }),
       image,
     );
     expect(locked.spec.lockedAspectRatio).toBeCloseTo(0.8, 6);
@@ -173,7 +173,7 @@ describe("resolvePreparationSpec", () => {
       values({ lockAspect: true }),
       image,
     );
-    expect(issues.some((issue) => issue.includes("for the lock to hold"))).toBe(
+    expect(issues.some((issue) => issue.includes("Choose a crop ratio"))).toBe(
       true,
     );
   });
@@ -214,27 +214,27 @@ describe("resolvePreparationSpec", () => {
   });
 });
 
-describe("setDimension with the aspect lock", () => {
-  it("derives the height from an edited width", () => {
+describe("setDimension", () => {
+  it("edits width without changing height", () => {
     const next = setDimension(
-      values({ lockAspect: true, aspectRatioInput: "4:5" }),
+      values({ lockAspect: true, aspectRatioInput: "4:5", heightValue: "999" }),
       "width",
       "400",
     );
     expect(next.widthValue).toBe("400");
-    expect(next.heightValue).toBe("500");
+    expect(next.heightValue).toBe("999");
   });
 
-  it("derives the width from an edited height", () => {
+  it("edits height without changing width", () => {
     const next = setDimension(
-      values({ lockAspect: true, aspectRatioInput: "4:5" }),
+      values({ lockAspect: true, aspectRatioInput: "4:5", widthValue: "111" }),
       "height",
       "500",
     );
-    expect(next.widthValue).toBe("400");
+    expect(next.widthValue).toBe("111");
   });
 
-  it("leaves the other field alone when the lock is off", () => {
+  it("leaves the other field alone", () => {
     const next = setDimension(values({ heightValue: "999" }), "width", "400");
     expect(next.heightValue).toBe("999");
   });
@@ -344,10 +344,10 @@ describe("resolveLockedRatio", () => {
     ).toBe(1);
   });
 
-  it("falls back to the current dimensions", () => {
+  it("does not infer crop ratio from final output dimensions", () => {
     expect(
       resolveLockedRatio(values({ widthValue: "400", heightValue: "500" })),
-    ).toBeCloseTo(0.8, 6);
+    ).toBeUndefined();
   });
 
   it("falls back to the crop selection's shape", () => {
@@ -374,6 +374,24 @@ describe("preparationFormValuesFrom", () => {
 
   it("leaves DPI blank when the file declares none", () => {
     expect(preparationFormValuesFrom(image).dpiValue).toBe("");
+  });
+
+  it("defaults image crop ratio to the source image shape", () => {
+    const seeded = preparationFormValuesFrom(image);
+    expect(seeded.lockAspect).toBe(true);
+    expect(seeded.aspectRatioInput).toBe("2880:1864");
+  });
+
+  it("does not set a crop ratio for PDFs", () => {
+    const seeded = preparationFormValuesFrom({
+      kind: "pdf",
+      name: "doc.pdf",
+      mimeType: "application/pdf",
+      sizeBytes: 100,
+      pageCount: 7,
+    });
+    expect(seeded.lockAspect).toBe(false);
+    expect(seeded.aspectRatioInput).toBe("");
   });
 
   it("seeds the last page from the page count", () => {

@@ -1,5 +1,3 @@
-import { Link2, Unlink2 } from "lucide-react";
-import { CheckboxField } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
 import { SelectField } from "~/components/ui/select";
 import { BYTE_UNITS, type ByteUnit } from "~/core/files/byte-units";
@@ -21,27 +19,17 @@ const FORMAT_OPTIONS: readonly { value: OutputFormat; label: string }[] = [
 const unitOptions = (units: readonly string[]) =>
   units.map((unit) => ({ value: unit, label: unit }));
 
-/**
- * One settings form, two hosts. `layout` changes only density and grid
- * columns: the side panel gets a single column in ~400px, the editor window a
- * narrower rail beside the image. Everything else — the fields, the rules, the
- * wording — is deliberately identical, so the two surfaces cannot drift.
- */
+/** Final output settings for the side panel. Crop shape lives in the editor. */
 export const PreparationSettings = ({
   inspection,
   settings,
-  layout,
   className,
 }: {
   readonly inspection: FileInspection;
   readonly settings: Settings;
-  readonly layout: "column" | "rail";
   readonly className?: string;
 }) => {
   const { values, setValue, setDimension, setLengthUnit, setPreset } = settings;
-  // The rail is about 20rem wide, so two-word labels wrap and "Optional"
-  // truncates to "Opt". Shorter wording beats a cramped column.
-  const isRail = layout === "rail";
   const isImage = inspection.kind === "image";
   const outputMimeType =
     values.format === "keep" ? inspection.mimeType : values.format;
@@ -64,14 +52,12 @@ export const PreparationSettings = ({
       {isImage && (
         <>
           <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/20 p-2.5">
-            <div
-              className={cn(
-                "grid gap-2",
-                layout === "column"
-                  ? "grid-cols-[1fr_1fr_auto]"
-                  : "grid-cols-2",
-              )}
-            >
+            <p className="font-medium text-foreground text-xs">Final output</p>
+            <p className="text-muted-foreground text-xs">
+              Enter the requirements shown on the form, such as 600 × 600 px,
+              JPG, 20–50 KB, or 300 DPI.
+            </p>
+            <div className={cn("grid gap-2", "grid-cols-[1fr_1fr_auto]")}>
               <label
                 htmlFor="prepare-width"
                 className="flex min-w-0 flex-col gap-1 text-xs"
@@ -114,36 +100,7 @@ export const PreparationSettings = ({
                 value={values.lengthUnit}
                 onValueChange={(next) => setLengthUnit(next as LengthUnit)}
                 options={unitOptions(LENGTH_UNITS)}
-                className={layout === "column" ? "w-20" : "col-span-2"}
-              />
-            </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <CheckboxField
-                id="prepare-lock-aspect"
-                checked={values.lockAspect}
-                onCheckedChange={(checked) => setValue("lockAspect", checked)}
-                label={
-                  <span className="inline-flex items-center gap-1">
-                    {values.lockAspect ? (
-                      <Link2 className="size-3.5" />
-                    ) : (
-                      <Unlink2 className="size-3.5" />
-                    )}
-                    Lock aspect ratio
-                  </span>
-                }
-              />
-              <Input
-                id="prepare-ratio"
-                aria-label="Aspect ratio"
-                className="h-8 w-24 text-xs"
-                placeholder="4:5"
-                value={values.aspectRatioInput}
-                disabled={!values.lockAspect}
-                onChange={(event) =>
-                  setValue("aspectRatioInput", event.target.value)
-                }
+                className="w-20"
               />
             </div>
 
@@ -201,22 +158,23 @@ export const PreparationSettings = ({
         </>
       )}
 
+      <p className="text-muted-foreground text-xs">
+        Leave file size blank unless the form gives a KB or MB limit.
+      </p>
       <div className="grid grid-cols-2 gap-2">
         <div className="flex min-w-0 items-end gap-1.5">
           <label
             htmlFor="prepare-max-size"
             className="flex min-w-0 flex-1 flex-col gap-1 text-xs"
           >
-            <span className="text-muted-foreground">
-              {isRail ? "Max size" : "Max file size"}
-            </span>
+            <span className="text-muted-foreground">Max file size</span>
             <Input
               id="prepare-max-size"
               type="number"
               min="0"
               step="any"
               inputMode="decimal"
-              placeholder={isRail ? "Any" : "Optional"}
+              placeholder="Optional"
               value={values.maxSizeValue}
               onChange={(event) => setValue("maxSizeValue", event.target.value)}
             />
@@ -235,16 +193,14 @@ export const PreparationSettings = ({
             htmlFor="prepare-min-size"
             className="flex min-w-0 flex-1 flex-col gap-1 text-xs"
           >
-            <span className="text-muted-foreground">
-              {isRail ? "Min size" : "Min file size"}
-            </span>
+            <span className="text-muted-foreground">Min file size</span>
             <Input
               id="prepare-min-size"
               type="number"
               min="0"
               step="any"
               inputMode="decimal"
-              placeholder={isRail ? "Any" : "Optional"}
+              placeholder="Optional"
               value={values.minSizeValue}
               onChange={(event) => setValue("minSizeValue", event.target.value)}
             />
