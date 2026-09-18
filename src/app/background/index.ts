@@ -474,6 +474,11 @@ const main = () => {
     return { ok: true };
   });
 
+  onMessage("deleteOnboardingAnswer", async ({ data }) => {
+    await (await getLocalDataStore()).delete(DEFAULT_PROFILE_ID, data.key);
+    return { ok: true };
+  });
+
   onMessage("getMemorySnapshot", async () => ({
     items: await (await getLocalDataStore()).search({
       profileId: DEFAULT_PROFILE_ID,

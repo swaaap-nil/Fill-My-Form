@@ -21,6 +21,7 @@ The browser lives on the other side of the boundary, in `src/lib` and
 | `llm/` | The `LLMProvider` port, mock, and AI SDK adapter | Prompt content; which model is used |
 | `policy/` | What the runtime is willing to do automatically | Asking the user (that is a tool) |
 | `verification/` | Comparing intent against reality | Reading the DOM back |
+| `files/` | What a compliant upload *is*: units, ratios, crop geometry, byte limits | Pixels and bytes themselves — canvas, encoders and IndexedDB are adapters |
 | `errors.ts` | The error taxonomy | |
 | `logging.ts` | Structured logging with a closed field allowlist | Shipping logs anywhere |
 

@@ -140,13 +140,48 @@ export const OnboardingForm = () => {
     }
   };
 
+  const deleteField = async (
+    key: string,
+    version: number,
+  ): Promise<boolean> => {
+    setFieldStatus(key, "saving");
+    try {
+      await sendMessage("deleteOnboardingAnswer", { key });
+      const { items } = await sendMessage("getMemorySnapshot", undefined);
+      const deleted = !items.some((item) => item.key === key);
+      if (!deleted) throw new Error("Deleted onboarding answer still exists.");
+      if (saveVersions.current[key] !== version) return false;
+      setSavedKeys((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+      setFieldStatus(key, "saved");
+      sound.play("onboardingSaveSucceeded");
+      return true;
+    } catch {
+      if (saveVersions.current[key] === version) {
+        setFieldStatus(key, "error");
+        sound.play("onboardingSaveFailed");
+      }
+      return false;
+    }
+  };
+
   const scheduleTextSave = (key: string, value: string, label: string) => {
     const nextVersion = (saveVersions.current[key] ?? 0) + 1;
     saveVersions.current[key] = nextVersion;
     clearTimeout(saveTimers.current[key]);
 
     if (value.trim() === "") {
-      setFieldStatus(key, "idle");
+      if (!savedKeys.has(key)) {
+        setFieldStatus(key, "idle");
+        return;
+      }
+      setFieldStatus(key, "pending");
+      saveTimers.current[key] = setTimeout(() => {
+        void deleteField(key, nextVersion);
+      }, AUTOSAVE_DELAY_MS);
       return;
     }
 

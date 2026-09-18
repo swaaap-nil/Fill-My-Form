@@ -28,6 +28,23 @@ test starts needing a DOM, the logic is in the wrong layer.
 | Adapters (`src/lib`) | `bun test` with fakes | Storage, messaging, site access, Chrome/Firefox toolbar-icon wiring |
 | End to end | `bun test:e2e` | The built extension in real Chromium, plus the fixtures |
 
+### File preparation, specifically
+
+Bun has no `canvas` and no `createImageBitmap`, and that fact decides where a
+file-preparation test goes — not preference.
+
+Everything that can be expressed as arithmetic lives in `src/core/files/` and is
+unit-tested: unit conversion, aspect-ratio parsing and locking, crop-rectangle
+clamping, byte limits, and the form-to-spec resolver. The crop clamp in
+particular is core code *because* of this rule — a selection escaping the image
+is a geometry bug, and stating it as `rectContains(image, selection)` means it
+is covered by `bun test` instead of only by an end-to-end drag.
+
+What genuinely needs pixels — encoding, the compression ladder, the downscale
+fallback — stays end-to-end in `e2e/files.spec.ts`. Do not reach for a canvas
+polyfill to move those into `bun test`; the polyfill would be the thing under
+test.
+
 ## The fixture site
 
 ```bash

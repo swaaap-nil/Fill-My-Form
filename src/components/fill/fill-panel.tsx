@@ -339,7 +339,7 @@ const AnswersSummaryCard = ({
       ? "Some answers were applied. Open details to review what remains."
       : failed
         ? "Nothing was changed. Try again or open details to review."
-        : "Open details to review every detected proposal.";
+        : "Review detected answers before filling.";
 
   return (
     <SummaryCardShell
@@ -432,7 +432,7 @@ const KnownFieldsSummaryCard = ({
     testId="known-fields-summary"
     onOpenDetails={onOpenDetails}
     title={`${count} ${pluralizeKnownField(count)}`}
-    subtitle="Open details to review every detected proposal."
+    subtitle="Answer missing information for detected fields."
   >
     <AgentRunPanel key={scanVersion} tabId={tabId} />
   </SummaryCardShell>
@@ -910,88 +910,94 @@ export const FillPanel = () => {
     : undefined;
 
   return (
-    <div className="flex w-full flex-col gap-4">
-      <ScanToolbar
-        state={scanUiState}
-        grantedOrigin={activeGrantedOrigin}
-        scannedAt={lastScannedAt}
-        onScan={scan}
-        onRevoke={revoke}
-      />
+    <div className="flex w-full grow flex-col gap-4">
+      <div className="flex flex-col gap-4">
+        {scanState.kind === "not_granted" && (
+          <p className="text-muted-foreground text-sm">
+            This site needs access before it can be scanned. Use "Scan this
+            page" and approve the browser prompt to continue.
+          </p>
+        )}
 
-      <Separator />
-
-      {scanState.kind === "not_granted" && (
-        <p className="text-muted-foreground text-sm">
-          This site needs access before it can be scanned. Use "Scan this page"
-          and approve the browser prompt to continue.
-        </p>
-      )}
-
-      {scanState.kind === "proposals" && showProposalDetails ? (
-        <div
-          className={cn(
-            "flex flex-col gap-2 motion-reduce:animate-none",
-            proposalViewMotionClass,
-          )}
-        >
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="self-start"
-            onClick={() => {
-              setProposalViewTransition("back");
-              setProposalView("summary");
-              sound.play("proposalDetailsClosed");
-            }}
-          >
-            <ChevronLeft className="size-4" />
-            Back
-          </Button>
-          {detailsProposals.map((proposal) => (
-            <ProposalCard
-              key={proposal.fieldId}
-              proposal={proposal}
-              onConfirm={(decisionId) => confirm([decisionId])}
-              confirmedIds={confirmedIds}
-            />
-          ))}
-        </div>
-      ) : (
-        scanState.kind === "proposals" && (
+        {scanState.kind === "proposals" && showProposalDetails ? (
           <div
             className={cn(
-              "flex flex-col gap-4 motion-reduce:animate-none",
+              "flex flex-col gap-2 motion-reduce:animate-none",
               proposalViewMotionClass,
             )}
           >
-            <AnswersSummaryCard
-              count={answeredDecisionIds.length}
-              fillStatus={fillStatus}
-              onOpenDetails={() => {
-                setProposalViewTransition("forward");
-                setProposalView("answers");
-                sound.play("proposalDetailsOpened");
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="self-start"
+              onClick={() => {
+                setProposalViewTransition("back");
+                setProposalView("summary");
+                sound.play("proposalDetailsClosed");
               }}
-              onFill={() => confirm(answeredDecisionIds)}
-            />
-            <KnownFieldsSummaryCard
-              count={knownNoAnswerProposals.length}
-              onOpenDetails={() => {
-                setProposalViewTransition("forward");
-                setProposalView("known");
-                sound.play("proposalDetailsOpened");
-              }}
-              tabId={activeTabId}
-              scanVersion={scanVersion}
-            />
-            {scanState.uploadIntents.length > 0 && (
-              <UploadIntentsCard intents={scanState.uploadIntents} />
-            )}
+            >
+              <ChevronLeft className="size-4" />
+              Back
+            </Button>
+            {detailsProposals.map((proposal) => (
+              <ProposalCard
+                key={proposal.fieldId}
+                proposal={proposal}
+                onConfirm={(decisionId) => confirm([decisionId])}
+                confirmedIds={confirmedIds}
+              />
+            ))}
           </div>
-        )
-      )}
+        ) : (
+          scanState.kind === "proposals" && (
+            <div
+              className={cn(
+                "flex flex-col gap-4 motion-reduce:animate-none",
+                proposalViewMotionClass,
+              )}
+            >
+              <AnswersSummaryCard
+                count={answeredDecisionIds.length}
+                fillStatus={fillStatus}
+                onOpenDetails={() => {
+                  setProposalViewTransition("forward");
+                  setProposalView("answers");
+                  sound.play("proposalDetailsOpened");
+                }}
+                onFill={() => confirm(answeredDecisionIds)}
+              />
+              {knownNoAnswerProposals.length > 0 && (
+                <KnownFieldsSummaryCard
+                  count={knownNoAnswerProposals.length}
+                  onOpenDetails={() => {
+                    setProposalViewTransition("forward");
+                    setProposalView("known");
+                    sound.play("proposalDetailsOpened");
+                  }}
+                  tabId={activeTabId}
+                  scanVersion={scanVersion}
+                />
+              )}
+              {scanState.uploadIntents.length > 0 && (
+                <UploadIntentsCard intents={scanState.uploadIntents} />
+              )}
+            </div>
+          )
+        )}
+      </div>
+
+      <div className="mt-auto flex flex-col gap-4">
+        <Separator />
+
+        <ScanToolbar
+          state={scanUiState}
+          grantedOrigin={activeGrantedOrigin}
+          scannedAt={lastScannedAt}
+          onScan={scan}
+          onRevoke={revoke}
+        />
+      </div>
     </div>
   );
 };

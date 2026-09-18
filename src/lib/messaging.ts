@@ -112,6 +112,7 @@ interface Messages {
     value: MemoryValue;
     label?: string;
   }): { ok: boolean };
+  deleteOnboardingAnswer(data: { key: MemoryKey }): { ok: boolean };
   getMemorySnapshot(): { items: readonly MemoryItem[] };
   exportLocalData(): { data: LocalDataExport };
   importLocalData(data: { payload: unknown }): { ok: boolean };
