@@ -93,6 +93,16 @@ export const conceptSchema = z.object({
    * education fields) have no standard token. See `~/core/matching`, tier 1.
    */
   autocomplete: z.array(z.string().min(1)).optional(),
+  /**
+   * Deterministic synonyms for this concept's *values*, not its label —
+   * distinct from `aliases`, which maps field labels to this concept. Keyed
+   * by normalised synonym (see `normaliseLabel`), valued by the normalised
+   * canonical form a page's option is expected to carry, e.g.
+   * `{ "indian": "india" }` for `identity.nationality`. Only meaningful for
+   * closed-vocabulary concepts (`expects: "select"`); see
+   * `~/core/matching/resolve-option`.
+   */
+  valueAliases: z.record(z.string(), z.string()).optional(),
 });
 
 export type Concept = z.infer<typeof conceptSchema>;

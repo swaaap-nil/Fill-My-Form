@@ -234,3 +234,30 @@ test("files: an oversized photo is transformed before upload", async ({
   expect(uploaded?.type).toBe("image/jpeg");
   expect(uploaded?.size).toBeLessThanOrEqual(8000);
 });
+
+test("files: standalone preparation tool creates a temporary image copy", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const photoPath = testInfo.outputPath("standalone-photo.png");
+  await writeFixture(photoPath, png(160, 120));
+
+  const panelPage = await openPanel(context, extensionId);
+  await panelPage.getByRole("button", { name: "Prepare file" }).click();
+  await panelPage.locator('input[type="file"]').setInputFiles(photoPath);
+  await expect(panelPage.getByText("standalone-photo.png")).toBeVisible();
+
+  await panelPage
+    .getByRole("button", { name: "Prepare temporary copy" })
+    .click();
+  await expect(panelPage.getByText("Ready to upload")).toBeVisible();
+  await expect(
+    panelPage.getByText("Drag this file to your form"),
+  ).toBeVisible();
+  await expect(
+    panelPage.getByTestId("prepared-file-drag-surface"),
+  ).toHaveAttribute("draggable", "true");
+  await expect(
+    panelPage.getByRole("link", { name: "Download prepared copy" }),
+  ).toBeVisible();
+});

@@ -36,7 +36,8 @@
           "required": false,
           "hasValue": false
         }
-      ]
+      ],
+      "uploadIntents": []
     }
   ],
   "observedAt": "<observedAt>"

@@ -70,6 +70,7 @@
         "disabled": false,
         "readOnly": false
       }
-    ]
+    ],
+    "uploadIntents": []
   }
 ]

@@ -54,6 +54,21 @@ const CONTENT_SCRIPT_CSS = ["content-scripts/content.css"];
 export const toOriginPattern = (url: string): string =>
   `${new URL(url).origin}/*`;
 
+/**
+ * Match patterns (and thus `permissions.contains`/`request`) only accept
+ * http/https/file/ftp schemes. Tabs showing the extension's own pages,
+ * `chrome://`, `about:`, etc. fail `new URL(url).protocol` checks silently
+ * in some browsers and log an "Invalid scheme" console error in others —
+ * treat them as never having site access rather than querying for one.
+ */
+const isPermissibleUrl = (url: string): boolean => {
+  try {
+    return /^https?:$/.test(new URL(url).protocol);
+  } catch {
+    return false;
+  }
+};
+
 const scriptIdFor = (origin: string) =>
   `${CONTENT_SCRIPT_ID}:${origin.replace(/[^a-zA-Z0-9]/g, "_")}`;
 
@@ -138,7 +153,9 @@ export const createSiteAccess = (browser: SiteAccessBrowser): SiteAccess => {
 
   return {
     hasSiteAccess: (url) =>
-      browser.permissions.contains({ origins: [toOriginPattern(url)] }),
+      isPermissibleUrl(url)
+        ? browser.permissions.contains({ origins: [toOriginPattern(url)] })
+        : Promise.resolve(false),
 
     async requestSiteAccess(url, activeTabId) {
       const origin = toOriginPattern(url);

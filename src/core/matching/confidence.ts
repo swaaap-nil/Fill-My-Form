@@ -34,3 +34,21 @@ export const TIER_CONFIDENCE: Readonly<Record<MatchTier, ConfidenceLevel>> = {
 
 export const tierToConfidence = (tier: MatchTier): ConfidenceLevel =>
   TIER_CONFIDENCE[tier];
+
+const CONFIDENCE_RANK: Readonly<Record<ConfidenceLevel, number>> = {
+  [ConfidenceLevel.LOW]: 0,
+  [ConfidenceLevel.MEDIUM]: 1,
+  [ConfidenceLevel.HIGH]: 2,
+  [ConfidenceLevel.CERTAIN]: 3,
+};
+
+/**
+ * The weaker of two confidence levels. A field resolved via one tiered
+ * cascade (concept matching) and then narrowed by a second (option
+ * matching) is only as trustworthy as its weakest link — see
+ * `~/core/fill/driver`.
+ */
+export const minConfidence = (
+  a: ConfidenceLevel,
+  b: ConfidenceLevel,
+): ConfidenceLevel => (CONFIDENCE_RANK[a] <= CONFIDENCE_RANK[b] ? a : b);

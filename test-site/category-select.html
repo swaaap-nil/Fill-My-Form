@@ -1,0 +1,36 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Category / nationality — closed-vocabulary controls</title>
+<style>
+  body { font: 16px/1.6 system-ui, sans-serif; max-width: 40rem; margin: 3rem auto; padding: 0 1rem; }
+  label, legend { display: block; margin-top: 1rem; font-weight: 600; }
+  select { width: 100%; padding: .5rem; font: inherit; }
+  fieldset { margin-top: 1.5rem; }
+</style>
+
+<h1>Reservation form</h1>
+<p>
+  A dedicated fixture for select/radio value resolution: option
+  <code>value</code>s are opaque codes, the visible <code>label</code> carries
+  the real meaning — mirrors GATE's real markup.
+</p>
+
+<form id="reservation" method="post" action="/submit">
+  <label for="nationality">Nationality</label>
+  <select id="nationality" name="nationality" required>
+    <option value="">Select Country</option>
+    <option value="IN">India</option>
+    <option value="US">United States</option>
+    <option value="GB">United Kingdom</option>
+  </select>
+
+  <fieldset>
+    <legend>Category</legend>
+    <label><input type="radio" id="cat-gen" name="category" value="1" /> GEN</label>
+    <label><input type="radio" id="cat-obc" name="category" value="2" /> OBC-NCL</label>
+    <label><input type="radio" id="cat-sc" name="category" value="3" /> SC</label>
+    <label><input type="radio" id="cat-st" name="category" value="4" /> ST</label>
+  </fieldset>
+
+  <button type="submit">Submit</button>
+</form>

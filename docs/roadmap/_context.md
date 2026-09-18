@@ -32,7 +32,7 @@ contracts, most of which have no implementation.
 | `src/core/agent/types.ts` | Types, `PHASE_TRANSITIONS`, `canTransition`. **No reducer, no loop.** |
 | `src/core/verification/types.ts` | Types only. **No `Verifier`.** |
 | `src/app/sidepanel`, `options` | **Sidepanel works (Phase 1c):** onboarding form (ontology-driven) and the fill panel (grant/scan/confirm), stacked behind two toggle buttons — no tab primitive exists yet. `options` still renders `<Layout />` only. |
-| `src/app/content/index.tsx` | **Works (Phase 1c).** `extractFullForm` and `fillField` message handlers, on top of the existing badge UI. Fill technique: native-setter + event, for text-like inputs/textarea/select only — radio/checkbox groups and ARIA widgets are not filled yet (Phase 2). |
+| `src/app/content/index.tsx` | **Works (Phase 1c).** `extractFullForm` and `fillField` message handlers, on top of the existing badge UI. Fill technique: native-setter + event, for text-like inputs/textarea/select/native radio/checkbox groups (`~/core/matching/resolve-option` resolves a stored value to the field's own option first). ARIA widgets whose options only exist in the DOM after an interaction (`controlled.html`'s combobox) are still not filled (Phase 2). |
 | `src/components/ui/` | shadcn-style primitives (button, card, input, form, …). Compose from these. No select/radio/checkbox/tabs primitive yet — onboarding and the fill panel work around this (see the phase 1c handback). |
 | `scripts/check-release-manifest.ts` | **Works,** wired into CI, with its own tests. Phase 0 built it. |
 

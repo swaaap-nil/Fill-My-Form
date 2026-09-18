@@ -156,6 +156,39 @@ test("confirm: confirming a proposal writes the value into the page", async ({
   );
 });
 
+test("closed-vocabulary fields: a stored value resolves to the field's own option and gets written", async ({
+  context,
+  extensionId,
+}) => {
+  const formPage = await context.newPage();
+  await formPage.goto("/category-select.html");
+
+  const panelPage = await openPanel(context, extensionId);
+  // Neither stored value equals any option's `value` attribute verbatim:
+  // "Indian" only matches India's `value="IN"` through the nationality
+  // concept's `valueAliases` demonym table, and "OBC" only matches
+  // OBC-NCL's `value="2"` through containment on the visible label — see
+  // `~/core/matching/resolve-option`.
+  await seedAnswers(panelPage, [
+    ["Nationality", "Indian"],
+    ["Reservation category", "OBC"],
+  ]);
+  await grantAccess(formPage, panelPage);
+
+  await formPage.bringToFront();
+  await panelPage.getByRole("button", { name: "Scan this page" }).click();
+  await openProposalDetails(panelPage);
+  for (const confirmButton of await panelPage
+    .getByRole("button", { name: "Confirm", exact: true })
+    .all()) {
+    await confirmButton.click();
+  }
+
+  await expect(formPage.getByLabel("Nationality")).toHaveValue("IN");
+  await expect(formPage.getByRole("radio", { name: "OBC-NCL" })).toBeChecked();
+  await expect(formPage.getByRole("radio", { name: "GEN" })).not.toBeChecked();
+});
+
 test("untouched: the csrf field and the terms checkbox are never filled", async ({
   context,
   extensionId,

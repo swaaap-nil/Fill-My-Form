@@ -1,8 +1,30 @@
 import { describe, expect, it } from "bun:test";
 import { IDBFactory } from "fake-indexeddb";
+import { PDFDocument } from "pdf-lib";
 import { createIndexedDbFileReferenceStore } from "~/lib/files/adapters";
+import { PdfPreparationAdapter } from "~/lib/files/pdf-preparation-adapter";
 
 describe("temporary file artifacts", () => {
+  it("retrieves a derived artifact as a File without changing the original", async () => {
+    const store = await createIndexedDbFileReferenceStore(new IDBFactory());
+    const original = new File(["original-bytes"], "photo.png", {
+      type: "image/png",
+    });
+    const originalRef = await store.save(original);
+    const derivedRef = await store.saveDerived(
+      new File(["prepared-bytes"], "photo.jpg", { type: "image/jpeg" }),
+      originalRef,
+    );
+
+    const derived = await store.getFile(derivedRef.id);
+    expect(derived?.name).toBe("photo.jpg");
+    expect(derived?.type).toBe("image/jpeg");
+    expect(await derived?.text()).toBe("prepared-bytes");
+    expect(await (await store.getFile(originalRef.id))?.text()).toBe(
+      "original-bytes",
+    );
+  });
+
   it("keeps the original immutable and purges expired derived copies", async () => {
     const store = await createIndexedDbFileReferenceStore(new IDBFactory());
     const original = new File(["original-bytes"], "photo.png", {
@@ -26,5 +48,40 @@ describe("temporary file artifacts", () => {
     expect(await store.purgeExpired("2026-01-01T00:01:01.000Z")).toBe(1);
     expect(await store.get(originalRef.id)).not.toBeNull();
     expect(await store.get(derived.id)).toBeNull();
+  });
+});
+
+describe("PDF preparation adapter", () => {
+  it("creates a page-range copy without changing the original", async () => {
+    const store = await createIndexedDbFileReferenceStore(new IDBFactory());
+    const source = await PDFDocument.create();
+    source.addPage([300, 400]);
+    source.addPage([500, 600]);
+    const bytes = await source.save();
+    const original = new File(
+      [new Uint8Array(bytes).buffer as ArrayBuffer],
+      "document.pdf",
+      { type: "application/pdf" },
+    );
+    const originalRef = await store.save(original);
+    const adapter = new PdfPreparationAdapter(store);
+    const result = await adapter.prepare(originalRef, {
+      pageRange: { start: 2, end: 2 },
+      pageWidth: 612,
+      pageHeight: 792,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.artifact.inspection.pageCount).toBe(1);
+    expect(await (await store.get(originalRef.id))?.blob.arrayBuffer()).toEqual(
+      await original.arrayBuffer(),
+    );
+    const prepared = await PDFDocument.load(
+      await result.artifact.blob.arrayBuffer(),
+    );
+    expect(prepared.getPageCount()).toBe(1);
+    expect(prepared.getPage(0).getWidth()).toBe(612);
+    expect(prepared.getPage(0).getHeight()).toBe(792);
   });
 });

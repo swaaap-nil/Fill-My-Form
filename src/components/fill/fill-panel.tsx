@@ -1,4 +1,3 @@
-import Cropper from "cropperjs";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -6,21 +5,24 @@ import {
   ChevronRight,
   LoaderCircle,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { Browser } from "wxt/browser";
 import { browser } from "wxt/browser";
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
+import type { PreparedArtifact } from "~/core/files/preparation";
 import type { UploadIntent } from "~/core/form/types";
 import {
-  createBrowserFileComplianceAdapter,
   createIndexedDbFileReferenceStore,
+  type FileReferenceStore,
 } from "~/lib/files/adapters";
+import { createBrowserFilePreparationRegistry } from "~/lib/files/preparation-registry";
 import type { DecisionId, FieldProposal } from "~/lib/messaging";
 import { sendMessage } from "~/lib/messaging";
 import { useSound } from "~/lib/sfx/react";
 import { siteAccess, toOriginPattern } from "~/lib/site-access";
 import { cn } from "~/lib/utils";
+import { PreparedFileHandoff } from "../files/prepared-file-handoff";
 import { AgentRunPanel } from "./agent-run-panel";
 import { ProposalCard } from "./proposal-card";
 
@@ -407,46 +409,27 @@ const UploadIntentItem = ({
   onPrepare,
   output,
   error,
+  onShowCurrentPage,
 }: {
   readonly intent: UploadIntent;
   readonly onPrepare: (file: File) => Promise<void>;
   readonly output?: {
+    readonly artifact: PreparedArtifact;
+    readonly store: FileReferenceStore;
     readonly url: string;
     readonly name: string;
     readonly size: number;
+    readonly mimeType: string;
   };
   readonly error?: string;
+  readonly onShowCurrentPage?: () => void;
 }) => {
-  const imageRef = useRef<HTMLImageElement>(null);
-  const cropperRef = useRef<Cropper | null>(null);
   const [sourceUrl, setSourceUrl] = useState<string>();
   const [sourceFile, setSourceFile] = useState<File>();
-
-  useEffect(() => {
-    if (!sourceUrl || !imageRef.current) return;
-    const cropper = new Cropper(imageRef.current);
-    cropperRef.current = cropper;
-    return () => {
-      cropper.destroy();
-      cropperRef.current = null;
-    };
-  }, [sourceUrl]);
-
-  const prepareCropped = async () => {
-    if (!sourceFile) return;
-    const selection = cropperRef.current?.getCropperSelection();
-    const canvas = selection ? await selection.$toCanvas() : undefined;
-    if (!canvas) return onPrepare(sourceFile);
-    const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, sourceFile.type || "image/jpeg", 0.95),
-    );
-    if (!blob) return;
-    await onPrepare(
-      new File([blob], sourceFile.name, {
-        type: sourceFile.type || "image/jpeg",
-      }),
-    );
-  };
+  const accept =
+    intent.constraints
+      .find((constraint) => constraint.kind === "accept")
+      ?.value.join(",") ?? "image/*,application/pdf";
 
   return (
     <div className="flex flex-col gap-2 rounded-md border border-border p-3">
@@ -463,7 +446,7 @@ const UploadIntentItem = ({
         <input
           className="max-w-32 text-xs"
           type="file"
-          accept="image/jpeg,image/png,image/webp"
+          accept={accept}
           aria-label={`Choose ${intent.label ?? "upload"}`}
           onChange={(event) => {
             const file = event.currentTarget.files?.[0];
@@ -476,16 +459,25 @@ const UploadIntentItem = ({
       </div>
       {sourceUrl && (
         <>
-          <div className="h-48 overflow-hidden rounded border bg-muted">
-            <img
-              ref={imageRef}
-              src={sourceUrl}
-              alt="Selected upload preview"
-              className="block max-h-full max-w-full"
-            />
-          </div>
-          <Button type="button" size="sm" onClick={() => void prepareCropped()}>
-            Prepare compliant copy
+          {sourceFile?.type.startsWith("image/") ? (
+            <div className="h-48 overflow-hidden rounded border bg-muted">
+              <img
+                src={sourceUrl}
+                alt="Selected upload preview"
+                className="h-full w-full object-contain"
+              />
+            </div>
+          ) : (
+            <div className="rounded border bg-muted/30 p-4 text-center text-muted-foreground text-xs">
+              Document selected. Prepare a temporary upload copy locally.
+            </div>
+          )}
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => sourceFile && void onPrepare(sourceFile)}
+          >
+            Prepare {intent.label?.toLowerCase() ?? intent.kind}
           </Button>
         </>
       )}
@@ -493,13 +485,13 @@ const UploadIntentItem = ({
         {intent.description}
       </p>
       {output && (
-        <a
-          className="text-primary text-xs underline"
-          href={output.url}
-          download={output.name}
-        >
-          Download prepared {output.name} ({Math.ceil(output.size / 1024)} KB)
-        </a>
+        <PreparedFileHandoff
+          artifact={output.artifact}
+          store={output.store}
+          downloadUrl={output.url}
+          label={intent.label ?? intent.kind}
+          onShowCurrentPage={onShowCurrentPage}
+        />
       )}
       {error && <p className="text-destructive text-xs">{error}</p>}
     </div>
@@ -514,25 +506,68 @@ const UploadIntentsCard = ({
   const [prepared, setPrepared] = useState<
     Record<
       string,
-      { readonly url: string; readonly name: string; readonly size: number }
+      {
+        readonly url: string;
+        readonly artifact: PreparedArtifact;
+        readonly store: FileReferenceStore;
+        readonly name: string;
+        readonly size: number;
+        readonly mimeType: string;
+      }
     >
   >({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const showCurrentPage = async () => {
+    const [tab] = await browser.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+    if (tab?.id !== undefined) {
+      await browser.tabs.update(tab.id, { active: true });
+    }
+  };
+
+  useEffect(
+    () => () => {
+      for (const output of Object.values(prepared)) {
+        URL.revokeObjectURL(output.url);
+      }
+    },
+    [prepared],
+  );
 
   const prepare = async (intent: UploadIntent, file: File) => {
     setErrors((current) => ({ ...current, [intent.id]: "" }));
     try {
       const store = await createIndexedDbFileReferenceStore();
       const original = await store.save(file);
-      const adapter = createBrowserFileComplianceAdapter(store);
-      const output = await adapter.prepareLocalFile(
+      const registry = createBrowserFilePreparationRegistry(store);
+      const adapter = registry.adapterFor({
+        kind:
+          file.type === "application/pdf" ||
+          file.name.toLowerCase().endsWith(".pdf")
+            ? "pdf"
+            : "image",
+        name: file.name,
+        mimeType: file.type,
+        sizeBytes: file.size,
+      });
+      if (!adapter) {
+        setErrors((current) => ({
+          ...current,
+          [intent.id]: "This file type is not supported by a local adapter.",
+        }));
+        return;
+      }
+      const output = await adapter.prepareForConstraints(
         original,
         intent.constraints,
       );
-      if (!output) {
+      if (!output.ok) {
         setErrors((current) => ({
           ...current,
-          [intent.id]: "This file could not satisfy the detected requirements.",
+          [intent.id]: output.reason,
         }));
         return;
       }
@@ -541,9 +576,12 @@ const UploadIntentsCard = ({
       setPrepared((current) => ({
         ...current,
         [intent.id]: {
-          url: URL.createObjectURL(output.blob),
-          name: output.name,
-          size: output.blob.size,
+          url: URL.createObjectURL(output.artifact.blob),
+          artifact: output.artifact,
+          store,
+          name: output.artifact.name,
+          size: output.artifact.sizeBytes,
+          mimeType: output.artifact.mimeType,
         },
       }));
     } catch {
@@ -571,6 +609,7 @@ const UploadIntentsCard = ({
           intent={intent}
           output={prepared[intent.id]}
           error={errors[intent.id]}
+          onShowCurrentPage={() => void showCurrentPage()}
           onPrepare={(file) => prepare(intent, file)}
         />
       ))}
@@ -774,7 +813,10 @@ export const FillPanel = () => {
   const answerDetailProposals: FieldProposal[] =
     scanState.kind === "proposals"
       ? scanState.proposals.filter(
-          (p) => p.state === "pending" || p.state === "restricted",
+          (p) =>
+            p.state === "pending" ||
+            p.state === "restricted" ||
+            p.state === "choose_option",
         )
       : [];
 
@@ -863,11 +905,7 @@ export const FillPanel = () => {
               key={proposal.fieldId}
               proposal={proposal}
               onConfirm={(decisionId) => confirm([decisionId])}
-              confirmed={
-                (proposal.state === "pending" ||
-                  proposal.state === "restricted") &&
-                confirmedIds.has(proposal.decisionId)
-              }
+              confirmedIds={confirmedIds}
             />
           ))}
         </div>

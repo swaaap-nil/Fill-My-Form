@@ -209,6 +209,122 @@ describe("planFill", () => {
   });
 });
 
+describe("planFill — closed-vocabulary fields", () => {
+  it("resolves a stored value to an option by containment, writing the option's value but keeping the display and memory as the label", async () => {
+    const store = await seedMemory("identity.category", "OBC");
+    const result = await planFill(
+      [
+        field({
+          label: "Category",
+          kind: FieldKind.RADIO,
+          id: "0/cat/0",
+          options: [
+            { value: "1", label: "GEN" },
+            { value: "2", label: "OBC-NCL" },
+            { value: "3", label: "SC" },
+          ],
+        }),
+      ],
+      ontology,
+      store,
+      DEFAULT_PROFILE_ID,
+      defaultPolicy,
+      fixedIds,
+    );
+
+    const proposal = result.proposals[0];
+    expect(proposal?.state).toBe("pending");
+    if (proposal?.state !== "pending" && proposal?.state !== "restricted") {
+      throw new Error("unreachable");
+    }
+    expect(proposal.value).toBe("OBC-NCL");
+    expect(proposal.payload).toEqual({ kind: "text", value: "2" });
+
+    const decision = result.decisions.get(proposal.decisionId);
+    expect(decision).toBeDefined();
+    if (!decision) throw new Error("unreachable");
+    expect(decision.memoryValue).toBe("OBC");
+
+    const outcome = confirmDecision(decision, defaultPolicy);
+    expect(outcome.payload).toEqual({ kind: "text", value: "2" });
+    expect(outcome.memoryValue).toBe("OBC");
+  });
+
+  it("resolves a demonym through the concept's valueAliases table", async () => {
+    const store = await seedMemory("identity.nationality", "Indian");
+    const result = await planFill(
+      [
+        field({
+          label: "Nationality",
+          kind: FieldKind.SELECT,
+          id: "0/nat/0",
+          options: [
+            { value: "IN", label: "India" },
+            { value: "US", label: "United States" },
+          ],
+        }),
+      ],
+      ontology,
+      store,
+      DEFAULT_PROFILE_ID,
+      defaultPolicy,
+      fixedIds,
+    );
+
+    const proposal = result.proposals[0];
+    expect(proposal?.state).toBe("pending");
+    if (proposal?.state !== "pending" && proposal?.state !== "restricted") {
+      throw new Error("unreachable");
+    }
+    expect(proposal.value).toBe("India");
+    expect(proposal.payload).toEqual({ kind: "text", value: "IN" });
+  });
+
+  it("proposes choose_option, one decision per option, when nothing resolves", async () => {
+    const store = await seedMemory("identity.category", "General");
+    const result = await planFill(
+      [
+        field({
+          label: "Category",
+          kind: FieldKind.RADIO,
+          id: "0/cat/0",
+          options: [
+            { value: "1", label: "GEN" },
+            { value: "2", label: "OBC-NCL" },
+          ],
+        }),
+      ],
+      ontology,
+      store,
+      DEFAULT_PROFILE_ID,
+      defaultPolicy,
+      fixedIds,
+    );
+
+    const proposal = result.proposals[0];
+    expect(proposal?.state).toBe("choose_option");
+    if (proposal?.state !== "choose_option") throw new Error("unreachable");
+    expect(proposal.storedValue).toBe("General");
+    expect(proposal.choices.map((c) => c.label)).toEqual(["GEN", "OBC-NCL"]);
+
+    for (const choice of proposal.choices) {
+      const decision = result.decisions.get(choice.decisionId);
+      expect(decision).toBeDefined();
+    }
+
+    const genChoice = proposal.choices.find((c) => c.label === "GEN");
+    expect(genChoice).toBeDefined();
+    if (!genChoice) throw new Error("unreachable");
+    const decision = result.decisions.get(genChoice.decisionId);
+    if (!decision) throw new Error("unreachable");
+
+    const outcome = confirmDecision(decision, defaultPolicy);
+    expect(outcome.ok).toBe(true);
+    expect(outcome.payload).toEqual({ kind: "text", value: "1" });
+    expect(outcome.memoryValue).toBe("GEN");
+  });
+});
+
 describe("confirmDecision", () => {
   it("allows a normal pending decision once confirmed", async () => {
     const store = await seedMemory("contact.email", "ananya@example.com");

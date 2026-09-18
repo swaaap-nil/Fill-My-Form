@@ -10,12 +10,14 @@ import type { FieldElements } from "./extract";
  * then dispatching a bubbling `input` event is not — the framework's own
  * change handler sees it and accepts it into its state.
  *
- * **Scope for phase 1c's straight-line first fill:** text-like inputs,
- * textareas, and `<select>` by exact option value. Radio/checkbox groups
- * and ARIA widgets (`controlled.html`'s combobox) are not written here —
- * matching a stored value against grouped options or driving a
- * click-to-select widget is fill-*technique* work Phase 2 owns, not
- * something this phase's driver needs to unblock its own gate.
+ * **Scope:** text-like inputs, textareas, `<select>`, and native
+ * radio/checkbox groups — all by exact option `value`, resolved upstream
+ * against the field's actual options by
+ * `~/core/matching/resolve-option` before this ever runs. ARIA widgets
+ * whose options only exist in the DOM after an interaction
+ * (`controlled.html`'s combobox) are still out of scope here — driving a
+ * click-to-select widget is fill-*technique* work of its own, not a value
+ * write.
  */
 
 const TEXT_LIKE_TYPES = new Set([
@@ -46,13 +48,45 @@ const dispatchChange = (el: Element): void => {
   el.dispatchEvent(new Event("change", { bubbles: true }));
 };
 
+const nativeCheckedSetter = (
+  el: HTMLInputElement,
+): ((checked: boolean) => void) | undefined =>
+  Object.getOwnPropertyDescriptor(
+    HTMLInputElement.prototype,
+    "checked",
+  )?.set?.bind(el);
+
+/**
+ * Writes into a radio/checkbox group by finding the member whose `.value`
+ * matches — the value already resolved to a real option by
+ * `~/core/matching/resolve-option`, never raw memory text. Native radio
+ * semantics (shared `name`) uncheck the rest; this is also what frameworks'
+ * `Radio`/`Checkbox` components actually listen to (verified against
+ * MUI's real `PrivateSwitchBase-input` markup).
+ */
+const writeOptionGroup = (
+  group: readonly Element[],
+  value: string,
+): boolean => {
+  const match = group.find(
+    (el): el is HTMLInputElement =>
+      el instanceof HTMLInputElement && el.value === value,
+  );
+  if (!match) return false;
+
+  nativeCheckedSetter(match)?.(true);
+  dispatchChange(match);
+  return true;
+};
+
 /** Returns whether the value was actually written. */
 export const writeFieldValue = (
   target: FieldElements,
   value: string,
 ): boolean => {
-  // Radio/checkbox groups: out of scope for this phase's driver — see above.
-  if (Array.isArray(target)) return false;
+  if (Array.isArray(target)) {
+    return writeOptionGroup(target as readonly Element[], value);
+  }
   const el = target as Element;
 
   if (el instanceof HTMLSelectElement) {

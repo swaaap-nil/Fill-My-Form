@@ -399,10 +399,18 @@ const main = () => {
         if (ok) {
           const concept = ontology.byKey(decision.conceptKey);
           const confirmedAt = new Date().toISOString();
+          // A select/radio field's payload carries the page's own option
+          // value (an opaque code, sometimes) — never what memory should
+          // remember. `memoryValue` is the canonical text for that case;
+          // every other decision leaves it unset and falls back to the
+          // payload, unchanged from before this existed.
+          const textMemoryValue =
+            outcome.memoryValue ??
+            (outcome.payload.kind === "text" ? outcome.payload.value : "");
           const horizon = concept
             ? deriveFreshnessHorizon(
                 concept,
-                outcome.payload.kind === "text" ? outcome.payload.value : "",
+                textMemoryValue,
                 confirmedAt,
                 bundledFreshnessDurationPolicy,
               )
@@ -412,7 +420,7 @@ const main = () => {
             key: decision.conceptKey,
             value:
               outcome.payload.kind === "text"
-                ? outcome.payload.value
+                ? textMemoryValue
                 : outcome.payload.ref,
             source: MemorySource.USER_CONFIRMED,
             now: confirmedAt,

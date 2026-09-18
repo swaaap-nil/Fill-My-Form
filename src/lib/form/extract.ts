@@ -725,19 +725,23 @@ const uploadConstraintsOf = (text: string): FieldConstraint[] => {
 
 const uploadSectionOf = (el: Element): Element => {
   let current = el.parentElement;
-  let best = current ?? el;
-  while (current && current !== el.ownerDocument.body) {
+  let best: Element | undefined;
+  while (
+    current &&
+    current !== el.ownerDocument.body &&
+    current.tagName !== "FORM"
+  ) {
     const text = textOf(current) ?? "";
     if (
       text.length <= 2400 &&
       /file size|pixel resolution|aspect ratio|JPEG|JPG|PNG/i.test(text)
     )
       return current;
-    if (text.length <= 2400 && /upload|choose file|browse/i.test(text))
+    if (!best && text.length <= 2400 && /upload|choose file|browse/i.test(text))
       best = current;
     current = current.parentElement;
   }
-  return best;
+  return best ?? el;
 };
 
 const extractUploadIntents = (

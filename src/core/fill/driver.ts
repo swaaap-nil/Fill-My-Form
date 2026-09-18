@@ -18,9 +18,14 @@
  * `~/core/messaging/fill-instruction` for the other half of that gate.
  */
 
-import { FieldKind, type FormField } from "../form/types";
-import { tierToConfidence } from "../matching/confidence";
+import { Certainty } from "../agent/types";
+import { FieldKind, type FormField, type FormOption } from "../form/types";
+import { minConfidence, tierToConfidence } from "../matching/confidence";
 import { resolve } from "../matching/resolve";
+import {
+  OPTION_TIER_CONFIDENCE,
+  resolveOption,
+} from "../matching/resolve-option";
 import { FreshnessStatus, freshness } from "../memory/freshness";
 import type { MemoryStore } from "../memory/store";
 import {
@@ -68,6 +73,33 @@ const displayValueOf = (payload: PendingDecision["payload"]): string =>
   payload.kind === "file"
     ? `${payload.ref.name} (${Math.round(payload.ref.sizeBytes / 1024)} KB)`
     : payload.value;
+
+/**
+ * Registers one decision per candidate option, for the panel's
+ * `"choose_option"` picker. Each already has a live `decisionId` — picking
+ * one is the ordinary `confirm([decisionId])` flow, no protocol change.
+ */
+const registerOptionChoices = (
+  decisions: Map<DecisionId, PendingDecision>,
+  generateDecisionId: () => DecisionId,
+  field: FormField,
+  conceptKey: string,
+  sensitivity: Sensitivity,
+  candidates: readonly FormOption[],
+): readonly { readonly decisionId: DecisionId; readonly label: string }[] =>
+  candidates.map((option) => {
+    const decisionId = generateDecisionId();
+    decisions.set(decisionId, {
+      fieldId: field.id,
+      payload: { kind: "text", value: option.value },
+      conceptKey,
+      sensitivity,
+      risk: FILL_RISK,
+      confidence: ConfidenceLevel.LOW,
+      memoryValue: option.label,
+    });
+    return { decisionId, label: option.label };
+  });
 
 export const planFill = async (
   fields: readonly FormField[],
@@ -145,6 +177,97 @@ export const planFill = async (
       continue;
     }
 
+    // Closed-vocabulary field: a stored value only means something once it
+    // maps onto one of the page's own options. See
+    // `~/core/matching/resolve-option`.
+    if (payload.kind === "text" && field.options && field.options.length > 0) {
+      const optionMatch = resolveOption(payload.value, field.options, concept);
+
+      if (optionMatch.certainty === Certainty.AMBIGUOUS) {
+        proposals.push({
+          fieldId: field.id,
+          fieldLabel,
+          state: "choose_option",
+          conceptKey: concept.key,
+          storedValue: payload.value,
+          choices: registerOptionChoices(
+            decisions,
+            generateDecisionId,
+            field,
+            concept.key,
+            concept.sensitivity,
+            optionMatch.candidates,
+          ),
+        });
+        continue;
+      }
+
+      if (optionMatch.certainty === Certainty.UNKNOWN) {
+        proposals.push({
+          fieldId: field.id,
+          fieldLabel,
+          state: "choose_option",
+          conceptKey: concept.key,
+          storedValue: payload.value,
+          choices: registerOptionChoices(
+            decisions,
+            generateDecisionId,
+            field,
+            concept.key,
+            concept.sensitivity,
+            field.options,
+          ),
+        });
+        continue;
+      }
+
+      // Resolved: write the page's own option value, keep the canonical
+      // stored text as what memory remembers, show the option's label.
+      const decisionId = generateDecisionId();
+      const resolvedPayload: PendingDecision["payload"] = {
+        kind: "text",
+        value: optionMatch.option.value,
+      };
+      const resolvedConfidence = minConfidence(
+        confidence,
+        OPTION_TIER_CONFIDENCE[optionMatch.tier],
+      );
+      const resolvedDecision =
+        resolvedConfidence === confidence
+          ? decision
+          : policy.evaluate({
+              risk: FILL_RISK,
+              sensitivity: concept.sensitivity,
+              confidence: resolvedConfidence,
+              isSubmission: false,
+              userConfirmed: false,
+            });
+
+      decisions.set(decisionId, {
+        fieldId: field.id,
+        payload: resolvedPayload,
+        conceptKey: concept.key,
+        sensitivity: concept.sensitivity,
+        risk: FILL_RISK,
+        confidence: resolvedConfidence,
+        stale: itemFreshness === FreshnessStatus.DUE,
+        memoryValue: payload.value,
+      });
+
+      proposals.push({
+        fieldId: field.id,
+        fieldLabel,
+        state: isRestricted(concept.sensitivity) ? "restricted" : "pending",
+        conceptKey: concept.key,
+        decisionId,
+        value: optionMatch.option.label,
+        payload: resolvedPayload,
+        source: item.provenance.source,
+        policyReason: resolvedDecision.reason,
+      });
+      continue;
+    }
+
     const decisionId = generateDecisionId();
     const value = displayValueOf(payload);
 
@@ -202,5 +325,6 @@ export const confirmDecision = (
     ok: result.effect === PolicyEffect.ALLOW,
     fieldId: decision.fieldId,
     payload: decision.payload,
+    memoryValue: decision.memoryValue,
   };
 };

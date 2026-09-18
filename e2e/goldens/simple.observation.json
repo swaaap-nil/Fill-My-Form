@@ -92,6 +92,24 @@
           "required": true,
           "hasValue": false
         }
+      ],
+      "uploadIntents": [
+        {
+          "id": "upload-0-0",
+          "kind": "document",
+          "label": "Upload resume PDF, max 2 MB",
+          "description": "Upload resume PDF, max 2 MB",
+          "requirements": ["Upload resume PDF, max 2 MB"],
+          "constraints": [
+            {
+              "kind": "accept",
+              "value": [".pdf"]
+            }
+          ],
+          "confidence": "high",
+          "actionability": "user_assisted",
+          "hasNativeTarget": false
+        }
       ]
     }
   ],
