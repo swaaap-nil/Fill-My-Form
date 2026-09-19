@@ -96,6 +96,25 @@ test("propose: scanning shows every field's proposal and fills nothing", async (
   await expect(formPage.getByLabel("First name")).toHaveValue("");
 });
 
+test("summary cards: hides answers summary when no answers are detected", async ({
+  context,
+  extensionId,
+}) => {
+  const formPage = await context.newPage();
+  await formPage.goto("/simple.html");
+
+  const panelPage = await openPanel(context, extensionId);
+  await grantAccess(formPage, panelPage);
+
+  await formPage.bringToFront();
+  await panelPage.getByRole("button", { name: "Scan this page" }).click();
+
+  await expect(panelPage.getByTestId("answers-summary-card")).toBeHidden();
+  await expect(
+    panelPage.getByTestId("known-fields-summary-card"),
+  ).toBeVisible();
+});
+
 test("summary cards: card surface opens details without stealing fill clicks", async ({
   context,
   extensionId,

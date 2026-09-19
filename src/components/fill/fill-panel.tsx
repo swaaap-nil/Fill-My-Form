@@ -891,6 +891,8 @@ export const FillPanel = () => {
   const showProposalDetails =
     scanState.kind === "proposals" &&
     (proposalView === "answers" || proposalView === "known");
+  const showAnswersSummary =
+    answerDetailProposals.length > 0 || fillStatus.kind !== "ready";
   const activeGrantedOrigin = activeTabGranted
     ? findGrantedOriginForUrl(activeTabUrl, grantedOrigins)
     : undefined;
@@ -943,16 +945,18 @@ export const FillPanel = () => {
                 proposalViewMotionClass,
               )}
             >
-              <AnswersSummaryCard
-                count={answeredDecisionIds.length}
-                fillStatus={fillStatus}
-                onOpenDetails={() => {
-                  setProposalViewTransition("forward");
-                  setProposalView("answers");
-                  sound.play("proposalDetailsOpened");
-                }}
-                onFill={() => confirm(answeredDecisionIds)}
-              />
+              {showAnswersSummary && (
+                <AnswersSummaryCard
+                  count={answeredDecisionIds.length}
+                  fillStatus={fillStatus}
+                  onOpenDetails={() => {
+                    setProposalViewTransition("forward");
+                    setProposalView("answers");
+                    sound.play("proposalDetailsOpened");
+                  }}
+                  onFill={() => confirm(answeredDecisionIds)}
+                />
+              )}
               {knownNoAnswerProposals.length > 0 && (
                 <KnownFieldsSummaryCard
                   count={knownNoAnswerProposals.length}

@@ -615,7 +615,7 @@ const performFill = async (
   }
 
   // The pipeline succeeded either way. A control `writeFieldValue` cannot
-  // write (the controlled.html combobox, a radio group) still returns
+  // write (for example, the controlled.html combobox) still returns
   // successfully here, carrying `{ ok: false }` as *data* — that is not a
   // pipeline problem to retry, it is VERIFY's job to notice (as
   // NOT_APPLIED) and PLAN's job to give up on after repeated failures,

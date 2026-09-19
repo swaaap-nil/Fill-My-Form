@@ -55,6 +55,26 @@ const readValue = (el: Element): string => {
   return el.textContent?.trim() ?? "";
 };
 
+const optionGroupInputs = (group: readonly Element[]): HTMLInputElement[] =>
+  group.filter((el): el is HTMLInputElement => el instanceof HTMLInputElement);
+
+const readOptionGroupValues = (
+  group: readonly Element[],
+): {
+  readonly type: "radio" | "checkbox" | "unknown";
+  readonly values: readonly string[];
+  readonly invalid: boolean;
+} => {
+  const inputs = optionGroupInputs(group);
+  const type = inputs[0]?.type;
+
+  return {
+    type: type === "radio" || type === "checkbox" ? type : "unknown",
+    values: inputs.filter((input) => input.checked).map((input) => input.value),
+    invalid: inputs.some((input) => input.matches(":invalid")),
+  };
+};
+
 /** Digits-only or case/whitespace-insensitive equality — a masked field reformatting what was typed, not rejecting it. */
 const looksNormalised = (actual: string, expected: string): boolean => {
   const digitsOnly = (s: string) => s.replace(/\D/g, "");
@@ -85,16 +105,57 @@ export const compareFieldValue = (
   target: FieldElements | undefined,
   expectedValue: string,
 ): VerificationResult => {
-  if (!target || Array.isArray(target)) {
-    // Missing entirely, or a radio/checkbox group — grouped controls are not
-    // written by `~/lib/form/fill` in this phase, so there is nothing to
-    // compare a single expected value against.
+  if (!target) {
     return failed([
       {
         code: VerificationIssueCode.FIELD_MISSING,
         message:
           "The field is no longer present on the page in the expected shape.",
       },
+    ]);
+  }
+
+  if (Array.isArray(target)) {
+    const actual = readOptionGroupValues(target as readonly Element[]);
+    const actualValue = actual.values.join(", ");
+
+    if (
+      actual.type === "radio"
+        ? actual.values[0] === expectedValue
+        : actual.values.includes(expectedValue)
+    ) {
+      return passed();
+    }
+
+    if (actual.invalid) {
+      return failed([
+        issue(
+          VerificationIssueCode.FIELD_INVALID,
+          "The page is showing its own validation error for this field.",
+          expectedValue,
+          actualValue,
+        ),
+      ]);
+    }
+
+    if (actual.values.length === 0 && expectedValue !== "") {
+      return failed([
+        issue(
+          VerificationIssueCode.NOT_APPLIED,
+          "The field is still empty after the write.",
+          expectedValue,
+          actualValue,
+        ),
+      ]);
+    }
+
+    return failed([
+      issue(
+        VerificationIssueCode.VALUE_MISMATCH,
+        "The field holds a different value than was written.",
+        expectedValue,
+        actualValue,
+      ),
     ]);
   }
 
