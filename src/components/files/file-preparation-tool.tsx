@@ -58,6 +58,7 @@ export const FilePreparationTool = () => {
     windowId?: number;
   }>();
   const editorWatch = useRef<(() => void) | null>(null);
+  const storedRefIds = useRef<Set<string>>(new Set());
 
   const settings = usePreparationSettings(inspection);
   const { setValues } = settings;
@@ -85,6 +86,30 @@ export const FilePreparationTool = () => {
 
   useEffect(() => () => editorWatch.current?.(), []);
 
+  useEffect(
+    () => () => {
+      const ids = [...storedRefIds.current];
+      storedRefIds.current.clear();
+      void storePromise.then((store) =>
+        Promise.all(ids.map((id) => store.delete(id))),
+      );
+    },
+    [storePromise],
+  );
+
+  const deleteStoredRefs = useCallback(
+    async (ids: Iterable<string>) => {
+      const unique = [...new Set(ids)].filter((id) =>
+        storedRefIds.current.has(id),
+      );
+      if (!unique.length) return;
+      const store = await storePromise;
+      await Promise.all(unique.map((id) => store.delete(id)));
+      for (const id of unique) storedRefIds.current.delete(id);
+    },
+    [storePromise],
+  );
+
   /**
    * The editor window's result comes back through `storage.session`. The panel
    * may have been closed when it was written, so this also reconciles whatever
@@ -99,6 +124,8 @@ export const FilePreparationTool = () => {
         const store = await storePromise;
         const record = await store.get(session.derivedId);
         if (record) {
+          await deleteStoredRefs(prepared ? [prepared.derived.id] : []);
+          storedRefIds.current.add(record.ref.id);
           if (preparedUrl) URL.revokeObjectURL(preparedUrl);
           setPrepared({
             original: original ?? record.ref,
@@ -128,7 +155,14 @@ export const FilePreparationTool = () => {
       setEditing(undefined);
       await clearEditorSession(sessionId);
     },
-    [storePromise, preparedUrl, original, setValues],
+    [
+      storePromise,
+      deleteStoredRefs,
+      prepared,
+      preparedUrl,
+      original,
+      setValues,
+    ],
   );
 
   const openEditor = async () => {
@@ -169,6 +203,10 @@ export const FilePreparationTool = () => {
     if (!file) return;
     setError(undefined);
     setPrepared(undefined);
+    await deleteStoredRefs([
+      ...(original ? [original.id] : []),
+      ...(prepared ? [prepared.derived.id] : []),
+    ]);
     if (preparedUrl) URL.revokeObjectURL(preparedUrl);
     if (sourceUrl) URL.revokeObjectURL(sourceUrl);
     try {
@@ -187,6 +225,7 @@ export const FilePreparationTool = () => {
         return;
       }
       const ref = await store.save(file);
+      storedRefIds.current.add(ref.id);
       const nextInspection = await adapter.inspect(file);
       setOriginal(ref);
       setInspection(nextInspection);
@@ -218,6 +257,8 @@ export const FilePreparationTool = () => {
         setError(result.reason);
         return;
       }
+      await deleteStoredRefs(prepared ? [prepared.derived.id] : []);
+      storedRefIds.current.add(result.artifact.derived.id);
       if (preparedUrl) URL.revokeObjectURL(preparedUrl);
       setPrepared(result.artifact);
       setPreparedUrl(URL.createObjectURL(result.artifact.blob));
@@ -229,6 +270,10 @@ export const FilePreparationTool = () => {
   };
 
   const reset = () => {
+    void deleteStoredRefs([
+      ...(original ? [original.id] : []),
+      ...(prepared ? [prepared.derived.id] : []),
+    ]);
     if (sourceUrl) URL.revokeObjectURL(sourceUrl);
     if (preparedUrl) URL.revokeObjectURL(preparedUrl);
     setOriginal(undefined);

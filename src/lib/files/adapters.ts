@@ -27,6 +27,7 @@ export interface FileReferenceStore {
   get(refId: string): Promise<StoredFileRecord | null>;
   getFile(refId: string): Promise<File | null>;
   delete(refId: string): Promise<void>;
+  clear(): Promise<void>;
   list(): Promise<FileReference[]>;
   purgeExpired(now?: string): Promise<number>;
 }
@@ -142,6 +143,12 @@ export const createIndexedDbFileReferenceStore = async (
     async delete(refId) {
       const transaction = db.transaction(FILE_STORE, "readwrite");
       transaction.objectStore(FILE_STORE).delete(refId);
+      await transactionDone(transaction);
+    },
+
+    async clear() {
+      const transaction = db.transaction(FILE_STORE, "readwrite");
+      transaction.objectStore(FILE_STORE).clear();
       await transactionDone(transaction);
     },
 

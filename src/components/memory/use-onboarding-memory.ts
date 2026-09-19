@@ -179,6 +179,12 @@ export const useOnboardingMemory = () => {
           setFileRefs((prev) => ({ ...prev, [key]: savedRef }));
         }
       } catch {
+        if (ref) {
+          const failedRef = ref;
+          void createIndexedDbFileReferenceStore().then((store) =>
+            store.delete(failedRef.id),
+          );
+        }
         if (saveVersions.current[key] === nextVersion) {
           setFieldStatus(key, "error");
         }

@@ -5,7 +5,7 @@ import {
   ChevronRight,
   LoaderCircle,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Browser } from "wxt/browser";
 import { browser } from "wxt/browser";
 import { Button } from "~/components/ui/button";
@@ -544,25 +544,38 @@ const UploadIntentsCard = ({
         readonly name: string;
         readonly size: number;
         readonly mimeType: string;
+        readonly cleanupIds: readonly string[];
       }
     >
   >({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const preparedRef = useRef(prepared);
+
+  useEffect(() => {
+    preparedRef.current = prepared;
+  }, [prepared]);
 
   useEffect(
     () => () => {
-      for (const output of Object.values(prepared)) {
+      for (const output of Object.values(preparedRef.current)) {
         URL.revokeObjectURL(output.url);
+        void Promise.all(
+          output.cleanupIds.map((id) => output.store.delete(id)),
+        );
       }
     },
-    [prepared],
+    [],
   );
 
   const prepare = async (intent: UploadIntent, file: File) => {
     setErrors((current) => ({ ...current, [intent.id]: "" }));
+    let originalId: string | undefined;
+    let storeForCleanup: FileReferenceStore | undefined;
     try {
       const store = await createIndexedDbFileReferenceStore();
+      storeForCleanup = store;
       const original = await store.save(file);
+      originalId = original.id;
       const registry = createBrowserFilePreparationRegistry(store);
       const adapter = registry.adapterFor({
         kind:
@@ -575,6 +588,8 @@ const UploadIntentsCard = ({
         sizeBytes: file.size,
       });
       if (!adapter) {
+        await store.delete(original.id);
+        originalId = undefined;
         setErrors((current) => ({
           ...current,
           [intent.id]: "This file type is not supported by a local adapter.",
@@ -585,6 +600,8 @@ const UploadIntentsCard = ({
         original,
         intent.constraints,
       );
+      await store.delete(original.id);
+      originalId = undefined;
       if (!output.ok) {
         setErrors((current) => ({
           ...current,
@@ -592,20 +609,31 @@ const UploadIntentsCard = ({
         }));
         return;
       }
-      const previous = prepared[intent.id];
-      if (previous) URL.revokeObjectURL(previous.url);
-      setPrepared((current) => ({
-        ...current,
-        [intent.id]: {
-          url: URL.createObjectURL(output.artifact.blob),
-          artifact: output.artifact,
-          store,
-          name: output.artifact.name,
-          size: output.artifact.sizeBytes,
-          mimeType: output.artifact.mimeType,
-        },
-      }));
+      const nextUrl = URL.createObjectURL(output.artifact.blob);
+      setPrepared((current) => {
+        const previous = current[intent.id];
+        if (previous) {
+          URL.revokeObjectURL(previous.url);
+          void Promise.all(
+            previous.cleanupIds.map((id) => previous.store.delete(id)),
+          );
+        }
+        return {
+          ...current,
+          [intent.id]: {
+            url: nextUrl,
+            artifact: output.artifact,
+            store,
+            name: output.artifact.name,
+            size: output.artifact.sizeBytes,
+            mimeType: output.artifact.mimeType,
+            cleanupIds: [output.artifact.derived.id],
+          },
+        };
+      });
     } catch {
+      if (storeForCleanup && originalId)
+        void storeForCleanup.delete(originalId);
       setErrors((current) => ({
         ...current,
         [intent.id]: "Local preparation failed.",

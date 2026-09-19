@@ -49,6 +49,23 @@ describe("temporary file artifacts", () => {
     expect(await store.get(originalRef.id)).not.toBeNull();
     expect(await store.get(derived.id)).toBeNull();
   });
+
+  it("clears original and derived artifacts for privacy wipes", async () => {
+    const store = await createIndexedDbFileReferenceStore(new IDBFactory());
+    const originalRef = await store.save(
+      new File(["original-bytes"], "photo.png", { type: "image/png" }),
+    );
+    const derivedRef = await store.saveDerived(
+      new File(["prepared-bytes"], "photo.jpg", { type: "image/jpeg" }),
+      originalRef,
+    );
+
+    await store.clear();
+
+    expect(await store.get(originalRef.id)).toBeNull();
+    expect(await store.get(derivedRef.id)).toBeNull();
+    expect(await store.list()).toEqual([]);
+  });
 });
 
 describe("PDF preparation adapter", () => {

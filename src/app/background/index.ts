@@ -21,7 +21,13 @@ import { createLogger } from "~/core/logging";
 import { resolve } from "~/core/matching/resolve";
 import { deriveFreshnessHorizon } from "~/core/memory/freshness";
 import { bundledFreshnessDurationPolicy } from "~/core/memory/freshness-policy";
-import { DEFAULT_PROFILE_ID, MemorySource } from "~/core/memory/types";
+import type { MemoryStore } from "~/core/memory/store";
+import {
+  DEFAULT_PROFILE_ID,
+  isFileReference,
+  MemorySource,
+  type MemoryValue,
+} from "~/core/memory/types";
 import { recordAnswer } from "~/core/memory/write-service";
 import { ontology } from "~/core/ontology";
 import { defaultPolicy } from "~/core/policy/default";
@@ -30,6 +36,7 @@ import { createToolRegistry } from "~/core/tools/registry";
 import { CapabilityDomain } from "~/core/tools/types";
 import type { Verifier } from "~/core/verification/types";
 import {
+  clearAllRunSnapshots,
   clearRunSnapshot,
   loadRunSnapshot,
   saveRunSnapshot,
@@ -78,6 +85,61 @@ const getFileStore = (): Promise<FileReferenceStore> => {
   return fileStore;
 };
 
+const collectFileReferenceIds = (
+  value: MemoryValue | undefined,
+  ids = new Set<string>(),
+): Set<string> => {
+  if (isFileReference(value)) {
+    ids.add(value.id);
+    return ids;
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) return ids;
+  for (const nested of Object.values(value))
+    collectFileReferenceIds(nested, ids);
+  return ids;
+};
+
+const deleteFileReferences = async (ids: Iterable<string>): Promise<void> => {
+  const unique = [...new Set(ids)];
+  if (!unique.length) return;
+  const store = await getFileStore();
+  await Promise.all(unique.map((id) => store.delete(id)));
+};
+
+const deletedFileReferenceIds = (
+  previous: MemoryValue | undefined,
+  next?: MemoryValue,
+): string[] => {
+  const nextIds = collectFileReferenceIds(next);
+  return [...collectFileReferenceIds(previous)].filter(
+    (id) => !nextIds.has(id),
+  );
+};
+
+const withFileReferenceCleanup = <T extends MemoryStore>(store: T): T =>
+  ({
+    ...store,
+    async set(item) {
+      const existing = await store.get(item.profileId, item.key);
+      await store.set(item);
+      await deleteFileReferences(
+        deletedFileReferenceIds(existing?.value, item.value),
+      );
+    },
+    async update(profileId, key, value) {
+      const existing = await store.get(profileId, key);
+      await store.update(profileId, key, value);
+      await deleteFileReferences(
+        deletedFileReferenceIds(existing?.value, value),
+      );
+    },
+    async delete(profileId, key) {
+      const existing = await store.get(profileId, key);
+      await store.delete(profileId, key);
+      await deleteFileReferences(deletedFileReferenceIds(existing?.value));
+    },
+  }) as T;
+
 const bytesOf = async (blob: Blob): Promise<number[]> =>
   Array.from(new Uint8Array(await blob.arrayBuffer()));
 
@@ -115,7 +177,7 @@ const pendingDecisions = new Map<DecisionId, PendingDecision>();
  * for the straight-line flow above.
  */
 const buildLoopPorts = async (tabId: number): Promise<LoopPorts> => {
-  const memoryStore = await getLocalDataStore();
+  const memoryStore = withFileReferenceCleanup(await getLocalDataStore());
   const files = createBrowserFileComplianceAdapter(await getFileStore());
   const tools = createToolRegistry();
 
@@ -350,7 +412,7 @@ const main = () => {
   });
 
   onMessage("confirmFill", async ({ data }) => {
-    const memoryStore = await getLocalDataStore();
+    const memoryStore = withFileReferenceCleanup(await getLocalDataStore());
     const files = createBrowserFileComplianceAdapter(await getFileStore());
     const tabId = data.tabId;
 
@@ -450,7 +512,7 @@ const main = () => {
   });
 
   onMessage("recordOnboardingAnswer", async ({ data }) => {
-    const memoryStore = await getLocalDataStore();
+    const memoryStore = withFileReferenceCleanup(await getLocalDataStore());
     const concept = ontology.byKey(data.key);
     const savedAt = new Date().toISOString();
     const horizon = concept
@@ -475,7 +537,10 @@ const main = () => {
   });
 
   onMessage("deleteOnboardingAnswer", async ({ data }) => {
-    await (await getLocalDataStore()).delete(DEFAULT_PROFILE_ID, data.key);
+    await withFileReferenceCleanup(await getLocalDataStore()).delete(
+      DEFAULT_PROFILE_ID,
+      data.key,
+    );
     return { ok: true };
   });
 
@@ -497,6 +562,8 @@ const main = () => {
 
   onMessage("wipeLocalData", async () => {
     await (await getLocalDataStore()).wipeLocalData();
+    await (await getFileStore()).clear();
+    await clearAllRunSnapshots();
     pendingDecisions.clear();
     return { ok: true };
   });
