@@ -8,6 +8,7 @@ import {
 import { type DragEvent, useEffect, useState } from "react";
 import type { PreparedArtifact } from "~/core/files/preparation";
 import type { FileReferenceStore } from "~/lib/files/adapters";
+import { useSound } from "~/lib/sfx/react";
 import { cn } from "~/lib/utils";
 import { FileMetadataCards } from "./file-metadata-cards";
 import { useObjectUrl } from "./use-object-url";
@@ -31,6 +32,7 @@ export const PreparedFileHandoff = ({
   readonly store: FileReferenceStore;
   readonly label?: string;
 }) => {
+  const sound = useSound();
   const [dragFile, setDragFile] = useState<File>();
   const [dragState, setDragState] = useState<DragState>("loading");
   const isImage = artifact.mimeType.startsWith("image/");
@@ -54,6 +56,7 @@ export const PreparedFileHandoff = ({
     if (!dragFile) {
       event.preventDefault();
       setDragState("failed");
+      sound.play("fileDragFailed");
       return;
     }
     try {
@@ -62,13 +65,18 @@ export const PreparedFileHandoff = ({
       event.dataTransfer.items.add(dragFile);
       event.dataTransfer.setData("text/plain", dragFile.name);
       setDragState("dragging");
+      sound.play("fileDragStarted");
     } catch {
       event.preventDefault();
       setDragState("failed");
+      sound.play("fileDragFailed");
     }
   };
 
-  const handleDragEnd = () => setDragState("finished");
+  const handleDragEnd = () => {
+    setDragState("finished");
+    sound.play("fileDragFinished");
+  };
   return (
     <section className="flex flex-col gap-3 rounded-lg border border-emerald-500/35 bg-emerald-50/60 p-4 shadow-sm dark:bg-emerald-950/20">
       <div className="flex items-start gap-3">

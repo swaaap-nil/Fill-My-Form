@@ -25,6 +25,7 @@ import {
   updateEditorSession,
 } from "~/lib/files/editor-session";
 import { ImagePreparationAdapter } from "~/lib/files/image-preparation-adapter";
+import { useSound } from "~/lib/sfx/react";
 import { CropStage, type CropStageHandle } from "./crop-stage";
 import { FileMetadataCards } from "./file-metadata-cards";
 import { useObjectUrl } from "./use-object-url";
@@ -51,6 +52,7 @@ const CROP_RATIO_OPTIONS = [
  * size and format.
  */
 export const ImageEditor = ({ sessionId }: { readonly sessionId: string }) => {
+  const sound = useSound();
   const [phase, setPhase] = useState<Phase>("loading");
   const [message, setMessage] = useState<string>();
   const [session, setSession] = useState<EditorSession>();
@@ -196,25 +198,30 @@ export const ImageEditor = ({ sessionId }: { readonly sessionId: string }) => {
 
   const save = async () => {
     const handle = stageRef.current;
+    const failSave = (nextMessage: string) => {
+      setPhase("error");
+      setMessage(nextMessage);
+      sound.stopLoop("file-editor-save");
+      sound.play("filePrepareFailed");
+    };
+
     // Never fail silently here. A primary button that does nothing and says
     // nothing is the worst outcome, and it is what an early `return` gives.
     if (!handle) {
-      setPhase("error");
-      setMessage("The image is still loading. Try again in a moment.");
+      failSave("The image is still loading. Try again in a moment.");
       return;
     }
     if (!store || !session || !settings.spec) {
-      setPhase("error");
-      setMessage("This editing session is no longer available.");
+      failSave("This editing session is no longer available.");
       return;
     }
     setPhase("saving");
     setMessage(undefined);
+    sound.startLoop("file-editor-save", "filePrepareStarted");
     try {
       const original = await store.get(session.originalId);
       if (!original) {
-        setPhase("error");
-        setMessage("The original file is no longer available.");
+        failSave("The original file is no longer available.");
         return;
       }
       const canvas = await handle.toCanvas(
@@ -226,8 +233,7 @@ export const ImageEditor = ({ sessionId }: { readonly sessionId: string }) => {
           : undefined,
       );
       if (!canvas) {
-        setPhase("error");
-        setMessage("The crop could not be rendered.");
+        failSave("The crop could not be rendered.");
         return;
       }
       const adapter = new ImagePreparationAdapter(store);
@@ -240,8 +246,7 @@ export const ImageEditor = ({ sessionId }: { readonly sessionId: string }) => {
         [`Cropped to ${canvas.width}×${canvas.height}px in the editor`],
       );
       if (!result.ok) {
-        setPhase("error");
-        setMessage(result.reason);
+        failSave(result.reason);
         return;
       }
       await updateEditorSession(sessionId, {
@@ -253,16 +258,18 @@ export const ImageEditor = ({ sessionId }: { readonly sessionId: string }) => {
       setMessage(
         `Saved ${result.artifact.name} · ${formatBytes(result.artifact.sizeBytes)}`,
       );
+      sound.stopLoop("file-editor-save");
+      sound.play("fileEditorSaved");
       window.close();
     } catch {
-      setPhase("error");
-      setMessage("The prepared copy could not be created.");
+      failSave("The prepared copy could not be created.");
     }
   };
 
   const cancel = async () => {
     await updateEditorSession(sessionId, { status: "cancelled" });
     setPhase("done");
+    sound.play("fileEditorCancelled");
     window.close();
   };
 

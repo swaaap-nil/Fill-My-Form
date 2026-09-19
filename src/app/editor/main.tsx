@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { ErrorBoundary } from "~/components/common/error-boundary";
 import { ImageEditor } from "~/components/files/image-editor";
+import { SoundProvider } from "~/lib/sfx/react";
 import { cn } from "~/lib/utils";
 import "~/assets/styles/globals.css";
 
@@ -45,24 +46,26 @@ const EditorApp = () => {
       {/* A throw in here used to leave an empty window with no way out and no
           hint as to why. The editor is a separate window, so there is no
           surrounding UI to fall back to. */}
-      <ErrorBoundary
-        fallback={
-          <div className="flex h-dvh flex-col items-center justify-center gap-3 p-6 text-center">
-            <p className="text-destructive text-sm">
-              The image editor could not start. Close this window and try again
-              from the panel.
-            </p>
-          </div>
-        }
-      >
-        {sessionId ? (
-          <ImageEditor sessionId={sessionId} />
-        ) : (
-          <div className="flex h-dvh items-center justify-center p-6 text-center text-muted-foreground text-sm">
-            This window was opened without an editing session.
-          </div>
-        )}
-      </ErrorBoundary>
+      <SoundProvider>
+        <ErrorBoundary
+          fallback={
+            <div className="flex h-dvh flex-col items-center justify-center gap-3 p-6 text-center">
+              <p className="text-destructive text-sm">
+                The image editor could not start. Close this window and try
+                again from the panel.
+              </p>
+            </div>
+          }
+        >
+          {sessionId ? (
+            <ImageEditor sessionId={sessionId} />
+          ) : (
+            <div className="flex h-dvh items-center justify-center p-6 text-center text-muted-foreground text-sm">
+              This window was opened without an editing session.
+            </div>
+          )}
+        </ErrorBoundary>
+      </SoundProvider>
     </div>
   );
 };

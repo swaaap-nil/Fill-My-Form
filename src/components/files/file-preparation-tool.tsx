@@ -31,6 +31,7 @@ import {
   openPreparationEditor,
 } from "~/lib/files/editor-window";
 import { createBrowserFilePreparationRegistry } from "~/lib/files/preparation-registry";
+import { useSound } from "~/lib/sfx/react";
 import { cn } from "~/lib/utils";
 import { FileMetadataCards } from "./file-metadata-cards";
 import { PreparationSettings } from "./preparation-settings";
@@ -39,6 +40,7 @@ import { useObjectUrl } from "./use-object-url";
 import { usePreparationSettings } from "./use-preparation-settings";
 
 export const FilePreparationTool = () => {
+  const sound = useSound();
   /**
    * Opened once, as a promise the handlers await. Holding only the resolved
    * store in state meant a file chosen before IndexedDB finished opening was
@@ -146,9 +148,13 @@ export const FilePreparationTool = () => {
             validation: ["Prepared in the image editor"],
           });
           setValues(session.values);
+          sound.play("fileEditorSaved");
         }
       } else if (session.status === "failed") {
         setError(session.reason ?? "The image editor could not finish.");
+        sound.play("filePrepareFailed");
+      } else if (session.status === "cancelled") {
+        sound.play("fileEditorCancelled");
       }
 
       editorWatch.current?.();
@@ -160,7 +166,7 @@ export const FilePreparationTool = () => {
       setEditing(undefined);
       await clearEditorSession(sessionId);
     },
-    [storePromise, deleteStoredRefs, prepared, original, setValues],
+    [storePromise, deleteStoredRefs, prepared, original, setValues, sound],
   );
   const adoptEditorResultRef = useRef(adoptEditorResult);
 
@@ -173,14 +179,25 @@ export const FilePreparationTool = () => {
     // A second click focuses the window that is already open rather than
     // opening a rival copy of the same edit.
     if (editing?.windowId !== undefined) {
-      if (await focusPreparationEditor(editing.windowId)) return;
+      if (await focusPreparationEditor(editing.windowId)) {
+        sound.play("fileEditorOpened");
+        return;
+      }
     }
     setError(undefined);
-    const opened = await openPreparationEditor({
-      originalId: original.id,
-      values: settings.values,
-    });
-    setEditing(opened);
+    let opened: { sessionId: string; windowId?: number };
+    try {
+      opened = await openPreparationEditor({
+        originalId: original.id,
+        values: settings.values,
+      });
+      setEditing(opened);
+      sound.play("fileEditorOpened");
+    } catch {
+      setError("The image editor could not open.");
+      sound.play("filePrepareFailed");
+      return;
+    }
 
     editorWatch.current?.();
     if (editorWindowRemoved.current) {
@@ -230,6 +247,7 @@ export const FilePreparationTool = () => {
         setError(
           "This file type does not have a local preparation adapter yet.",
         );
+        sound.play("filePrepareFailed");
         return;
       }
       const ref = await store.save(file);
@@ -239,10 +257,12 @@ export const FilePreparationTool = () => {
       setInspection(nextInspection);
       settings.resetFor(nextInspection);
       setSourceFile(file);
+      sound.play("fileSelected");
     } catch {
       setError(
         "This file could not be inspected locally. The original was not changed.",
       );
+      sound.play("filePrepareFailed");
     }
   };
 
@@ -250,6 +270,8 @@ export const FilePreparationTool = () => {
     if (!original || !inspection || !settings.spec) return;
     setBusy(true);
     setError(undefined);
+    sound.startLoop("file-prepare", "filePrepareStarted");
+    let outcome: "filePrepareSucceeded" | "filePrepareFailed" | undefined;
     try {
       const store = await storePromise;
       const registry = createBrowserFilePreparationRegistry(store);
@@ -258,19 +280,25 @@ export const FilePreparationTool = () => {
         setError(
           "This file type does not have a local preparation adapter yet.",
         );
+        outcome = "filePrepareFailed";
         return;
       }
       const result = await adapter.prepare(original, settings.spec);
       if (!result.ok) {
         setError(result.reason);
+        outcome = "filePrepareFailed";
         return;
       }
       await deleteStoredRefs(prepared ? [prepared.derived.id] : []);
       storedRefIds.current.add(result.artifact.derived.id);
       setPrepared(result.artifact);
+      outcome = "filePrepareSucceeded";
     } catch {
       setError("Local preparation failed. The original file was not changed.");
+      outcome = "filePrepareFailed";
     } finally {
+      sound.stopLoop("file-prepare");
+      if (outcome) sound.play(outcome);
       setBusy(false);
     }
   };
