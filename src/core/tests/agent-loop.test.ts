@@ -167,19 +167,11 @@ const buildPorts = (page: FakePage, policy: PolicyEngine): LoopPorts => {
     ontology,
     verifier: fakeVerifier(page),
     files: {
-      prepareForUpload: async (ref) => ({
-        ok: true,
-        upload: {
-          ref,
-          payload: {
-            name: ref.name,
-            mimeType: ref.mimeType,
-            sizeBytes: ref.sizeBytes,
-          },
-          transformed: false,
-          originalSizeBytes: ref.sizeBytes,
-        },
-      }),
+      prepareForUpload: async () => {
+        throw new Error(
+          "The loop should delegate file preparation to the tool.",
+        );
+      },
     },
     profileId: DEFAULT_PROFILE_ID,
     clock: fakeClock(),
@@ -246,7 +238,7 @@ describe("loop: a known field policy allows automatically", () => {
 });
 
 describe("loop: file references use the generic compliance/upload adapters", () => {
-  it("prepares a compliant copy and uploads by file metadata, leaving the reference untouched", async () => {
+  it("uploads the original reference and lets the upload tool prepare it once", async () => {
     const resumeRef: FileReference = {
       kind: "file_ref",
       id: "resume-1",
@@ -255,7 +247,6 @@ describe("loop: file references use the generic compliance/upload adapters", () 
       sizeBytes: 2048,
       createdAt: "2026-01-01T00:00:00.000Z",
     };
-    const seenConstraints: unknown[] = [];
     const page: FakePage = {
       fields: [
         makeField({
@@ -271,44 +262,19 @@ describe("loop: file references use the generic compliance/upload adapters", () 
       values: {},
     };
     const ports = buildPorts(page, alwaysAllow);
-    const customPorts: LoopPorts = {
-      ...ports,
-      files: {
-        prepareForUpload: async (ref, constraints) => {
-          seenConstraints.push(...constraints);
-          return {
-            ok: true,
-            upload: {
-              ref,
-              payload: {
-                name: ref.name,
-                mimeType: ref.mimeType,
-                sizeBytes: 512,
-              },
-              transformed: true,
-              originalSizeBytes: ref.sizeBytes,
-            },
-          };
-        },
-      },
-    };
-    await recordAnswer(customPorts.memory, {
+    await recordAnswer(ports.memory, {
       profileId: DEFAULT_PROFILE_ID,
       key: "documents.resume",
       value: resumeRef,
       source: MemorySource.USER_PROVIDED,
-      now: customPorts.clock(),
+      now: ports.clock(),
     });
 
-    let snapshot = createRun(customPorts, "https://example.com", 1);
-    snapshot = await drive(snapshot, customPorts);
+    let snapshot = createRun(ports, "https://example.com", 1);
+    snapshot = await drive(snapshot, ports);
 
     expect(snapshot.run.state.status).toBe(AgentStatus.COMPLETED);
     expect(page.values.resume).toBe("resume.pdf");
-    expect(seenConstraints).toContainEqual({
-      kind: "maxFileSizeBytes",
-      value: 1024,
-    });
     expect(resumeRef.sizeBytes).toBe(2048);
   });
 });

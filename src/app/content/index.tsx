@@ -88,10 +88,10 @@ const registerFillHandlers = () => {
 
   onMessage("uploadFile", async ({ data }) => {
     const { fieldId, uploadId } = assertValidUploadInstruction(data);
-    const target = lastElementsById.get(fieldId);
-    if (!target) return { ok: false };
     const upload = await readStagedUpload(uploadId);
     if (!upload) return { ok: false };
+    const target = lastElementsById.get(fieldId);
+    if (!target) return { ok: false };
 
     return { ok: uploadFieldFile(target, upload) };
   });

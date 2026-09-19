@@ -631,21 +631,14 @@ const performFileUpload = async (
   ref: FileReference,
   ports: LoopPorts,
 ): Promise<RunSnapshot> => {
-  const prepared = await ports.files?.prepareForUpload(ref, field.constraints);
   const withWrite: RunSnapshot = {
     ...snapshot,
     pendingWrite: { fieldId: field.id, value: ref.name },
   };
 
-  if (!prepared?.ok) {
-    return applyEvent(withWrite, { type: "acted", ok: false }, ports, {
-      toolName: UPLOAD_FILE_TOOL,
-    });
-  }
-
   const input: UploadFileInput = {
     fieldId: field.id,
-    ref: prepared.upload.ref,
+    ref,
     constraints: field.constraints,
   };
   const result = await executeTool(

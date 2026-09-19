@@ -235,19 +235,21 @@ const buildLoopPorts = async (tabId: number): Promise<LoopPorts> => {
         input.constraints as Parameters<typeof files.prepareLocalFile>[1],
       );
       if (!prepared) return { ok: false };
-      const result = await sendMessage(
-        "uploadFile",
-        {
-          decisionId: crypto.randomUUID(),
-          fieldId: input.fieldId,
-          uploadId: await stageUpload(prepared),
-        },
-        tabId,
-      );
-      if (result.ok && prepared.temporaryRef) {
-        await files.cleanupPreparedFile(prepared.temporaryRef);
+      try {
+        return await sendMessage(
+          "uploadFile",
+          {
+            decisionId: crypto.randomUUID(),
+            fieldId: input.fieldId,
+            uploadId: await stageUpload(prepared),
+          },
+          tabId,
+        );
+      } finally {
+        if (prepared.temporaryRef) {
+          await files.cleanupPreparedFile(prepared.temporaryRef);
+        }
       }
-      return result;
     },
   });
 
@@ -431,18 +433,21 @@ const main = () => {
             decision.constraints ?? [],
           );
           if (prepared) {
-            const result = await sendMessage(
-              "uploadFile",
-              {
-                decisionId,
-                fieldId: outcome.fieldId,
-                uploadId: await stageUpload(prepared),
-              },
-              tabId,
-            );
-            ok = result.ok;
-            if (ok && prepared.temporaryRef) {
-              await files.cleanupPreparedFile(prepared.temporaryRef);
+            try {
+              const result = await sendMessage(
+                "uploadFile",
+                {
+                  decisionId,
+                  fieldId: outcome.fieldId,
+                  uploadId: await stageUpload(prepared),
+                },
+                tabId,
+              );
+              ok = result.ok;
+            } finally {
+              if (prepared.temporaryRef) {
+                await files.cleanupPreparedFile(prepared.temporaryRef);
+              }
             }
           }
         } else {
