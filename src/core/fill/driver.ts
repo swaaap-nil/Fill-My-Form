@@ -33,7 +33,7 @@ import {
   type MemoryValue,
   type ProfileId,
 } from "../memory/types";
-import type { ConceptIndex, Sensitivity } from "../ontology/types";
+import type { Concept, ConceptIndex, Sensitivity } from "../ontology/types";
 import { Sensitivity as SensitivityValue } from "../ontology/types";
 import {
   ActionRisk,
@@ -59,7 +59,23 @@ const FILL_RISK: ActionRisk = ActionRisk.MEDIUM;
 const fieldLabelOf = (field: FormField): string | undefined =>
   field.label ?? field.name ?? field.placeholder;
 
-const payloadFor = (
+export type ResolvedStoredValue =
+  | {
+      readonly kind: "fillable";
+      readonly payload: PendingDecision["payload"];
+      readonly displayValue: string;
+      readonly confidence: ConfidenceLevel;
+      readonly memoryValue?: string;
+      readonly constraints?: FormField["constraints"];
+    }
+  | {
+      readonly kind: "choose_option";
+      readonly storedValue: string;
+      readonly candidates: readonly FormOption[];
+    }
+  | { readonly kind: "no_value" };
+
+export const payloadFor = (
   field: FormField,
   value: MemoryValue,
 ): PendingDecision["payload"] | null => {
@@ -69,10 +85,62 @@ const payloadFor = (
   return { kind: "text", value: String(value) };
 };
 
-const displayValueOf = (payload: PendingDecision["payload"]): string =>
+export const displayValueOf = (payload: PendingDecision["payload"]): string =>
   payload.kind === "file"
     ? `${payload.ref.name} (${Math.round(payload.ref.sizeBytes / 1024)} KB)`
     : payload.value;
+
+export const resolveStoredValueForField = (
+  field: FormField,
+  value: MemoryValue,
+  concept: Concept,
+  confidence: ConfidenceLevel,
+): ResolvedStoredValue => {
+  const payload = payloadFor(field, value);
+  if (!payload) return { kind: "no_value" };
+
+  // Closed-vocabulary fields must receive one of the page's own option values.
+  // The user's stored text remains the memory value; the DOM write uses the
+  // option code/label the page actually exposes.
+  if (payload.kind === "text" && field.options && field.options.length > 0) {
+    const optionMatch = resolveOption(payload.value, field.options, concept);
+
+    if (optionMatch.certainty === Certainty.AMBIGUOUS) {
+      return {
+        kind: "choose_option",
+        storedValue: payload.value,
+        candidates: optionMatch.candidates,
+      };
+    }
+
+    if (optionMatch.certainty === Certainty.UNKNOWN) {
+      return {
+        kind: "choose_option",
+        storedValue: payload.value,
+        candidates: field.options,
+      };
+    }
+
+    return {
+      kind: "fillable",
+      payload: { kind: "text", value: optionMatch.option.value },
+      displayValue: optionMatch.option.label,
+      confidence: minConfidence(
+        confidence,
+        OPTION_TIER_CONFIDENCE[optionMatch.tier],
+      ),
+      memoryValue: payload.value,
+    };
+  }
+
+  return {
+    kind: "fillable",
+    payload,
+    displayValue: displayValueOf(payload),
+    confidence,
+    constraints: field.kind === FieldKind.FILE ? field.constraints : undefined,
+  };
+};
 
 /**
  * Registers one decision per candidate option, for the panel's
@@ -166,8 +234,13 @@ export const planFill = async (
       userConfirmed: false,
     });
 
-    const payload = payloadFor(field, item.value);
-    if (!payload) {
+    const resolvedValue = resolveStoredValueForField(
+      field,
+      item.value,
+      concept,
+      confidence,
+    );
+    if (resolvedValue.kind === "no_value") {
       proposals.push({
         fieldId: field.id,
         fieldLabel,
@@ -177,110 +250,47 @@ export const planFill = async (
       continue;
     }
 
-    // Closed-vocabulary field: a stored value only means something once it
-    // maps onto one of the page's own options. See
-    // `~/core/matching/resolve-option`.
-    if (payload.kind === "text" && field.options && field.options.length > 0) {
-      const optionMatch = resolveOption(payload.value, field.options, concept);
-
-      if (optionMatch.certainty === Certainty.AMBIGUOUS) {
-        proposals.push({
-          fieldId: field.id,
-          fieldLabel,
-          state: "choose_option",
-          conceptKey: concept.key,
-          storedValue: payload.value,
-          choices: registerOptionChoices(
-            decisions,
-            generateDecisionId,
-            field,
-            concept.key,
-            concept.sensitivity,
-            optionMatch.candidates,
-          ),
-        });
-        continue;
-      }
-
-      if (optionMatch.certainty === Certainty.UNKNOWN) {
-        proposals.push({
-          fieldId: field.id,
-          fieldLabel,
-          state: "choose_option",
-          conceptKey: concept.key,
-          storedValue: payload.value,
-          choices: registerOptionChoices(
-            decisions,
-            generateDecisionId,
-            field,
-            concept.key,
-            concept.sensitivity,
-            field.options,
-          ),
-        });
-        continue;
-      }
-
-      // Resolved: write the page's own option value, keep the canonical
-      // stored text as what memory remembers, show the option's label.
-      const decisionId = generateDecisionId();
-      const resolvedPayload: PendingDecision["payload"] = {
-        kind: "text",
-        value: optionMatch.option.value,
-      };
-      const resolvedConfidence = minConfidence(
-        confidence,
-        OPTION_TIER_CONFIDENCE[optionMatch.tier],
-      );
-      const resolvedDecision =
-        resolvedConfidence === confidence
-          ? decision
-          : policy.evaluate({
-              risk: FILL_RISK,
-              sensitivity: concept.sensitivity,
-              confidence: resolvedConfidence,
-              isSubmission: false,
-              userConfirmed: false,
-            });
-
-      decisions.set(decisionId, {
-        fieldId: field.id,
-        payload: resolvedPayload,
-        conceptKey: concept.key,
-        sensitivity: concept.sensitivity,
-        risk: FILL_RISK,
-        confidence: resolvedConfidence,
-        stale: itemFreshness === FreshnessStatus.DUE,
-        memoryValue: payload.value,
-      });
-
+    if (resolvedValue.kind === "choose_option") {
       proposals.push({
         fieldId: field.id,
         fieldLabel,
-        state: isRestricted(concept.sensitivity) ? "restricted" : "pending",
+        state: "choose_option",
         conceptKey: concept.key,
-        decisionId,
-        value: optionMatch.option.label,
-        payload: resolvedPayload,
-        source: item.provenance.source,
-        policyReason: resolvedDecision.reason,
+        storedValue: resolvedValue.storedValue,
+        choices: registerOptionChoices(
+          decisions,
+          generateDecisionId,
+          field,
+          concept.key,
+          concept.sensitivity,
+          resolvedValue.candidates,
+        ),
       });
       continue;
     }
 
     const decisionId = generateDecisionId();
-    const value = displayValueOf(payload);
+    const resolvedDecision =
+      resolvedValue.confidence === confidence
+        ? decision
+        : policy.evaluate({
+            risk: FILL_RISK,
+            sensitivity: concept.sensitivity,
+            confidence: resolvedValue.confidence,
+            isSubmission: false,
+            userConfirmed: false,
+          });
 
     decisions.set(decisionId, {
       fieldId: field.id,
-      payload,
-      constraints:
-        field.kind === FieldKind.FILE ? field.constraints : undefined,
+      payload: resolvedValue.payload,
+      constraints: resolvedValue.constraints,
       conceptKey: concept.key,
       sensitivity: concept.sensitivity,
       risk: FILL_RISK,
-      confidence,
+      confidence: resolvedValue.confidence,
       stale: itemFreshness === FreshnessStatus.DUE,
+      memoryValue: resolvedValue.memoryValue,
     });
 
     proposals.push({
@@ -289,10 +299,10 @@ export const planFill = async (
       state: isRestricted(concept.sensitivity) ? "restricted" : "pending",
       conceptKey: concept.key,
       decisionId,
-      value,
-      payload,
+      value: resolvedValue.displayValue,
+      payload: resolvedValue.payload,
       source: item.provenance.source,
-      policyReason: decision.reason,
+      policyReason: resolvedDecision.reason,
     });
   }
 

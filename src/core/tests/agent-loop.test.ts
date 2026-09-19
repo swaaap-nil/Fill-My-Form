@@ -212,6 +212,37 @@ describe("loop: a known field policy allows automatically", () => {
     expect(snapshot.run.state.status).toBe(AgentStatus.COMPLETED);
     expect(page.values.f1).toBe("ananya@example.com");
   });
+
+  it("writes a closed-vocabulary field's page option value, not the raw stored text", async () => {
+    const page: FakePage = {
+      fields: [
+        makeField({
+          id: "nationality",
+          kind: "select",
+          label: "Nationality",
+          options: [
+            { value: "IN", label: "India" },
+            { value: "US", label: "United States" },
+          ],
+        }),
+      ],
+      values: {},
+    };
+    const ports = buildPorts(page, alwaysAllow);
+    await recordAnswer(ports.memory, {
+      profileId: DEFAULT_PROFILE_ID,
+      key: "identity.nationality",
+      value: "Indian",
+      source: MemorySource.USER_PROVIDED,
+      now: ports.clock(),
+    });
+
+    let snapshot = createRun(ports, "https://example.com", 1);
+    snapshot = await drive(snapshot, ports);
+
+    expect(snapshot.run.state.status).toBe(AgentStatus.COMPLETED);
+    expect(page.values.nationality).toBe("IN");
+  });
 });
 
 describe("loop: file references use the generic compliance/upload adapters", () => {
