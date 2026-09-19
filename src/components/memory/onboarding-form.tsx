@@ -1,14 +1,11 @@
 import { AlertCircle, Check, FileUp, Loader2, Lock } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo } from "react";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { type FileReference, isFileReference } from "~/core/memory/types";
 import { concepts } from "~/core/ontology";
 import { Sensitivity } from "~/core/ontology/types";
-import { createIndexedDbFileReferenceStore } from "~/lib/files/adapters";
-import { sendMessage } from "~/lib/messaging";
-import { useSound } from "~/lib/sfx/react";
 import { LocalDataControls } from "./local-data-controls";
+import { type FieldStatus, useOnboardingMemory } from "./use-onboarding-memory";
 
 /**
  * An ontology-driven "tell us about yourself" form.
@@ -56,10 +53,6 @@ const restrictedConcepts = fillableConcepts.filter(
   (c) => c.sensitivity === Sensitivity.RESTRICTED,
 );
 
-const AUTOSAVE_DELAY_MS = 600;
-
-type FieldStatus = "idle" | "pending" | "saving" | "saved" | "error";
-
 const groupByPrefix = <T extends { key: string }>(
   items: readonly T[],
 ): [string, T[]][] => {
@@ -74,153 +67,19 @@ const groupByPrefix = <T extends { key: string }>(
 };
 
 export const OnboardingForm = () => {
-  const sound = useSound();
-  const [values, setValues] = useState<Record<string, string>>({});
-  const [fileRefs, setFileRefs] = useState<Record<string, FileReference>>({});
-  const [savedKeys, setSavedKeys] = useState<Set<string>>(new Set());
-  const [fieldStatuses, setFieldStatuses] = useState<
-    Record<string, FieldStatus>
-  >({});
-  const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-  const saveVersions = useRef<Record<string, number>>({});
-
-  const loadSnapshot = () => {
-    sendMessage("getMemorySnapshot", undefined).then(({ items }) => {
-      const loaded: Record<string, string> = {};
-      const loadedFiles: Record<string, FileReference> = {};
-      for (const item of items) {
-        if (typeof item.value === "string") loaded[item.key] = item.value;
-        if (isFileReference(item.value)) loadedFiles[item.key] = item.value;
-      }
-      setValues(loaded);
-      setFileRefs(loadedFiles);
-      setSavedKeys(new Set(items.map((i) => i.key)));
-      setFieldStatuses({});
-    });
-  };
-
-  useEffect(loadSnapshot, []);
-
-  useEffect(
-    () => () => {
-      for (const timer of Object.values(saveTimers.current)) {
-        clearTimeout(timer);
-      }
-    },
-    [],
-  );
-
+  const {
+    fileRefs,
+    getStatus,
+    reload,
+    savedCount,
+    updateFileField,
+    updateTextField,
+    values,
+  } = useOnboardingMemory();
   const groupedStandard = useMemo(() => groupByPrefix(standardConcepts), []);
 
-  const setFieldStatus = (key: string, status: FieldStatus) => {
-    setFieldStatuses((prev) => ({ ...prev, [key]: status }));
-  };
-
-  const recordField = async (
-    key: string,
-    value: string | FileReference,
-    label: string,
-    version: number,
-    playOutcome = true,
-  ): Promise<boolean> => {
-    setFieldStatus(key, "saving");
-    try {
-      await sendMessage("recordOnboardingAnswer", { key, value, label });
-      if (saveVersions.current[key] !== version) return false;
-      setSavedKeys((prev) => new Set(prev).add(key));
-      setFieldStatus(key, "saved");
-      if (playOutcome) sound.play("onboardingSaveSucceeded");
-      return true;
-    } catch {
-      if (saveVersions.current[key] === version) {
-        setFieldStatus(key, "error");
-        if (playOutcome) sound.play("onboardingSaveFailed");
-      }
-      return false;
-    }
-  };
-
-  const deleteField = async (
-    key: string,
-    version: number,
-  ): Promise<boolean> => {
-    setFieldStatus(key, "saving");
-    try {
-      await sendMessage("deleteOnboardingAnswer", { key });
-      const { items } = await sendMessage("getMemorySnapshot", undefined);
-      const deleted = !items.some((item) => item.key === key);
-      if (!deleted) throw new Error("Deleted onboarding answer still exists.");
-      if (saveVersions.current[key] !== version) return false;
-      setSavedKeys((prev) => {
-        const next = new Set(prev);
-        next.delete(key);
-        return next;
-      });
-      setFieldStatus(key, "saved");
-      sound.play("onboardingSaveSucceeded");
-      return true;
-    } catch {
-      if (saveVersions.current[key] === version) {
-        setFieldStatus(key, "error");
-        sound.play("onboardingSaveFailed");
-      }
-      return false;
-    }
-  };
-
-  const scheduleTextSave = (key: string, value: string, label: string) => {
-    const nextVersion = (saveVersions.current[key] ?? 0) + 1;
-    saveVersions.current[key] = nextVersion;
-    clearTimeout(saveTimers.current[key]);
-
-    if (value.trim() === "") {
-      if (!savedKeys.has(key)) {
-        setFieldStatus(key, "idle");
-        return;
-      }
-      setFieldStatus(key, "pending");
-      saveTimers.current[key] = setTimeout(() => {
-        void deleteField(key, nextVersion);
-      }, AUTOSAVE_DELAY_MS);
-      return;
-    }
-
-    setFieldStatus(key, "pending");
-    saveTimers.current[key] = setTimeout(() => {
-      void recordField(key, value, label, nextVersion);
-    }, AUTOSAVE_DELAY_MS);
-  };
-
-  const tagFile = async (
-    key: string,
-    label: string,
-    file: File | undefined,
-  ) => {
-    if (!file) return;
-    const nextVersion = (saveVersions.current[key] ?? 0) + 1;
-    saveVersions.current[key] = nextVersion;
-    clearTimeout(saveTimers.current[key]);
-    setFieldStatus(key, "saving");
-    sound.startLoop(`file-tagging:${key}`, "fileTagging");
-    let saved = false;
-
-    try {
-      const store = await createIndexedDbFileReferenceStore();
-      const ref = await store.save(file);
-      setFileRefs((prev) => ({ ...prev, [key]: ref }));
-      saved = await recordField(key, ref, label, nextVersion, false);
-    } catch {
-      if (saveVersions.current[key] === nextVersion) {
-        setFieldStatus(key, "error");
-      }
-    } finally {
-      sound.stopLoop(`file-tagging:${key}`);
-    }
-    sound.play(saved ? "onboardingSaveSucceeded" : "onboardingSaveFailed");
-  };
-
   const renderStatus = (key: string) => {
-    const status = fieldStatuses[key] ?? "idle";
+    const status = getStatus(key);
     if (status === "idle") return null;
 
     const statusLabels: Record<Exclude<FieldStatus, "idle">, string> = {
@@ -260,12 +119,7 @@ export const OnboardingForm = () => {
             value={values[concept.key] ?? ""}
             onChange={(e) => {
               const value = e.target.value;
-              sound.play("onboardingTyping");
-              setValues((prev) => ({
-                ...prev,
-                [concept.key]: value,
-              }));
-              scheduleTextSave(concept.key, value, concept.label);
+              updateTextField(concept.key, value, concept.label);
             }}
           />
           {renderStatus(concept.key)}
@@ -324,7 +178,11 @@ export const OnboardingForm = () => {
                   id={concept.key}
                   type="file"
                   onChange={(e) =>
-                    tagFile(concept.key, concept.label, e.target.files?.[0])
+                    updateFileField(
+                      concept.key,
+                      concept.label,
+                      e.target.files?.[0],
+                    )
                   }
                 />
                 {renderStatus(concept.key)}
@@ -340,9 +198,9 @@ export const OnboardingForm = () => {
       </fieldset>
 
       <p className="text-muted-foreground text-xs" data-testid="saved-count">
-        {savedKeys.size} value{savedKeys.size === 1 ? "" : "s"} saved
+        {savedCount} value{savedCount === 1 ? "" : "s"} saved
       </p>
-      <LocalDataControls onDataChanged={loadSnapshot} />
+      <LocalDataControls onDataChanged={reload} />
     </form>
   );
 };
