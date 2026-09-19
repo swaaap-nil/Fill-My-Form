@@ -35,6 +35,7 @@ import { cn } from "~/lib/utils";
 import { FileMetadataCards } from "./file-metadata-cards";
 import { PreparationSettings } from "./preparation-settings";
 import { PreparedFileHandoff } from "./prepared-file-handoff";
+import { useObjectUrl } from "./use-object-url";
 import { usePreparationSettings } from "./use-preparation-settings";
 
 export const FilePreparationTool = () => {
@@ -48,9 +49,8 @@ export const FilePreparationTool = () => {
   const [store, setStore] = useState<FileReferenceStore>();
   const [original, setOriginal] = useState<FileReference>();
   const [inspection, setInspection] = useState<FileInspection>();
-  const [sourceUrl, setSourceUrl] = useState<string>();
+  const [sourceFile, setSourceFile] = useState<File>();
   const [prepared, setPrepared] = useState<PreparedArtifact>();
-  const [preparedUrl, setPreparedUrl] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [editing, setEditing] = useState<{
@@ -58,7 +58,9 @@ export const FilePreparationTool = () => {
     windowId?: number;
   }>();
   const editorWatch = useRef<(() => void) | null>(null);
+  const editorWindowRemoved = useRef<((closedId: number) => void) | null>(null);
   const storedRefIds = useRef<Set<string>>(new Set());
+  const sourceUrl = useObjectUrl(sourceFile);
 
   const settings = usePreparationSettings(inspection);
   const { setValues } = settings;
@@ -78,13 +80,14 @@ export const FilePreparationTool = () => {
 
   useEffect(
     () => () => {
-      if (sourceUrl) URL.revokeObjectURL(sourceUrl);
-      if (preparedUrl) URL.revokeObjectURL(preparedUrl);
+      editorWatch.current?.();
+      if (editorWindowRemoved.current) {
+        browser.windows.onRemoved.removeListener(editorWindowRemoved.current);
+        editorWindowRemoved.current = null;
+      }
     },
-    [preparedUrl, sourceUrl],
+    [],
   );
-
-  useEffect(() => () => editorWatch.current?.(), []);
 
   useEffect(
     () => () => {
@@ -126,7 +129,6 @@ export const FilePreparationTool = () => {
         if (record) {
           await deleteStoredRefs(prepared ? [prepared.derived.id] : []);
           storedRefIds.current.add(record.ref.id);
-          if (preparedUrl) URL.revokeObjectURL(preparedUrl);
           setPrepared({
             original: original ?? record.ref,
             derived: record.ref,
@@ -143,7 +145,6 @@ export const FilePreparationTool = () => {
             },
             validation: ["Prepared in the image editor"],
           });
-          setPreparedUrl(URL.createObjectURL(record.blob));
           setValues(session.values);
         }
       } else if (session.status === "failed") {
@@ -152,18 +153,20 @@ export const FilePreparationTool = () => {
 
       editorWatch.current?.();
       editorWatch.current = null;
+      if (editorWindowRemoved.current) {
+        browser.windows.onRemoved.removeListener(editorWindowRemoved.current);
+        editorWindowRemoved.current = null;
+      }
       setEditing(undefined);
       await clearEditorSession(sessionId);
     },
-    [
-      storePromise,
-      deleteStoredRefs,
-      prepared,
-      preparedUrl,
-      original,
-      setValues,
-    ],
+    [storePromise, deleteStoredRefs, prepared, original, setValues],
   );
+  const adoptEditorResultRef = useRef(adoptEditorResult);
+
+  useEffect(() => {
+    adoptEditorResultRef.current = adoptEditorResult;
+  }, [adoptEditorResult]);
 
   const openEditor = async () => {
     if (!original) return;
@@ -180,8 +183,13 @@ export const FilePreparationTool = () => {
     setEditing(opened);
 
     editorWatch.current?.();
+    if (editorWindowRemoved.current) {
+      browser.windows.onRemoved.removeListener(editorWindowRemoved.current);
+      editorWindowRemoved.current = null;
+    }
     editorWatch.current = watchEditorSession(opened.sessionId, (session) => {
-      if (session.status !== "open") void adoptEditorResult(opened.sessionId);
+      if (session.status !== "open")
+        void adoptEditorResultRef.current(opened.sessionId);
     });
 
     // The guarantee behind the editor's best-effort `pagehide` write: if the
@@ -191,10 +199,12 @@ export const FilePreparationTool = () => {
       const onRemoved = (closedId: number) => {
         if (closedId !== opened.windowId) return;
         browser.windows.onRemoved.removeListener(onRemoved);
+        editorWindowRemoved.current = null;
         void updateEditorSession(opened.sessionId, {
           status: "cancelled",
-        }).then(() => adoptEditorResult(opened.sessionId));
+        }).then(() => adoptEditorResultRef.current(opened.sessionId));
       };
+      editorWindowRemoved.current = onRemoved;
       browser.windows.onRemoved.addListener(onRemoved);
     }
   };
@@ -207,8 +217,6 @@ export const FilePreparationTool = () => {
       ...(original ? [original.id] : []),
       ...(prepared ? [prepared.derived.id] : []),
     ]);
-    if (preparedUrl) URL.revokeObjectURL(preparedUrl);
-    if (sourceUrl) URL.revokeObjectURL(sourceUrl);
     try {
       const store = await storePromise;
       const registry = createBrowserFilePreparationRegistry(store);
@@ -230,7 +238,7 @@ export const FilePreparationTool = () => {
       setOriginal(ref);
       setInspection(nextInspection);
       settings.resetFor(nextInspection);
-      setSourceUrl(URL.createObjectURL(file));
+      setSourceFile(file);
     } catch {
       setError(
         "This file could not be inspected locally. The original was not changed.",
@@ -259,9 +267,7 @@ export const FilePreparationTool = () => {
       }
       await deleteStoredRefs(prepared ? [prepared.derived.id] : []);
       storedRefIds.current.add(result.artifact.derived.id);
-      if (preparedUrl) URL.revokeObjectURL(preparedUrl);
       setPrepared(result.artifact);
-      setPreparedUrl(URL.createObjectURL(result.artifact.blob));
     } catch {
       setError("Local preparation failed. The original file was not changed.");
     } finally {
@@ -274,13 +280,10 @@ export const FilePreparationTool = () => {
       ...(original ? [original.id] : []),
       ...(prepared ? [prepared.derived.id] : []),
     ]);
-    if (sourceUrl) URL.revokeObjectURL(sourceUrl);
-    if (preparedUrl) URL.revokeObjectURL(preparedUrl);
     setOriginal(undefined);
     setInspection(undefined);
     setPrepared(undefined);
-    setSourceUrl(undefined);
-    setPreparedUrl(undefined);
+    setSourceFile(undefined);
     setError(undefined);
     settings.resetFor(undefined);
   };
@@ -417,11 +420,10 @@ export const FilePreparationTool = () => {
         </section>
       )}
 
-      {prepared && preparedUrl && store && (
+      {prepared && store && (
         <PreparedFileHandoff
           artifact={prepared}
           store={store}
-          downloadUrl={preparedUrl}
           // The preset names the preview for screen readers. Custom names
           // nothing, so fall back to the generic noun.
           label={

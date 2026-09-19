@@ -27,6 +27,7 @@ import {
 import { ImagePreparationAdapter } from "~/lib/files/image-preparation-adapter";
 import { CropStage, type CropStageHandle } from "./crop-stage";
 import { FileMetadataCards } from "./file-metadata-cards";
+import { useObjectUrl } from "./use-object-url";
 import { usePreparationSettings } from "./use-preparation-settings";
 
 type Phase = "loading" | "ready" | "saving" | "done" | "error";
@@ -55,9 +56,10 @@ export const ImageEditor = ({ sessionId }: { readonly sessionId: string }) => {
   const [session, setSession] = useState<EditorSession>();
   const [store, setStore] = useState<FileReferenceStore>();
   const [inspection, setInspection] = useState<FileInspection>();
-  const [sourceUrl, setSourceUrl] = useState<string>();
+  const [sourceFile, setSourceFile] = useState<File>();
   const [crop, setCrop] = useState<CropRect>();
   const stageRef = useRef<CropStageHandle | null>(null);
+  const sourceUrl = useObjectUrl(sourceFile);
 
   const settings = usePreparationSettings(inspection);
   const { setValues } = settings;
@@ -154,7 +156,7 @@ export const ImageEditor = ({ sessionId }: { readonly sessionId: string }) => {
         // Carry the panel's settings across, so the editor opens where the
         // user left off rather than resetting their work.
         setValues(nextSession.values);
-        setSourceUrl(URL.createObjectURL(file));
+        setSourceFile(file);
         setPhase("ready");
       } catch {
         if (!active) return;
@@ -167,13 +169,6 @@ export const ImageEditor = ({ sessionId }: { readonly sessionId: string }) => {
       active = false;
     };
   }, [sessionId, setValues]);
-
-  useEffect(
-    () => () => {
-      if (sourceUrl) URL.revokeObjectURL(sourceUrl);
-    },
-    [sourceUrl],
-  );
 
   /**
    * Best-effort: if the window is closed with the X rather than a button, tell

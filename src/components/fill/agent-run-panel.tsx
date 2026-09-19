@@ -176,6 +176,7 @@ export const AgentRunPanel = ({ tabId }: AgentRunPanelProps) => {
       setFileError("Could not save that file.");
     } finally {
       sound.stopLoop("agent-run");
+      setBusy(false);
     }
   };
 

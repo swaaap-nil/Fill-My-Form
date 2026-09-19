@@ -23,6 +23,7 @@ import { useSound } from "~/lib/sfx/react";
 import { siteAccess, toOriginPattern } from "~/lib/site-access";
 import { cn } from "~/lib/utils";
 import { PreparedFileHandoff } from "../files/prepared-file-handoff";
+import { useObjectUrl } from "../files/use-object-url";
 import { AgentRunPanel } from "./agent-run-panel";
 import { ProposalCard } from "./proposal-card";
 
@@ -449,15 +450,14 @@ const UploadIntentItem = ({
   readonly output?: {
     readonly artifact: PreparedArtifact;
     readonly store: FileReferenceStore;
-    readonly url: string;
     readonly name: string;
     readonly size: number;
     readonly mimeType: string;
   };
   readonly error?: string;
 }) => {
-  const [sourceUrl, setSourceUrl] = useState<string>();
   const [sourceFile, setSourceFile] = useState<File>();
+  const sourceUrl = useObjectUrl(sourceFile);
   const accept =
     intent.constraints
       .find((constraint) => constraint.kind === "accept")
@@ -483,9 +483,7 @@ const UploadIntentItem = ({
           onChange={(event) => {
             const file = event.currentTarget.files?.[0];
             if (!file) return;
-            if (sourceUrl) URL.revokeObjectURL(sourceUrl);
             setSourceFile(file);
-            setSourceUrl(URL.createObjectURL(file));
           }}
         />
       </div>
@@ -520,7 +518,6 @@ const UploadIntentItem = ({
         <PreparedFileHandoff
           artifact={output.artifact}
           store={output.store}
-          downloadUrl={output.url}
           label={intent.label ?? intent.kind}
         />
       )}
@@ -538,7 +535,6 @@ const UploadIntentsCard = ({
     Record<
       string,
       {
-        readonly url: string;
         readonly artifact: PreparedArtifact;
         readonly store: FileReferenceStore;
         readonly name: string;
@@ -558,7 +554,6 @@ const UploadIntentsCard = ({
   useEffect(
     () => () => {
       for (const output of Object.values(preparedRef.current)) {
-        URL.revokeObjectURL(output.url);
         void Promise.all(
           output.cleanupIds.map((id) => output.store.delete(id)),
         );
@@ -609,11 +604,9 @@ const UploadIntentsCard = ({
         }));
         return;
       }
-      const nextUrl = URL.createObjectURL(output.artifact.blob);
       setPrepared((current) => {
         const previous = current[intent.id];
         if (previous) {
-          URL.revokeObjectURL(previous.url);
           void Promise.all(
             previous.cleanupIds.map((id) => previous.store.delete(id)),
           );
@@ -621,7 +614,6 @@ const UploadIntentsCard = ({
         return {
           ...current,
           [intent.id]: {
-            url: nextUrl,
             artifact: output.artifact,
             store,
             name: output.artifact.name,

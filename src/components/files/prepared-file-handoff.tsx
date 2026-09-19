@@ -10,6 +10,7 @@ import type { PreparedArtifact } from "~/core/files/preparation";
 import type { FileReferenceStore } from "~/lib/files/adapters";
 import { cn } from "~/lib/utils";
 import { FileMetadataCards } from "./file-metadata-cards";
+import { useObjectUrl } from "./use-object-url";
 
 type DragState = "loading" | "ready" | "dragging" | "finished" | "failed";
 
@@ -24,17 +25,17 @@ const formatExpiry = (expiresAt?: string) => {
 export const PreparedFileHandoff = ({
   artifact,
   store,
-  downloadUrl,
   label = "file",
 }: {
   readonly artifact: PreparedArtifact;
   readonly store: FileReferenceStore;
-  readonly downloadUrl: string;
   readonly label?: string;
 }) => {
   const [dragFile, setDragFile] = useState<File>();
   const [dragState, setDragState] = useState<DragState>("loading");
-  const [previewUrl, setPreviewUrl] = useState<string>();
+  const isImage = artifact.mimeType.startsWith("image/");
+  const previewUrl = useObjectUrl(isImage ? artifact.blob : undefined);
+  const downloadUrl = useObjectUrl(artifact.blob);
 
   useEffect(() => {
     let active = true;
@@ -48,16 +49,6 @@ export const PreparedFileHandoff = ({
       active = false;
     };
   }, [artifact.derived.id, store]);
-
-  useEffect(() => {
-    if (!artifact.mimeType.startsWith("image/")) {
-      setPreviewUrl(undefined);
-      return;
-    }
-    const url = URL.createObjectURL(artifact.blob);
-    setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [artifact.blob, artifact.mimeType]);
 
   const handleDragStart = (event: DragEvent<HTMLFieldSetElement>) => {
     if (!dragFile) {
@@ -78,7 +69,6 @@ export const PreparedFileHandoff = ({
   };
 
   const handleDragEnd = () => setDragState("finished");
-  const isImage = artifact.mimeType.startsWith("image/");
   return (
     <section className="flex flex-col gap-3 rounded-lg border border-emerald-500/35 bg-emerald-50/60 p-4 shadow-sm dark:bg-emerald-950/20">
       <div className="flex items-start gap-3">
@@ -167,8 +157,9 @@ export const PreparedFileHandoff = ({
 
       <div className="grid grid-cols-1 gap-2">
         <a
-          href={downloadUrl}
+          href={downloadUrl ?? "#"}
           download={artifact.name}
+          aria-disabled={!downloadUrl}
           className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-primary px-2.5 font-semibold text-primary-foreground text-sm shadow-sm hover:bg-[#dccdff]"
         >
           <Download className="size-4" aria-hidden="true" />
