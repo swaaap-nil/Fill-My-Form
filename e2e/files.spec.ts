@@ -274,6 +274,62 @@ test("files: standalone preparation tool creates a temporary image copy", async 
   ).toBeVisible();
 });
 
+test("files: standalone preparation tool can use a saved onboarding document", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const photoPath = testInfo.outputPath("saved-photo.png");
+  await writeFixture(photoPath, png(180, 140));
+
+  const panelPage = await openPanel(context, extensionId);
+  await seedFile(panelPage, "Photograph", photoPath);
+
+  await panelPage.getByRole("button", { name: "Prepare file" }).click();
+  await expect(
+    panelPage.getByRole("combobox", { name: "Pick a saved file" }),
+  ).toBeVisible();
+
+  await panelPage.getByRole("combobox", { name: "Pick a saved file" }).click();
+  await panelPage
+    .getByRole("option", { name: /Photograph.*saved-photo\.png/ })
+    .click();
+  await panelPage.getByRole("button", { name: "Use this" }).click();
+  await expect(panelPage.getByText("saved-photo.png")).toBeVisible();
+
+  await panelPage
+    .getByRole("button", { name: "Prepare temporary copy" })
+    .click();
+  await expect(panelPage.getByText("Ready to upload")).toBeVisible();
+  await expect(
+    panelPage.getByTestId("prepared-file-drag-surface"),
+  ).toHaveAttribute("draggable", "true");
+});
+
+test("files: unsupported saved onboarding documents are shown but disabled", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const signaturePath = testInfo.outputPath("signature.txt");
+  await writeFixture(signaturePath, new TextEncoder().encode("signature"));
+
+  const panelPage = await openPanel(context, extensionId);
+  await seedFile(panelPage, "Signature", signaturePath);
+
+  await panelPage.getByRole("button", { name: "Prepare file" }).click();
+  await panelPage.getByRole("combobox", { name: "Pick a saved file" }).click();
+  await expect(
+    panelPage.getByRole("option", {
+      name: /Signature.*signature\.txt.*unsupported/,
+    }),
+  ).toBeDisabled();
+  await expect(
+    panelPage.getByText("Images and PDFs can be prepared here."),
+  ).toBeVisible();
+  await expect(
+    panelPage.getByRole("button", { name: "Use this" }),
+  ).toBeDisabled();
+});
+
 test("files: physical units and a size limit in MB reach the prepared copy", async ({
   context,
   extensionId,

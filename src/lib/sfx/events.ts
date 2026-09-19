@@ -27,6 +27,7 @@ export const SFX_EVENT_CUES = {
   onboardingSaveSucceeded: "success",
   onboardingSaveFailed: "error",
   fileTagging: "processing",
+  fileSourceSelected: "select",
   fileSelected: "select",
   filePrepareStarted: "processing",
   filePrepareSucceeded: "success",

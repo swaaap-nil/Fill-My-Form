@@ -1,20 +1,30 @@
 import {
   Crop,
+  FileCheck2,
   FileImage,
   FileText,
   FileUp,
   LoaderCircle,
   RefreshCcw,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { browser } from "wxt/browser";
 import { Button } from "~/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { formatBytes } from "~/core/files/byte-units";
 import type {
   FileInspection,
   PreparedArtifact,
 } from "~/core/files/preparation";
 import { CUSTOM_PRESET_ID, presetById } from "~/core/files/presets";
-import type { FileReference } from "~/core/memory/types";
+import { type FileReference, isFileReference } from "~/core/memory/types";
+import { concepts } from "~/core/ontology";
 import {
   createIndexedDbFileReferenceStore,
   type FileReferenceStore,
@@ -31,6 +41,7 @@ import {
   openPreparationEditor,
 } from "~/lib/files/editor-window";
 import { createBrowserFilePreparationRegistry } from "~/lib/files/preparation-registry";
+import { sendMessage } from "~/lib/messaging";
 import { useSound } from "~/lib/sfx/react";
 import { cn } from "~/lib/utils";
 import { FileMetadataCards } from "./file-metadata-cards";
@@ -38,6 +49,32 @@ import { PreparationSettings } from "./preparation-settings";
 import { PreparedFileHandoff } from "./prepared-file-handoff";
 import { useObjectUrl } from "./use-object-url";
 import { usePreparationSettings } from "./use-preparation-settings";
+
+interface SavedDocument {
+  readonly key: string;
+  readonly label: string;
+  readonly ref: FileReference;
+  readonly supported: boolean;
+}
+
+const fileConceptLabels = new Map(
+  concepts
+    .filter((concept) => concept.expects === "file")
+    .map((concept) => [concept.key, concept.label]),
+);
+
+const canPrepareSavedDocument = (ref: FileReference): boolean =>
+  ref.mimeType.startsWith("image/") || ref.mimeType === "application/pdf";
+
+const SAVED_DOCUMENT_PLACEHOLDER = "saved-document-placeholder";
+type SourceMode = "saved" | "upload";
+
+const sourceInspectionFor = (ref: FileReference): FileInspection => ({
+  kind: "unsupported",
+  name: ref.name,
+  mimeType: ref.mimeType,
+  sizeBytes: ref.sizeBytes,
+});
 
 export const FilePreparationTool = () => {
   const sound = useSound();
@@ -53,6 +90,13 @@ export const FilePreparationTool = () => {
   const [inspection, setInspection] = useState<FileInspection>();
   const [sourceFile, setSourceFile] = useState<File>();
   const [prepared, setPrepared] = useState<PreparedArtifact>();
+  const [savedDocuments, setSavedDocuments] = useState<
+    readonly SavedDocument[]
+  >([]);
+  const [selectedSavedDocumentKey, setSelectedSavedDocumentKey] = useState(
+    SAVED_DOCUMENT_PLACEHOLDER,
+  );
+  const [sourceMode, setSourceMode] = useState<SourceMode>("upload");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [editing, setEditing] = useState<{
@@ -66,6 +110,30 @@ export const FilePreparationTool = () => {
 
   const settings = usePreparationSettings(inspection);
   const { setValues } = settings;
+  const supportedSavedDocuments = useMemo(
+    () => savedDocuments.filter((document) => document.supported),
+    [savedDocuments],
+  );
+  const selectedSavedDocument = useMemo(
+    () =>
+      savedDocuments.find(
+        (document) => document.key === selectedSavedDocumentKey,
+      ),
+    [savedDocuments, selectedSavedDocumentKey],
+  );
+  const savedDocumentItems = useMemo(
+    () =>
+      Object.fromEntries([
+        [SAVED_DOCUMENT_PLACEHOLDER, "Choose a saved document"],
+        ...savedDocuments.map((document) => [
+          document.key,
+          `${document.label} - ${document.ref.name}${
+            document.supported ? "" : " (unsupported)"
+          }`,
+        ]),
+      ]),
+    [savedDocuments],
+  );
 
   useEffect(() => {
     let active = true;
@@ -79,6 +147,34 @@ export const FilePreparationTool = () => {
       active = false;
     };
   }, [storePromise]);
+
+  useEffect(() => {
+    let active = true;
+    sendMessage("getMemorySnapshot", undefined)
+      .then(({ items }) => {
+        if (!active) return;
+        const documents = items.flatMap((item) => {
+          const label = fileConceptLabels.get(item.key);
+          if (!label || !isFileReference(item.value)) return [];
+          return [
+            {
+              key: item.key,
+              label,
+              ref: item.value,
+              supported: canPrepareSavedDocument(item.value),
+            },
+          ];
+        });
+        setSavedDocuments(documents);
+        if (documents.length > 0) setSourceMode("saved");
+      })
+      .catch(() => {
+        if (active) setSavedDocuments([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(
     () => () => {
@@ -113,6 +209,35 @@ export const FilePreparationTool = () => {
       for (const id of unique) storedRefIds.current.delete(id);
     },
     [storePromise],
+  );
+
+  const clearCurrentSource = useCallback(async () => {
+    await deleteStoredRefs([
+      ...(original ? [original.id] : []),
+      ...(prepared ? [prepared.derived.id] : []),
+    ]);
+  }, [deleteStoredRefs, original, prepared]);
+
+  const inspectSourceFile = useCallback(
+    async (file: File, ref: FileReference) => {
+      const store = await storePromise;
+      const registry = createBrowserFilePreparationRegistry(store);
+      const adapter = registry.adapterFor(sourceInspectionFor(ref));
+      if (!adapter) {
+        setError(
+          "This file type does not have a local preparation adapter yet.",
+        );
+        sound.play("filePrepareFailed");
+        return;
+      }
+      const nextInspection = await adapter.inspect(file);
+      setOriginal(ref);
+      setInspection(nextInspection);
+      settings.resetFor(nextInspection);
+      setSourceFile(file);
+      sound.play("fileSelected");
+    },
+    [storePromise, settings, sound],
   );
 
   /**
@@ -230,40 +355,65 @@ export const FilePreparationTool = () => {
     if (!file) return;
     setError(undefined);
     setPrepared(undefined);
-    await deleteStoredRefs([
-      ...(original ? [original.id] : []),
-      ...(prepared ? [prepared.derived.id] : []),
-    ]);
+    await clearCurrentSource();
+    setOriginal(undefined);
+    setInspection(undefined);
+    setSourceFile(undefined);
     try {
       const store = await storePromise;
-      const registry = createBrowserFilePreparationRegistry(store);
-      const adapter = registry.adapterFor({
-        kind: "image",
-        name: file.name,
-        mimeType: file.type,
-        sizeBytes: file.size,
-      });
-      if (!adapter) {
-        setError(
-          "This file type does not have a local preparation adapter yet.",
-        );
-        sound.play("filePrepareFailed");
-        return;
-      }
       const ref = await store.save(file);
       storedRefIds.current.add(ref.id);
-      const nextInspection = await adapter.inspect(file);
-      setOriginal(ref);
-      setInspection(nextInspection);
-      settings.resetFor(nextInspection);
-      setSourceFile(file);
-      sound.play("fileSelected");
+      await inspectSourceFile(file, ref);
     } catch {
       setError(
         "This file could not be inspected locally. The original was not changed.",
       );
       sound.play("filePrepareFailed");
     }
+  };
+
+  const selectSavedDocument = async (document: SavedDocument) => {
+    if (!document.supported) return;
+    setError(undefined);
+    setPrepared(undefined);
+    await clearCurrentSource();
+    setOriginal(undefined);
+    setInspection(undefined);
+    setSourceFile(undefined);
+    try {
+      const store = await storePromise;
+      const file = await store.getFile(document.ref.id);
+      if (!file) {
+        setError(
+          "That saved document is no longer available. Add it again in My information.",
+        );
+        sound.play("filePrepareFailed");
+        return;
+      }
+      await inspectSourceFile(file, document.ref);
+    } catch {
+      setError("That saved document could not be opened.");
+      sound.play("filePrepareFailed");
+    }
+  };
+
+  const pickSelectedSavedDocument = () => {
+    if (!selectedSavedDocument?.supported) return;
+    void selectSavedDocument(selectedSavedDocument);
+  };
+
+  const chooseSourceMode = (nextMode: SourceMode) => {
+    if (nextMode === sourceMode) return;
+    setSourceMode(nextMode);
+    sound.play("fileSourceSelected");
+  };
+
+  const chooseSavedDocument = (key: string | null) => {
+    const nextKey = key ?? SAVED_DOCUMENT_PLACEHOLDER;
+    if (nextKey === selectedSavedDocumentKey) return;
+    setSelectedSavedDocumentKey(nextKey);
+    if (nextKey !== SAVED_DOCUMENT_PLACEHOLDER)
+      sound.play("fileSourceSelected");
   };
 
   const prepare = async () => {
@@ -304,10 +454,7 @@ export const FilePreparationTool = () => {
   };
 
   const reset = () => {
-    void deleteStoredRefs([
-      ...(original ? [original.id] : []),
-      ...(prepared ? [prepared.derived.id] : []),
-    ]);
+    void clearCurrentSource();
     setOriginal(undefined);
     setInspection(undefined);
     setPrepared(undefined);
@@ -338,28 +485,147 @@ export const FilePreparationTool = () => {
           )}
         </div>
         {!original && (
-          <label
-            className="flex min-h-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border border-dashed border-border bg-muted/30 p-3 text-center hover:border-primary/60"
-            onDragOver={(event) => event.preventDefault()}
-            onDrop={(event) => {
-              event.preventDefault();
-              void selectFile(event.dataTransfer.files[0]);
-            }}
-          >
-            <FileUp className="size-5 text-muted-foreground" />
-            <span className="font-medium text-sm">Choose or drop a file</span>
-            <span className="text-muted-foreground text-xs">
-              JPEG, PNG, WebP, or PDF
-            </span>
-            <input
-              className="sr-only"
-              type="file"
-              accept="image/jpeg,image/png,image/webp,application/pdf"
-              onChange={(event) =>
-                void selectFile(event.currentTarget.files?.[0])
-              }
-            />
-          </label>
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant={sourceMode === "saved" ? "default" : "outline"}
+                className="h-auto min-h-14 flex-col items-start gap-0.5 px-3 py-2 text-left"
+                disabled={savedDocuments.length === 0}
+                onClick={() => chooseSourceMode("saved")}
+              >
+                <span className="font-semibold text-sm">Use a saved file</span>
+                <span className="font-normal text-xs opacity-80">
+                  From My information
+                </span>
+              </Button>
+              <Button
+                type="button"
+                variant={sourceMode === "upload" ? "default" : "outline"}
+                className="h-auto min-h-14 flex-col items-start gap-0.5 px-3 py-2 text-left"
+                onClick={() => chooseSourceMode("upload")}
+              >
+                <span className="font-semibold text-sm">Choose a new file</span>
+                <span className="font-normal text-xs opacity-80">
+                  From this computer
+                </span>
+              </Button>
+            </div>
+
+            {sourceMode === "saved" ? (
+              <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/20 p-2.5">
+                {savedDocuments.length === 0 ? (
+                  <p className="rounded-md border border-dashed border-border px-3 py-2 text-muted-foreground text-xs">
+                    Saved resumes, photos, and signatures will appear here after
+                    you add them in My information.
+                  </p>
+                ) : (
+                  <>
+                    <div className="flex items-end gap-2">
+                      <div className="flex min-w-0 flex-1 flex-col gap-1 text-xs">
+                        <label
+                          htmlFor="saved-document"
+                          className="text-muted-foreground"
+                        >
+                          Pick a saved file
+                        </label>
+                        <Select
+                          value={selectedSavedDocumentKey}
+                          onValueChange={chooseSavedDocument}
+                          items={savedDocumentItems}
+                        >
+                          <SelectTrigger id="saved-document">
+                            {selectedSavedDocument ? (
+                              <span className="min-w-0 truncate text-left">
+                                <span>{selectedSavedDocument.label}</span>{" "}
+                                <span className="ml-1.5 text-muted-foreground italic">
+                                  {selectedSavedDocument.ref.name}
+                                </span>
+                              </span>
+                            ) : (
+                              <SelectValue />
+                            )}
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem
+                              value={SAVED_DOCUMENT_PLACEHOLDER}
+                              disabled
+                            >
+                              Choose a saved document
+                            </SelectItem>
+                            {savedDocuments.map((document) => (
+                              <SelectItem
+                                key={document.key}
+                                value={document.key}
+                                disabled={!document.supported}
+                              >
+                                <span>{document.label}</span>
+                                <span className="ml-1.5 min-w-0 truncate text-muted-foreground italic">
+                                  {document.ref.name}
+                                </span>
+                                {!document.supported && (
+                                  <span className="text-muted-foreground">
+                                    unsupported
+                                  </span>
+                                )}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="shrink-0 font-normal"
+                        disabled={!selectedSavedDocument?.supported}
+                        onClick={pickSelectedSavedDocument}
+                      >
+                        <FileCheck2 className="size-4" />
+                        Use this
+                      </Button>
+                    </div>
+                    <p className="text-muted-foreground text-xs">
+                      {selectedSavedDocument
+                        ? formatBytes(selectedSavedDocument.ref.sizeBytes)
+                        : `${supportedSavedDocuments.length} saved ${
+                            supportedSavedDocuments.length === 1
+                              ? "file"
+                              : "files"
+                          } ready`}
+                      {savedDocuments.some((document) => !document.supported)
+                        ? ". Images and PDFs can be prepared here."
+                        : ""}
+                    </p>
+                  </>
+                )}
+              </div>
+            ) : (
+              <label
+                className="flex min-h-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border border-dashed border-border bg-muted/30 p-3 text-center hover:border-primary/60"
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  void selectFile(event.dataTransfer.files[0]);
+                }}
+              >
+                <FileUp className="size-5 text-muted-foreground" />
+                <span className="font-medium text-sm">
+                  Choose or drop a new file
+                </span>
+                <span className="text-muted-foreground text-xs">
+                  JPEG, PNG, WebP, or PDF
+                </span>
+                <input
+                  className="sr-only"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  onChange={(event) =>
+                    void selectFile(event.currentTarget.files?.[0])
+                  }
+                />
+              </label>
+            )}
+          </>
         )}
         {/* Selection errors have to live here, not in the details card below:
             a file that fails to inspect never produces one, so an error
