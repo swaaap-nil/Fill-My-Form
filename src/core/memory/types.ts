@@ -14,7 +14,7 @@
  * typed by the user, never extracted from it. See ADR 005.
  */
 
-/** Usually an ontology concept key, but free-form keys are permitted. */
+/** Ontology concept key. Imports and UI writes reject unknown keys. */
 export type MemoryKey = string;
 
 /**

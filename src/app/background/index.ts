@@ -15,9 +15,9 @@ import {
 } from "~/core/agent/loop";
 import { Certainty, isTerminal } from "~/core/agent/types";
 import { confirmDecision, planFill } from "~/core/fill/driver";
-import type { DecisionId, PendingDecision } from "~/core/fill/types";
+import { PendingDecisionRegistry } from "~/core/fill/pending-decisions";
 import { FieldKind } from "~/core/form/types";
-import { createLogger } from "~/core/logging";
+import { createLogger, LogErrorCode } from "~/core/logging";
 import { resolve } from "~/core/matching/resolve";
 import { deriveFreshnessHorizon } from "~/core/memory/freshness";
 import { bundledFreshnessDurationPolicy } from "~/core/memory/freshness-policy";
@@ -160,12 +160,13 @@ const stageUpload = async (file: {
 };
 
 /**
- * decisionId -> what `planFill` decided about one field. Cleared per id
- * once acted on, so a decisionId cannot be replayed. Lives only as long as
- * the service worker does — a run that outlives a worker restart is
- * Phase 2's problem, not this straight-line driver's.
+ * decisionId -> what `planFill` decided about one field, scoped to the tab
+ * whose DOM was extracted. Cleared per id once acted on, and pruned by age,
+ * so a decisionId cannot be replayed against a later tab or page state.
+ * Lives only as long as the service worker does — a run that outlives a
+ * worker restart is Phase 2's problem, not this straight-line driver's.
  */
-const pendingDecisions = new Map<DecisionId, PendingDecision>();
+const pendingDecisions = new PendingDecisionRegistry();
 
 /**
  * The Phase 2 agent loop's `LoopPorts`, for one tab. Both browser tools are
@@ -266,6 +267,7 @@ const buildLoopPorts = async (tabId: number): Promise<LoopPorts> => {
     tools,
     policy: defaultPolicy,
     memory: memoryStore,
+    userMemory: memoryStore,
     journal: memoryStore,
     files,
     ontology,
@@ -330,10 +332,10 @@ const driveAndPersist = async (
 
 const main = () => {
   browser.storage.session
-    .setAccessLevel?.({ accessLevel: "TRUSTED_AND_UNTRUSTED_CONTEXTS" })
-    .catch((error: unknown) =>
-      logger.warn("could not expose session storage to content scripts", {
-        errorCode: String(error),
+    .setAccessLevel?.({ accessLevel: "TRUSTED_CONTEXTS" })
+    .catch(() =>
+      logger.warn("could not restrict session storage to extension contexts", {
+        errorCode: LogErrorCode.EXTENSION_API,
       }),
     );
 
@@ -407,7 +409,7 @@ const main = () => {
     }
 
     for (const [decisionId, decision] of decisions) {
-      pendingDecisions.set(decisionId, decision);
+      pendingDecisions.remember(decisionId, data.tabId, decision);
     }
 
     return { granted: true, proposals, uploadIntents };
@@ -420,7 +422,7 @@ const main = () => {
 
     const results = await Promise.all(
       data.decisionIds.map(async (decisionId) => {
-        const decision = pendingDecisions.get(decisionId);
+        const decision = pendingDecisions.take(decisionId, tabId);
         if (!decision) return { decisionId, ok: false };
 
         const outcome = confirmDecision(decision, defaultPolicy);
@@ -496,20 +498,16 @@ const main = () => {
           });
         }
 
-        // Consumed either way: a decisionId is single-use, so it cannot be
-        // replayed against a later, different page state.
-        pendingDecisions.delete(decisionId);
         return { decisionId, ok };
       }),
     );
 
     const filledCount = results.filter((result) => result.ok).length;
     if (filledCount > 0) {
-      await sendMessage("showFillFeedback", { filledCount }, tabId).catch(
-        (error: unknown) =>
-          logger.warn("could not show fill feedback", {
-            errorCode: String(error),
-          }),
+      await sendMessage("showFillFeedback", { filledCount }, tabId).catch(() =>
+        logger.warn("could not show fill feedback", {
+          errorCode: LogErrorCode.EXTENSION_API,
+        }),
       );
     }
 
@@ -519,15 +517,14 @@ const main = () => {
   onMessage("recordOnboardingAnswer", async ({ data }) => {
     const memoryStore = withFileReferenceCleanup(await getLocalDataStore());
     const concept = ontology.byKey(data.key);
+    if (!concept) return { ok: false };
     const savedAt = new Date().toISOString();
-    const horizon = concept
-      ? deriveFreshnessHorizon(
-          concept,
-          data.value,
-          savedAt,
-          bundledFreshnessDurationPolicy,
-        )
-      : undefined;
+    const horizon = deriveFreshnessHorizon(
+      concept,
+      data.value,
+      savedAt,
+      bundledFreshnessDurationPolicy,
+    );
     await recordAnswer(memoryStore, {
       profileId: DEFAULT_PROFILE_ID,
       key: data.key,
@@ -561,6 +558,9 @@ const main = () => {
 
   onMessage("importLocalData", async ({ data }) => {
     if (!isLocalDataExport(data.payload)) return { ok: false };
+    if (data.payload.memory.some((item) => !ontology.byKey(item.key))) {
+      return { ok: false };
+    }
     await (await getLocalDataStore()).importLocalData(data.payload);
     return { ok: true };
   });

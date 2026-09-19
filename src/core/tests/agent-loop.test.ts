@@ -159,11 +159,13 @@ const buildPorts = (page: FakePage, policy: PolicyEngine): LoopPorts => {
   tools.register(inspectFormTool(page));
   tools.register(fillFieldTool(page));
   tools.register(uploadFileTool(page));
+  const memory = createInMemoryMemoryStore();
 
   return {
     tools,
     policy,
-    memory: createInMemoryMemoryStore(),
+    memory,
+    userMemory: memory,
     ontology,
     verifier: fakeVerifier(page),
     files: {
@@ -190,7 +192,7 @@ describe("loop: a known field policy allows automatically", () => {
   it("fills it with no pause", async () => {
     const page: FakePage = { fields: [EMAIL_FIELD], values: {} };
     const ports = buildPorts(page, alwaysAllow);
-    await recordAnswer(ports.memory, {
+    await recordAnswer(ports.userMemory, {
       profileId: DEFAULT_PROFILE_ID,
       key: "contact.email",
       value: "ananya@example.com",
@@ -221,7 +223,7 @@ describe("loop: a known field policy allows automatically", () => {
       values: {},
     };
     const ports = buildPorts(page, alwaysAllow);
-    await recordAnswer(ports.memory, {
+    await recordAnswer(ports.userMemory, {
       profileId: DEFAULT_PROFILE_ID,
       key: "identity.nationality",
       value: "Indian",
@@ -262,7 +264,7 @@ describe("loop: file references use the generic compliance/upload adapters", () 
       values: {},
     };
     const ports = buildPorts(page, alwaysAllow);
-    await recordAnswer(ports.memory, {
+    await recordAnswer(ports.userMemory, {
       profileId: DEFAULT_PROFILE_ID,
       key: "documents.resume",
       value: resumeRef,
@@ -300,10 +302,12 @@ describe("loop: a fill_field tool call that succeeds but writes nothing", () => 
       execute: async () => ({ ok: false }),
     });
 
+    const memory = createInMemoryMemoryStore();
     const ports: LoopPorts = {
       tools,
       policy: alwaysAllow,
-      memory: createInMemoryMemoryStore(),
+      memory,
+      userMemory: memory,
       ontology,
       verifier: fakeVerifier(page),
       profileId: DEFAULT_PROFILE_ID,
@@ -311,7 +315,7 @@ describe("loop: a fill_field tool call that succeeds but writes nothing", () => 
       generateId: fakeIdGen(),
       logger: nullLogger,
     };
-    await recordAnswer(ports.memory, {
+    await recordAnswer(ports.userMemory, {
       profileId: DEFAULT_PROFILE_ID,
       key: "contact.email",
       value: "ananya@example.com",
@@ -343,7 +347,7 @@ describe("loop: the request_review round trip (defaultPolicy)", () => {
   const setup = async () => {
     const page: FakePage = { fields: [EMAIL_FIELD], values: {} };
     const ports = buildPorts(page, defaultPolicy);
-    await recordAnswer(ports.memory, {
+    await recordAnswer(ports.userMemory, {
       profileId: DEFAULT_PROFILE_ID,
       key: "contact.email",
       value: "ananya@example.com",
@@ -380,7 +384,7 @@ describe("loop: the request_review round trip (defaultPolicy)", () => {
       ...buildPorts(page, defaultPolicy),
       clock: () => "2026-01-01T00:00:00.000Z",
     };
-    await recordAnswer(ports.memory, {
+    await recordAnswer(ports.userMemory, {
       profileId: DEFAULT_PROFILE_ID,
       key: "employment.current.company",
       value: "Kirloskar Systems",
@@ -525,7 +529,7 @@ describe("loop: re-observation and FORM_CHANGED", () => {
   it("picks up a field that appears only after the action, without repeating the same write", async () => {
     const page: FakePage = { fields: [EMAIL_FIELD], values: {} };
     const ports = buildPorts(page, alwaysAllow);
-    await recordAnswer(ports.memory, {
+    await recordAnswer(ports.userMemory, {
       profileId: DEFAULT_PROFILE_ID,
       key: "contact.email",
       value: "ananya@example.com",
@@ -569,7 +573,7 @@ describe("loop: resumability — the run round-trips through JSON at every step"
   it("keeps AgentRun JSON-serialisable after every transition", async () => {
     const page: FakePage = { fields: [EMAIL_FIELD], values: {} };
     const ports = buildPorts(page, alwaysAllow);
-    await recordAnswer(ports.memory, {
+    await recordAnswer(ports.userMemory, {
       profileId: DEFAULT_PROFILE_ID,
       key: "contact.email",
       value: "ananya@example.com",

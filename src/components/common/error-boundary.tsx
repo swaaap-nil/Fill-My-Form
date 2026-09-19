@@ -1,5 +1,8 @@
 import type { ReactElement } from "react";
 import { Component } from "react";
+import { createLogger, errorCodeOf } from "~/core/logging";
+
+const logger = createLogger();
 
 const ErrorContent = () => {
   return (
@@ -27,7 +30,11 @@ class ReactErrorBoundary extends Component<
   }
 
   componentDidCatch(error: unknown, errorInfo: unknown) {
-    console.error(error, errorInfo);
+    logger.error("react error boundary caught render error", {
+      errorCode: errorCodeOf(error),
+      recoverable: false,
+      count: errorInfo ? 1 : 0,
+    });
   }
 
   render() {

@@ -23,13 +23,12 @@ import type { LocalDataExport } from "./indexeddb-local-data";
 /**
  * The panel <-> background <-> content-script protocol.
  *
- * **One rule that must survive every change to this file:** a fill
- * instruction the content script accepts must carry a `decisionId` the
- * background issued after running `PolicyEngine.evaluate`. Without that,
- * the panel could message the content script directly and policy becomes
- * advisory instead of load-bearing. `~/core/messaging/fill-instruction` is
- * the one place that requirement is enforced and unit-tested, with no
- * browser involved, precisely so this property can never quietly regress.
+ * **One rule that must survive every change to this file:** page writes are
+ * background-originated only. The content script validates the payload shape
+ * before touching the DOM, while the background keeps the actual capability:
+ * straight-line fills must match a live, tab-bound pending decision that is
+ * consumed after use; agent-loop fills are emitted by the reviewed loop
+ * ports after policy has run.
  *
  * Everything here is a message *shape*; the handlers that back these types
  * live in `src/app/background` (composition root — the only place that

@@ -19,6 +19,33 @@ export const LogLevel = {
 
 export type LogLevel = (typeof LogLevel)[keyof typeof LogLevel];
 
+export const LogErrorCode = {
+  FORM_DETECTION: "form_detection",
+  TOOL_EXECUTION: "tool_execution",
+  MEMORY: "memory",
+  LLM: "llm",
+  VALIDATION: "validation",
+  VERIFICATION: "verification",
+  USER_CANCELLED: "user_cancelled",
+  UNSUPPORTED_FIELD: "unsupported_field",
+  EXTENSION_API: "extension_api",
+  UNKNOWN: "unknown_error",
+} as const;
+
+export type LogErrorCode = (typeof LogErrorCode)[keyof typeof LogErrorCode];
+
+const LOG_ERROR_CODES = new Set<string>(Object.values(LogErrorCode));
+
+export const errorCodeOf = (error: unknown): LogErrorCode => {
+  if (error && typeof error === "object") {
+    const code = (error as { readonly code?: unknown }).code;
+    if (typeof code === "string" && LOG_ERROR_CODES.has(code)) {
+      return code as LogErrorCode;
+    }
+  }
+  return LogErrorCode.UNKNOWN;
+};
+
 /**
  * Every field permitted in a log line. All are non-personal identifiers,
  * enumerations or measurements.
@@ -45,7 +72,7 @@ export interface LogFields {
   readonly providerId?: string;
   readonly inputTokens?: number;
   readonly outputTokens?: number;
-  readonly errorCode?: string;
+  readonly errorCode?: LogErrorCode;
   readonly severity?: string;
   readonly recoverable?: boolean;
 }

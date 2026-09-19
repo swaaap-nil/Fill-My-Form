@@ -131,7 +131,8 @@ export interface RunSnapshot {
 export interface LoopPorts {
   readonly tools: ToolRegistry;
   readonly policy: PolicyEngine;
-  readonly memory: MemoryStore;
+  readonly memory: Pick<MemoryStore, "get" | "search">;
+  readonly userMemory: Pick<MemoryStore, "get" | "set">;
   readonly ontology: ConceptIndex;
   readonly llm?: LLMProvider;
   readonly verifier: Verifier;
@@ -791,7 +792,7 @@ const retryAct = async (
               bundledFreshnessDurationPolicy,
             )
           : undefined;
-      await recordAnswer(ports.memory, {
+      await recordAnswer(ports.userMemory, {
         profileId: ports.profileId,
         key: fieldValue.conceptKey,
         value: fieldValue.value,
@@ -1008,10 +1009,10 @@ export const drive = async (
 };
 
 /**
- * Resolves an `ask_user` pause. The answer is written to memory through
- * `recordAnswer` — the only write path, never through `executeTool` — before
- * the run resumes. If the field's concept can no longer be resolved (should
- * not happen; defensive), the run still resumes but the value is discarded
+ * Resolves an `ask_user` pause. The answer is written through the explicit
+ * user-memory write service, never through `executeTool`, before the run
+ * resumes. If the field's concept can no longer be resolved (should not
+ * happen; defensive), the run still resumes but the value is discarded
  * rather than recorded under a guessed key.
  */
 export const answerQuestion = async (
@@ -1041,7 +1042,7 @@ export const answerQuestion = async (
       confirmationTime,
       bundledFreshnessDurationPolicy,
     );
-    await recordAnswer(ports.memory, {
+    await recordAnswer(ports.userMemory, {
       profileId: ports.profileId,
       key: concept.key,
       value,

@@ -48,9 +48,9 @@ extraction later if a `web` app appears. See
 | `ontology/` | Canonical concept keys and multilingual aliases, as data |
 | `matching/` | Deterministic `FormField` -> candidate concept(s), and the eval harness that measures it |
 | `journal/` | The local, unsent record of fields the matcher could not resolve |
-| `memory/` | Personal memory types, the `MemoryStore` contract, the in-memory implementation, and the one write path (`write-service.ts`) |
+| `memory/` | Personal memory types, the `MemoryStore` contract, implementations, local restore, and the user-answer write path (`write-service.ts`) |
 | `fill/` | The straight-line fill driver: match -> memory lookup -> policy -> proposal |
-| `messaging/` | The `decisionId`-gated fill-instruction schema, shared by background and content script |
+| `messaging/` | Typed panel/background/content messages and DOM-write payload validation |
 | `agent/` | Phases, statuses, events, the legal transition table |
 | `tools/` | Tool contracts, the registry, the validated execution path |
 | `llm/` | The `LLMProvider` port, a mock, and one AI SDK adapter |
