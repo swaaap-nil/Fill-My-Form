@@ -1,5 +1,36 @@
 # Changelog
 
+## [1.3.0](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.2.0...v1.3.0) (2026-09-20)
+
+
+### Features
+
+* add file preparation sound effects ([66cf859](https://github.com/swaaap-nil/Fill-My-Form/commit/66cf8593e2d3f92447b5e2dbfbf46749376901a5))
+* add saved document picker to prepare file ([b7e4a05](https://github.com/swaaap-nil/Fill-My-Form/commit/b7e4a05d753270d3ef97376a3335636f510f45df))
+* **files:** add core model for units, ratios and crop geometry ([480560c](https://github.com/swaaap-nil/Fill-My-Form/commit/480560ce3863353ae1ff07d23acf778988e9b072))
+* **files:** add resilient local upload preparation ([8b6e56f](https://github.com/swaaap-nil/Fill-My-Form/commit/8b6e56ff0be707dd7bfead27cd771c5ee98d5e6d))
+* **files:** crop in a real window, with the selection clamped ([55192e1](https://github.com/swaaap-nil/Fill-My-Form/commit/55192e1deed07c981ad9520313dae134e88f7ec1))
+* **files:** honour aspect lock, DPI and a downscale fallback ([18dce8c](https://github.com/swaaap-nil/Fill-My-Form/commit/18dce8c8f077560beb0f1b923df81cf6fb0b58b9))
+* **files:** improve prepared handoff and crop UX ([5420361](https://github.com/swaaap-nil/Fill-My-Form/commit/5420361a57ede8d39e433d58caafc73b1dd1927a))
+* **files:** read and write image DPI headers ([80b3dfc](https://github.com/swaaap-nil/Fill-My-Form/commit/80b3dfcbfac6823a8ff849e69f4e6f0d7a7a303b))
+* **files:** rebuild the preparation form around units and formats ([ea16dcc](https://github.com/swaaap-nil/Fill-My-Form/commit/ea16dcce0614536de8bfc346e93e81d017635343))
+* improve file preparation editor UX ([19e0ef8](https://github.com/swaaap-nil/Fill-My-Form/commit/19e0ef802772737015053ab68d172b73a9d1e468))
+* polish file prepare UX, handoff, and support surfaces ([9f88435](https://github.com/swaaap-nil/Fill-My-Form/commit/9f88435de6881bf7105fdff1f9598c2433d0a78c))
+* show relative last scanned time ([d46a399](https://github.com/swaaap-nil/Fill-My-Form/commit/d46a39910868130e52fa0aa9a5813fdec53204c2))
+* tooltips ([1e23bc8](https://github.com/swaaap-nil/Fill-My-Form/commit/1e23bc87cc86e94578f21e6ee889213c5ed7459a))
+
+
+### Bug Fixes
+
+* centralize object url cleanup ([332f104](https://github.com/swaaap-nil/Fill-My-Form/commit/332f104f26753d0528241499815f2bf4c1b5c621))
+* clean up local file data on privacy deletes ([4a09876](https://github.com/swaaap-nil/Fill-My-Form/commit/4a09876aa6584704d9168e9b1431d65240cee473))
+* harden fill and memory security gates ([71e7665](https://github.com/swaaap-nil/Fill-My-Form/commit/71e7665c2344a2fc177cb37378c2327ced03529d))
+* hide empty answers and verify groups ([f89a50f](https://github.com/swaaap-nil/Fill-My-Form/commit/f89a50f8eecd304cf04bfd2139a1a1a7ce36a9f8))
+* prevent temporary upload leaks ([e24ba65](https://github.com/swaaap-nil/Fill-My-Form/commit/e24ba65dc9597f8ea5e156037e58e5c91993487c))
+* rename sidepanel return action to Back to home ([d91f784](https://github.com/swaaap-nil/Fill-My-Form/commit/d91f78406e1c858236597e0d9a246ba74521a39f))
+* route panel prepare through editor-derived crop copy ([5b38236](https://github.com/swaaap-nil/Fill-My-Form/commit/5b38236e0ef4f2998f115b8e1132ecc1562d2d11))
+* share resolved fill payloads with agent loop ([092bdd4](https://github.com/swaaap-nil/Fill-My-Form/commit/092bdd481b684dc0322fe71ff6a436820e1765db))
+
 ## [1.2.0](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.1.1...v1.2.0) (2026-09-17)
 
 
