@@ -288,32 +288,41 @@ export const FilePreparationTool = () => {
       if (!session || session.status === "open") return;
 
       if (session.status === "saved" && session.derivedId) {
-        const store = await storePromise;
-        const record = await store.get(session.derivedId);
-        if (record) {
-          await deleteStoredRefs(editorCrop ? [editorCrop.derived.id] : []);
-          storedRefIds.current.add(record.ref.id);
-          const derivedFile = await store.getFile(session.derivedId);
-          let derivedInspection: FileInspection = {
-            kind: "image",
-            name: record.ref.name,
-            mimeType: record.ref.mimeType,
-            sizeBytes: record.ref.sizeBytes,
-          };
-          if (derivedFile) {
-            const registry = createBrowserFilePreparationRegistry(store);
-            const adapter = registry.adapterFor(derivedInspection);
-            if (adapter) {
-              derivedInspection = await adapter.inspect(derivedFile);
+        // Watch and `windows.onRemoved` can both adopt the same save. The
+        // previous crop must not be deleted when it *is* that save — doing so
+        // left a thumbnail in memory and an empty IndexedDB record, so the
+        // next Prepare failed with "original file is no longer available".
+        if (editorCrop?.derived.id !== session.derivedId) {
+          const store = await storePromise;
+          const record = await store.get(session.derivedId);
+          if (record) {
+            const previousDerivedId = editorCrop?.derived.id;
+            if (previousDerivedId && previousDerivedId !== session.derivedId) {
+              await deleteStoredRefs([previousDerivedId]);
             }
+            storedRefIds.current.add(record.ref.id);
+            const derivedFile = await store.getFile(session.derivedId);
+            let derivedInspection: FileInspection = {
+              kind: "image",
+              name: record.ref.name,
+              mimeType: record.ref.mimeType,
+              sizeBytes: record.ref.sizeBytes,
+            };
+            if (derivedFile) {
+              const registry = createBrowserFilePreparationRegistry(store);
+              const adapter = registry.adapterFor(derivedInspection);
+              if (adapter) {
+                derivedInspection = await adapter.inspect(derivedFile);
+              }
+            }
+            setEditorCrop({
+              derived: record.ref,
+              blob: record.blob,
+              inspection: derivedInspection,
+            });
+            setValues(session.values);
+            sound.play("fileEditorSaved");
           }
-          setEditorCrop({
-            derived: record.ref,
-            blob: record.blob,
-            inspection: derivedInspection,
-          });
-          setValues(session.values);
-          sound.play("fileEditorSaved");
         }
       } else if (session.status === "failed") {
         setError(session.reason ?? "The image editor could not finish.");

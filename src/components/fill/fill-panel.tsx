@@ -310,11 +310,13 @@ const AnswersSummaryCard = ({
   fillStatus,
   onOpenDetails,
   onFill,
+  children,
 }: {
   readonly count: number;
   readonly fillStatus: FillStatus;
   readonly onOpenDetails: () => void;
   readonly onFill: () => void;
+  readonly children?: React.ReactNode;
 }) => {
   const filling = fillStatus.kind === "filling";
   const filled = fillStatus.kind === "filled";
@@ -413,6 +415,7 @@ const AnswersSummaryCard = ({
           >
             {filling ? "Filling..." : "Fill My Form 😡"}
           </Button>
+          {children}
         </div>
       )}
     </SummaryCardShell>
@@ -981,7 +984,11 @@ export const FillPanel = () => {
                     sound.play("proposalDetailsOpened");
                   }}
                   onFill={() => confirm(answeredDecisionIds)}
-                />
+                >
+                  {knownNoAnswerProposals.length === 0 && (
+                    <AgentRunPanel key={scanVersion} tabId={activeTabId} />
+                  )}
+                </AnswersSummaryCard>
               )}
               {knownNoAnswerProposals.length > 0 && (
                 <KnownFieldsSummaryCard
@@ -994,6 +1001,9 @@ export const FillPanel = () => {
                   tabId={activeTabId}
                   scanVersion={scanVersion}
                 />
+              )}
+              {!showAnswersSummary && knownNoAnswerProposals.length === 0 && (
+                <AgentRunPanel key={scanVersion} tabId={activeTabId} />
               )}
               {scanState.uploadIntents.length > 0 && (
                 <UploadIntentsCard intents={scanState.uploadIntents} />

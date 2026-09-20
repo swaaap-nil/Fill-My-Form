@@ -47,11 +47,6 @@ const outputName = (name: string, mimeType: string) => {
   return `${name.replace(/\.[^.]+$/, "")}.${extension}`;
 };
 
-const compress = (blob: Blob, options: Compressor.Options): Promise<Blob> =>
-  new Promise((resolve, reject) => {
-    new Compressor(blob, { ...options, success: resolve, error: reject });
-  });
-
 const QUALITY_LADDER = [0.9, 0.78, 0.66, 0.54, 0.42, 0.3, 0.2] as const;
 
 /**
@@ -63,6 +58,34 @@ const QUALITY_LADDER = [0.9, 0.78, 0.66, 0.54, 0.42, 0.3, 0.2] as const;
 const DOWNSCALE_STEP = 0.85;
 const MIN_DIMENSION = 64;
 const MAX_DOWNSCALE_STEPS = 8;
+
+type DrawingCanvas = HTMLCanvasElement | OffscreenCanvas;
+
+const compressorAvailable = (): boolean => typeof Image !== "undefined";
+
+const compress = (blob: Blob, options: Compressor.Options): Promise<Blob> => {
+  if (!compressorAvailable()) return Promise.resolve(blob);
+  return new Promise((resolve, reject) => {
+    new Compressor(blob, { ...options, success: resolve, error: reject });
+  });
+};
+
+const createDrawingCanvas = (width: number, height: number): DrawingCanvas => {
+  const nextWidth = Math.max(1, Math.round(width));
+  const nextHeight = Math.max(1, Math.round(height));
+  // Confirming a fill runs in the service worker, which has no `document`.
+  // OffscreenCanvas is the same drawing surface there.
+  if (typeof document !== "undefined") {
+    const canvas = document.createElement("canvas");
+    canvas.width = nextWidth;
+    canvas.height = nextHeight;
+    return canvas;
+  }
+  if (typeof OffscreenCanvas === "undefined") {
+    throw new Error("This browser cannot create an image canvas.");
+  }
+  return new OffscreenCanvas(nextWidth, nextHeight);
+};
 
 interface EncodeAttempt {
   readonly blob: Blob;
@@ -98,21 +121,27 @@ const compressWithinLimit = async (
   return { blob: result, quality };
 };
 
-const canvasToBlob = (
-  canvas: HTMLCanvasElement,
+const canvasToBlob = async (
+  canvas: DrawingCanvas,
   mimeType: string,
   quality: number | undefined,
-): Promise<Blob | null> =>
-  new Promise((resolve) => canvas.toBlob(resolve, mimeType, quality));
+): Promise<Blob | null> => {
+  if ("convertToBlob" in canvas) {
+    try {
+      return await canvas.convertToBlob({ type: mimeType, quality });
+    } catch {
+      return null;
+    }
+  }
+  return new Promise((resolve) => canvas.toBlob(resolve, mimeType, quality));
+};
 
 const scaleCanvas = (
-  source: HTMLCanvasElement,
+  source: DrawingCanvas,
   width: number,
   height: number,
-): HTMLCanvasElement | undefined => {
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(width));
-  canvas.height = Math.max(1, Math.round(height));
+): DrawingCanvas | undefined => {
+  const canvas = createDrawingCanvas(width, height);
   const context = canvas.getContext("2d");
   if (!context) return undefined;
   context.drawImage(source, 0, 0, canvas.width, canvas.height);
@@ -194,53 +223,58 @@ export class ImagePreparationAdapter implements FilePreparationAdapter {
     if (!record)
       return { ok: false, reason: "The original file is no longer available." };
 
-    const bitmap = await createImageBitmap(record.blob, {
-      imageOrientation: "from-image",
-    });
-    const sourceCrop = spec.crop ?? {
-      x: 0,
-      y: 0,
-      width: bitmap.width,
-      height: bitmap.height,
-    };
-    const target = resolveTargetSize(spec, sourceCrop);
+    try {
+      const bitmap = await createImageBitmap(record.blob, {
+        imageOrientation: "from-image",
+      });
+      const sourceCrop = spec.crop ?? {
+        x: 0,
+        y: 0,
+        width: bitmap.width,
+        height: bitmap.height,
+      };
+      const target = resolveTargetSize(spec, sourceCrop);
 
-    const canvas = document.createElement("canvas");
-    canvas.width = target.width;
-    canvas.height = target.height;
-    const context = canvas.getContext("2d");
-    if (!context) {
+      const canvas = createDrawingCanvas(target.width, target.height);
+      const context = canvas.getContext("2d");
+      if (!context) {
+        bitmap.close();
+        return {
+          ok: false,
+          reason: "This browser cannot create an image canvas.",
+        };
+      }
+      context.drawImage(
+        bitmap,
+        sourceCrop.x,
+        sourceCrop.y,
+        sourceCrop.width,
+        sourceCrop.height,
+        0,
+        0,
+        canvas.width,
+        canvas.height,
+      );
       bitmap.close();
+
+      const cropNote =
+        spec.crop &&
+        (spec.crop.width !== target.width || spec.crop.height !== target.height)
+          ? [
+              `Cropped to ${target.width}x${target.height}px from ${Math.round(spec.crop.width)}x${Math.round(spec.crop.height)}px`,
+            ]
+          : [`Output sized to ${target.width}x${target.height}px`];
+
+      return this.prepareFromCanvas(file, canvas, spec, [
+        ...cropNote,
+        ...target.notes,
+      ]);
+    } catch {
       return {
         ok: false,
-        reason: "This browser cannot create an image canvas.",
+        reason: "This browser cannot prepare the image locally.",
       };
     }
-    context.drawImage(
-      bitmap,
-      sourceCrop.x,
-      sourceCrop.y,
-      sourceCrop.width,
-      sourceCrop.height,
-      0,
-      0,
-      canvas.width,
-      canvas.height,
-    );
-    bitmap.close();
-
-    const cropNote =
-      spec.crop &&
-      (spec.crop.width !== target.width || spec.crop.height !== target.height)
-        ? [
-            `Cropped to ${target.width}x${target.height}px from ${Math.round(spec.crop.width)}x${Math.round(spec.crop.height)}px`,
-          ]
-        : [`Output sized to ${target.width}x${target.height}px`];
-
-    return this.prepareFromCanvas(file, canvas, spec, [
-      ...cropNote,
-      ...target.notes,
-    ]);
   }
 
   /**
@@ -250,7 +284,7 @@ export class ImagePreparationAdapter implements FilePreparationAdapter {
    */
   async prepareFromCanvas(
     file: FileReference,
-    canvas: HTMLCanvasElement,
+    canvas: DrawingCanvas,
     spec: PreparationSpec,
     priorNotes: readonly string[] = [],
   ): Promise<PreparationResult> {
@@ -411,7 +445,7 @@ const readDensityOf = async (
  * 1 — so without this a PNG over the limit simply failed.
  */
 const encodeWithinLimit = async (
-  canvas: HTMLCanvasElement,
+  canvas: DrawingCanvas,
   mimeType: string,
   spec: PreparationSpec,
 ): Promise<EncodeOutcome> => {

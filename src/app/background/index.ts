@@ -143,21 +143,15 @@ const withFileReferenceCleanup = <T extends MemoryStore>(store: T): T =>
 const bytesOf = async (blob: Blob): Promise<number[]> =>
   Array.from(new Uint8Array(await blob.arrayBuffer()));
 
-const stageUpload = async (file: {
+const uploadPayloadOf = async (file: {
   readonly name: string;
   readonly mimeType: string;
   readonly blob: Blob;
-}): Promise<string> => {
-  const uploadId = crypto.randomUUID();
-  await browser.storage.session.set({
-    [`file-upload:${uploadId}`]: {
-      name: file.name,
-      mimeType: file.mimeType,
-      bytes: await bytesOf(file.blob),
-    },
-  });
-  return uploadId;
-};
+}) => ({
+  name: file.name,
+  mimeType: file.mimeType,
+  bytes: await bytesOf(file.blob),
+});
 
 /**
  * decisionId -> what `planFill` decided about one field, scoped to the tab
@@ -242,7 +236,7 @@ const buildLoopPorts = async (tabId: number): Promise<LoopPorts> => {
           {
             decisionId: crypto.randomUUID(),
             fieldId: input.fieldId,
-            uploadId: await stageUpload(prepared),
+            upload: await uploadPayloadOf(prepared),
           },
           tabId,
         );
@@ -441,7 +435,7 @@ const main = () => {
                 {
                   decisionId,
                   fieldId: outcome.fieldId,
-                  uploadId: await stageUpload(prepared),
+                  upload: await uploadPayloadOf(prepared),
                 },
                 tabId,
               );

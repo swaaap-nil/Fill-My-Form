@@ -46,22 +46,35 @@ describe("assertValidFillInstruction", () => {
 
 describe("assertValidUploadInstruction", () => {
   it("accepts a well-formed upload instruction", () => {
-    expect(
-      assertValidUploadInstruction({
-        decisionId: "decision-1",
-        fieldId: "field-1",
-        uploadId: "upload-1",
-      }),
-    ).toEqual({
+    const payload = {
       decisionId: "decision-1",
       fieldId: "field-1",
-      uploadId: "upload-1",
-    });
+      upload: {
+        name: "resume.pdf",
+        mimeType: "application/pdf",
+        bytes: [37, 80, 68, 70],
+      },
+    };
+    expect(assertValidUploadInstruction(payload)).toEqual(payload);
   });
 
   it("rejects a missing decisionId", () => {
     expect(() =>
       assertValidUploadInstruction({
+        fieldId: "field-1",
+        upload: {
+          name: "resume.pdf",
+          mimeType: "application/pdf",
+          bytes: [37],
+        },
+      }),
+    ).toThrow();
+  });
+
+  it("rejects a session-staged uploadId without the file bytes", () => {
+    expect(() =>
+      assertValidUploadInstruction({
+        decisionId: "decision-1",
         fieldId: "field-1",
         uploadId: "upload-1",
       }),
