@@ -53,3 +53,8 @@ export const maxFileSizeBytes = (
   constraints: readonly FieldConstraint[],
 ): number | undefined =>
   constraints.find((c) => c.kind === "maxFileSizeBytes")?.value;
+
+export const fileSizeRangeBytes = (
+  constraints: readonly FieldConstraint[],
+): { readonly min?: number; readonly max?: number } | undefined =>
+  constraints.find((c) => c.kind === "fileSizeRangeBytes")?.value;

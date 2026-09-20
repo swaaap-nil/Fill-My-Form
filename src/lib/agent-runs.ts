@@ -16,6 +16,7 @@ import { browser } from "wxt/browser";
 import type { RunSnapshot } from "~/core/agent/loop";
 
 const keyFor = (tabId: number): string => `agent-run:${tabId}`;
+const RUN_KEY_PREFIX = "agent-run:";
 
 export const saveRunSnapshot = async (snapshot: RunSnapshot): Promise<void> => {
   await browser.storage.session.set({ [keyFor(snapshot.tabId)]: snapshot });
@@ -30,4 +31,12 @@ export const loadRunSnapshot = async (
 
 export const clearRunSnapshot = async (tabId: number): Promise<void> => {
   await browser.storage.session.remove(keyFor(tabId));
+};
+
+export const clearAllRunSnapshots = async (): Promise<void> => {
+  const stored = await browser.storage.session.get(null);
+  const runKeys = Object.keys(stored).filter((key) =>
+    key.startsWith(RUN_KEY_PREFIX),
+  );
+  if (runKeys.length) await browser.storage.session.remove(runKeys);
 };

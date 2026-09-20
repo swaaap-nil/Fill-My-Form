@@ -84,7 +84,7 @@ test("propose: scanning shows every field's proposal and fills nothing", async (
   await panelPage.getByRole("button", { name: "Scan this page" }).click();
 
   await expect(panelPage.getByText("1 answer detected")).toBeVisible();
-  await expect(panelPage.getByText("Last scanned just now")).toBeVisible();
+  await expect(panelPage.getByText(/^Last scanned .+/)).toBeVisible();
   await expect(
     panelPage.getByRole("button", { name: "Rescan page" }),
   ).toBeVisible();
@@ -94,6 +94,25 @@ test("propose: scanning shows every field's proposal and fills nothing", async (
   // The assertion that proves policy is on the path: proposing is not filling.
   await expect(formPage.getByLabel("Email address")).toHaveValue("");
   await expect(formPage.getByLabel("First name")).toHaveValue("");
+});
+
+test("summary cards: hides answers summary when no answers are detected", async ({
+  context,
+  extensionId,
+}) => {
+  const formPage = await context.newPage();
+  await formPage.goto("/simple.html");
+
+  const panelPage = await openPanel(context, extensionId);
+  await grantAccess(formPage, panelPage);
+
+  await formPage.bringToFront();
+  await panelPage.getByRole("button", { name: "Scan this page" }).click();
+
+  await expect(panelPage.getByTestId("answers-summary-card")).toBeHidden();
+  await expect(
+    panelPage.getByTestId("known-fields-summary-card"),
+  ).toBeVisible();
 });
 
 test("summary cards: card surface opens details without stealing fill clicks", async ({
@@ -154,6 +173,39 @@ test("confirm: confirming a proposal writes the value into the page", async ({
   await expect(formPage.getByLabel("Email address")).toHaveValue(
     "ananya@example.com",
   );
+});
+
+test("closed-vocabulary fields: a stored value resolves to the field's own option and gets written", async ({
+  context,
+  extensionId,
+}) => {
+  const formPage = await context.newPage();
+  await formPage.goto("/category-select.html");
+
+  const panelPage = await openPanel(context, extensionId);
+  // Neither stored value equals any option's `value` attribute verbatim:
+  // "Indian" only matches India's `value="IN"` through the nationality
+  // concept's `valueAliases` demonym table, and "OBC" only matches
+  // OBC-NCL's `value="2"` through containment on the visible label — see
+  // `~/core/matching/resolve-option`.
+  await seedAnswers(panelPage, [
+    ["Nationality", "Indian"],
+    ["Reservation category", "OBC"],
+  ]);
+  await grantAccess(formPage, panelPage);
+
+  await formPage.bringToFront();
+  await panelPage.getByRole("button", { name: "Scan this page" }).click();
+  await openProposalDetails(panelPage);
+  for (const confirmButton of await panelPage
+    .getByRole("button", { name: "Confirm", exact: true })
+    .all()) {
+    await confirmButton.click();
+  }
+
+  await expect(formPage.getByLabel("Nationality")).toHaveValue("IN");
+  await expect(formPage.getByRole("radio", { name: "OBC-NCL" })).toBeChecked();
+  await expect(formPage.getByRole("radio", { name: "GEN" })).not.toBeChecked();
 });
 
 test("untouched: the csrf field and the terms checkbox are never filled", async ({
@@ -282,7 +334,7 @@ test("privacy: fixture fills make no outbound network requests", async ({
   await expect(panelPage.getByText("Filled from last scan")).toBeVisible();
   await formPage.bringToFront();
   await panelPage.getByRole("button", { name: "Scan again" }).click();
-  await expect(panelPage.getByText("Last scanned just now")).toBeVisible();
+  await expect(panelPage.getByText(/^Last scanned .+/)).toBeVisible();
   await expect(panelPage.getByText("3 answers detected")).toBeVisible();
   await expect(panelPage.getByText("3 answers filled")).toBeHidden();
 

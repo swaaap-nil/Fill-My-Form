@@ -18,9 +18,14 @@
  * `~/core/messaging/fill-instruction` for the other half of that gate.
  */
 
-import { FieldKind, type FormField } from "../form/types";
-import { tierToConfidence } from "../matching/confidence";
+import { Certainty } from "../agent/types";
+import { FieldKind, type FormField, type FormOption } from "../form/types";
+import { minConfidence, tierToConfidence } from "../matching/confidence";
 import { resolve } from "../matching/resolve";
+import {
+  OPTION_TIER_CONFIDENCE,
+  resolveOption,
+} from "../matching/resolve-option";
 import { FreshnessStatus, freshness } from "../memory/freshness";
 import type { MemoryStore } from "../memory/store";
 import {
@@ -28,7 +33,7 @@ import {
   type MemoryValue,
   type ProfileId,
 } from "../memory/types";
-import type { ConceptIndex, Sensitivity } from "../ontology/types";
+import type { Concept, ConceptIndex, Sensitivity } from "../ontology/types";
 import { Sensitivity as SensitivityValue } from "../ontology/types";
 import {
   ActionRisk,
@@ -54,7 +59,23 @@ const FILL_RISK: ActionRisk = ActionRisk.MEDIUM;
 const fieldLabelOf = (field: FormField): string | undefined =>
   field.label ?? field.name ?? field.placeholder;
 
-const payloadFor = (
+export type ResolvedStoredValue =
+  | {
+      readonly kind: "fillable";
+      readonly payload: PendingDecision["payload"];
+      readonly displayValue: string;
+      readonly confidence: ConfidenceLevel;
+      readonly memoryValue?: string;
+      readonly constraints?: FormField["constraints"];
+    }
+  | {
+      readonly kind: "choose_option";
+      readonly storedValue: string;
+      readonly candidates: readonly FormOption[];
+    }
+  | { readonly kind: "no_value" };
+
+export const payloadFor = (
   field: FormField,
   value: MemoryValue,
 ): PendingDecision["payload"] | null => {
@@ -64,10 +85,89 @@ const payloadFor = (
   return { kind: "text", value: String(value) };
 };
 
-const displayValueOf = (payload: PendingDecision["payload"]): string =>
+export const displayValueOf = (payload: PendingDecision["payload"]): string =>
   payload.kind === "file"
     ? `${payload.ref.name} (${Math.round(payload.ref.sizeBytes / 1024)} KB)`
     : payload.value;
+
+export const resolveStoredValueForField = (
+  field: FormField,
+  value: MemoryValue,
+  concept: Concept,
+  confidence: ConfidenceLevel,
+): ResolvedStoredValue => {
+  const payload = payloadFor(field, value);
+  if (!payload) return { kind: "no_value" };
+
+  // Closed-vocabulary fields must receive one of the page's own option values.
+  // The user's stored text remains the memory value; the DOM write uses the
+  // option code/label the page actually exposes.
+  if (payload.kind === "text" && field.options && field.options.length > 0) {
+    const optionMatch = resolveOption(payload.value, field.options, concept);
+
+    if (optionMatch.certainty === Certainty.AMBIGUOUS) {
+      return {
+        kind: "choose_option",
+        storedValue: payload.value,
+        candidates: optionMatch.candidates,
+      };
+    }
+
+    if (optionMatch.certainty === Certainty.UNKNOWN) {
+      return {
+        kind: "choose_option",
+        storedValue: payload.value,
+        candidates: field.options,
+      };
+    }
+
+    return {
+      kind: "fillable",
+      payload: { kind: "text", value: optionMatch.option.value },
+      displayValue: optionMatch.option.label,
+      confidence: minConfidence(
+        confidence,
+        OPTION_TIER_CONFIDENCE[optionMatch.tier],
+      ),
+      memoryValue: payload.value,
+    };
+  }
+
+  return {
+    kind: "fillable",
+    payload,
+    displayValue: displayValueOf(payload),
+    confidence,
+    constraints: field.kind === FieldKind.FILE ? field.constraints : undefined,
+  };
+};
+
+/**
+ * Registers one decision per candidate option, for the panel's
+ * `"choose_option"` picker. Each already has a live `decisionId` — picking
+ * one is the ordinary `confirm([decisionId])` flow, no protocol change.
+ */
+const registerOptionChoices = (
+  decisions: Map<DecisionId, PendingDecision>,
+  generateDecisionId: () => DecisionId,
+  field: FormField,
+  conceptKey: string,
+  sensitivity: Sensitivity,
+  candidates: readonly FormOption[],
+): readonly { readonly decisionId: DecisionId; readonly label: string }[] =>
+  candidates.map((option) => {
+    const decisionId = generateDecisionId();
+    decisions.set(decisionId, {
+      fieldId: field.id,
+      payload: { kind: "text", value: option.value },
+      conceptKey,
+      sensitivity,
+      risk: FILL_RISK,
+      confidence: ConfidenceLevel.LOW,
+      memoryValue: option.label,
+    });
+    return { decisionId, label: option.label };
+  });
 
 export const planFill = async (
   fields: readonly FormField[],
@@ -134,8 +234,13 @@ export const planFill = async (
       userConfirmed: false,
     });
 
-    const payload = payloadFor(field, item.value);
-    if (!payload) {
+    const resolvedValue = resolveStoredValueForField(
+      field,
+      item.value,
+      concept,
+      confidence,
+    );
+    if (resolvedValue.kind === "no_value") {
       proposals.push({
         fieldId: field.id,
         fieldLabel,
@@ -145,19 +250,47 @@ export const planFill = async (
       continue;
     }
 
+    if (resolvedValue.kind === "choose_option") {
+      proposals.push({
+        fieldId: field.id,
+        fieldLabel,
+        state: "choose_option",
+        conceptKey: concept.key,
+        storedValue: resolvedValue.storedValue,
+        choices: registerOptionChoices(
+          decisions,
+          generateDecisionId,
+          field,
+          concept.key,
+          concept.sensitivity,
+          resolvedValue.candidates,
+        ),
+      });
+      continue;
+    }
+
     const decisionId = generateDecisionId();
-    const value = displayValueOf(payload);
+    const resolvedDecision =
+      resolvedValue.confidence === confidence
+        ? decision
+        : policy.evaluate({
+            risk: FILL_RISK,
+            sensitivity: concept.sensitivity,
+            confidence: resolvedValue.confidence,
+            isSubmission: false,
+            userConfirmed: false,
+          });
 
     decisions.set(decisionId, {
       fieldId: field.id,
-      payload,
-      constraints:
-        field.kind === FieldKind.FILE ? field.constraints : undefined,
+      payload: resolvedValue.payload,
+      constraints: resolvedValue.constraints,
       conceptKey: concept.key,
       sensitivity: concept.sensitivity,
       risk: FILL_RISK,
-      confidence,
+      confidence: resolvedValue.confidence,
       stale: itemFreshness === FreshnessStatus.DUE,
+      memoryValue: resolvedValue.memoryValue,
     });
 
     proposals.push({
@@ -166,10 +299,10 @@ export const planFill = async (
       state: isRestricted(concept.sensitivity) ? "restricted" : "pending",
       conceptKey: concept.key,
       decisionId,
-      value,
-      payload,
+      value: resolvedValue.displayValue,
+      payload: resolvedValue.payload,
       source: item.provenance.source,
-      policyReason: decision.reason,
+      policyReason: resolvedDecision.reason,
     });
   }
 
@@ -202,5 +335,6 @@ export const confirmDecision = (
     ok: result.effect === PolicyEffect.ALLOW,
     fieldId: decision.fieldId,
     payload: decision.payload,
+    memoryValue: decision.memoryValue,
   };
 };

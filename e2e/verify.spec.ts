@@ -71,6 +71,28 @@ test("controlled.html: a reformatting field passes verification as VALUE_NORMALI
   await expect(formPage.locator("#masked-phone")).toHaveValue("(988) 442-1077");
 });
 
+test("category-select.html: radio groups pass verification after the loop fills them", async ({
+  context,
+  extensionId,
+}) => {
+  const formPage = await context.newPage();
+  await formPage.goto("/category-select.html");
+
+  const panelPage = await openPanel(context, extensionId);
+  await seedAnswers(panelPage, [
+    ["Nationality", "Indian"],
+    ["Reservation category", "OBC"],
+  ]);
+  await grantAccess(formPage, panelPage);
+
+  await formPage.bringToFront();
+  await driveAgentToCompletion(panelPage);
+
+  await expect(formPage.getByLabel("Nationality")).toHaveValue("IN");
+  await expect(formPage.getByRole("radio", { name: "OBC-NCL" })).toBeChecked();
+  await expect(formPage.getByRole("radio", { name: "GEN" })).not.toBeChecked();
+});
+
 test("controlled.html: a naive .value write alone is not enough to pass verification", async ({
   context,
 }) => {

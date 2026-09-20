@@ -57,7 +57,7 @@ const LayoutContent = ({
     <div
       data-testid="panel-root"
       className={cn(
-        "flex min-h-screen w-full min-w-[23rem] flex-col items-center justify-center bg-background text-base text-foreground font-sans",
+        "flex min-h-screen w-full min-w-[23rem] flex-col items-center justify-start bg-background text-base text-foreground font-sans",
         {
           dark: prefersDark,
         },
@@ -65,13 +65,13 @@ const LayoutContent = ({
     >
       <div
         className={cn(
-          "flex w-full max-w-[80rem] grow flex-col items-center justify-between gap-5 bg-background p-5",
+          "flex w-full max-w-[80rem] min-h-screen flex-col items-center gap-5 bg-background p-5",
           className,
         )}
       >
         <Header action={headerAction} />
-        {children}
-        <Footer />
+        <div className="flex w-full flex-1 flex-col">{children}</div>
+        <Footer className="mt-auto shrink-0" />
       </div>
       <Toaster />
     </div>

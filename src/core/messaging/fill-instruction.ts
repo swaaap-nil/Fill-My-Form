@@ -1,15 +1,17 @@
 /**
- * The one validation that keeps `PolicyEngine.evaluate` on the critical
- * path rather than beside it.
+ * Browser-message shape validation for DOM writes.
  *
  * The content script's `fillField` handler (`src/app/content`) calls
  * {@link assertValidFillInstruction} before touching the DOM. It throws —
- * fills nothing — unless `decisionId` is present and non-empty. That
- * `decisionId` is only ever minted by the background after it has actually
- * run policy for this exact field and value (`src/app/background`); no
- * other caller in the codebase constructs one. This file is pure and
- * DOM-free on purpose, so the property is testable without a browser and
- * cannot regress silently behind a browser-only integration test.
+ * fills nothing — unless `decisionId` is present and non-empty. The actual
+ * policy gate lives in the background worker: `confirmFill` only sends one
+ * of these payloads after finding a live, tab-bound pending decision and
+ * re-running policy for it. The agent-loop path also sends from the
+ * background after its reviewed plan step.
+ *
+ * This file is pure and DOM-free on purpose: it proves malformed content
+ * messages do not write to the page, while the capability and policy checks
+ * remain centralized in `src/app/background`.
  */
 
 import { z } from "zod";

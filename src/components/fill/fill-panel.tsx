@@ -5,16 +5,26 @@ import {
   ChevronRight,
   LoaderCircle,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Browser } from "wxt/browser";
 import { browser } from "wxt/browser";
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
+import type { PreparedArtifact } from "~/core/files/preparation";
+import type { UploadIntent } from "~/core/form/types";
+import {
+  createIndexedDbFileReferenceStore,
+  type FileReferenceStore,
+} from "~/lib/files/adapters";
+import { createBrowserFilePreparationRegistry } from "~/lib/files/preparation-registry";
 import type { DecisionId, FieldProposal } from "~/lib/messaging";
 import { sendMessage } from "~/lib/messaging";
 import { useSound } from "~/lib/sfx/react";
 import { siteAccess, toOriginPattern } from "~/lib/site-access";
 import { cn } from "~/lib/utils";
+import { PreparationSuccessSupport } from "../files/preparation-success-support";
+import { PreparedFileHandoff } from "../files/prepared-file-handoff";
+import { useObjectUrl } from "../files/use-object-url";
 import { AgentRunPanel } from "./agent-run-panel";
 import { ProposalCard } from "./proposal-card";
 
@@ -50,6 +60,7 @@ type ScanState =
   | {
       readonly kind: "proposals";
       readonly proposals: readonly FieldProposal[];
+      readonly uploadIntents: readonly UploadIntent[];
     };
 
 type ProposalView = "summary" | "answers" | "known";
@@ -121,6 +132,36 @@ const formatGrantedOrigin = (origin: string) => {
   }
 };
 
+const formatScanTimestamp = (scannedAt: Date | undefined) => {
+  if (!scannedAt) return "Last scanned";
+
+  const elapsedSeconds = Math.max(
+    0,
+    Math.floor((Date.now() - scannedAt.getTime()) / 1000),
+  );
+  const formatter = new Intl.RelativeTimeFormat(undefined, {
+    numeric: "always",
+    style: "long",
+  });
+
+  if (elapsedSeconds < 60) {
+    return `Last scanned ${formatter.format(-elapsedSeconds, "second")}`;
+  }
+
+  const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+  if (elapsedMinutes < 60) {
+    return `Last scanned ${formatter.format(-elapsedMinutes, "minute")}`;
+  }
+
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
+  if (elapsedHours < 24) {
+    return `Last scanned ${formatter.format(-elapsedHours, "hour")}`;
+  }
+
+  const elapsedDays = Math.floor(elapsedHours / 24);
+  return `Last scanned ${formatter.format(-elapsedDays, "day")}`;
+};
+
 const SummaryCardShell = ({
   testId,
   onOpenDetails,
@@ -182,11 +223,13 @@ const SummaryCardShell = ({
 const ScanToolbar = ({
   state,
   grantedOrigin,
+  scannedAt,
   onScan,
   onRevoke,
 }: {
   readonly state: ScanUiState;
   readonly grantedOrigin: string | undefined;
+  readonly scannedAt: Date | undefined;
   readonly onScan: () => void;
   readonly onRevoke: (origin: string) => void;
 }) => {
@@ -201,7 +244,9 @@ const ScanToolbar = ({
           ? "Scan again"
           : "Scan this page";
   const statusLabel =
-    state === "filled" ? "Filled from last scan" : "Last scanned just now";
+    state === "filled"
+      ? "Filled from last scan"
+      : formatScanTimestamp(scannedAt);
 
   return (
     <div className="flex min-h-[5.25rem] flex-col justify-center gap-2 rounded-lg border border-border bg-card p-3 shadow-sm shadow-black/5 transition-all duration-300 ease-out motion-reduce:transition-none dark:shadow-black/20">
@@ -296,7 +341,7 @@ const AnswersSummaryCard = ({
       ? "Some answers were applied. Open details to review what remains."
       : failed
         ? "Nothing was changed. Try again or open details to review."
-        : "Open details to review every detected proposal.";
+        : "Review detected answers before filling.";
 
   return (
     <SummaryCardShell
@@ -389,11 +434,234 @@ const KnownFieldsSummaryCard = ({
     testId="known-fields-summary"
     onOpenDetails={onOpenDetails}
     title={`${count} ${pluralizeKnownField(count)}`}
-    subtitle="Open details to review every detected proposal."
+    subtitle="Answer missing information for detected fields."
   >
     <AgentRunPanel key={scanVersion} tabId={tabId} />
   </SummaryCardShell>
 );
+
+const UploadIntentItem = ({
+  intent,
+  onPrepare,
+  output,
+  error,
+}: {
+  readonly intent: UploadIntent;
+  readonly onPrepare: (file: File) => Promise<void>;
+  readonly output?: {
+    readonly artifact: PreparedArtifact;
+    readonly store: FileReferenceStore;
+    readonly name: string;
+    readonly size: number;
+    readonly mimeType: string;
+  };
+  readonly error?: string;
+}) => {
+  const [sourceFile, setSourceFile] = useState<File>();
+  const sourceUrl = useObjectUrl(sourceFile);
+  const accept =
+    intent.constraints
+      .find((constraint) => constraint.kind === "accept")
+      ?.value.join(",") ?? "image/*,application/pdf";
+
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-border p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="font-medium text-sm">{intent.label ?? "Upload"}</p>
+          <p className="text-muted-foreground text-xs">
+            {intent.kind} ·{" "}
+            {intent.actionability === "automatic"
+              ? "native upload available"
+              : "choose the prepared copy on the page"}
+          </p>
+        </div>
+        <input
+          className="max-w-32 text-xs"
+          type="file"
+          accept={accept}
+          aria-label={`Choose ${intent.label ?? "upload"}`}
+          onChange={(event) => {
+            const file = event.currentTarget.files?.[0];
+            if (!file) return;
+            setSourceFile(file);
+          }}
+        />
+      </div>
+      {sourceUrl && (
+        <>
+          {sourceFile?.type.startsWith("image/") ? (
+            <div className="h-48 overflow-hidden rounded border bg-muted">
+              <img
+                src={sourceUrl}
+                alt="Selected upload preview"
+                className="h-full w-full object-contain"
+              />
+            </div>
+          ) : (
+            <div className="rounded border bg-muted/30 p-4 text-center text-muted-foreground text-xs">
+              Document selected. Prepare a temporary upload copy locally.
+            </div>
+          )}
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => sourceFile && void onPrepare(sourceFile)}
+          >
+            Prepare {intent.label?.toLowerCase() ?? intent.kind}
+          </Button>
+        </>
+      )}
+      <p className="line-clamp-4 text-muted-foreground text-xs">
+        {intent.description}
+      </p>
+      {output && (
+        <>
+          <PreparedFileHandoff
+            artifact={output.artifact}
+            store={output.store}
+            label={intent.label ?? intent.kind}
+          />
+          {output.artifact.mimeType.startsWith("image/") ? (
+            <PreparationSuccessSupport />
+          ) : null}
+        </>
+      )}
+      {error && <p className="text-destructive text-xs">{error}</p>}
+    </div>
+  );
+};
+
+const UploadIntentsCard = ({
+  intents,
+}: {
+  readonly intents: readonly UploadIntent[];
+}) => {
+  const [prepared, setPrepared] = useState<
+    Record<
+      string,
+      {
+        readonly artifact: PreparedArtifact;
+        readonly store: FileReferenceStore;
+        readonly name: string;
+        readonly size: number;
+        readonly mimeType: string;
+        readonly cleanupIds: readonly string[];
+      }
+    >
+  >({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const preparedRef = useRef(prepared);
+
+  useEffect(() => {
+    preparedRef.current = prepared;
+  }, [prepared]);
+
+  useEffect(
+    () => () => {
+      for (const output of Object.values(preparedRef.current)) {
+        void Promise.all(
+          output.cleanupIds.map((id) => output.store.delete(id)),
+        );
+      }
+    },
+    [],
+  );
+
+  const prepare = async (intent: UploadIntent, file: File) => {
+    setErrors((current) => ({ ...current, [intent.id]: "" }));
+    let originalId: string | undefined;
+    let storeForCleanup: FileReferenceStore | undefined;
+    try {
+      const store = await createIndexedDbFileReferenceStore();
+      storeForCleanup = store;
+      const original = await store.save(file);
+      originalId = original.id;
+      const registry = createBrowserFilePreparationRegistry(store);
+      const adapter = registry.adapterFor({
+        kind:
+          file.type === "application/pdf" ||
+          file.name.toLowerCase().endsWith(".pdf")
+            ? "pdf"
+            : "image",
+        name: file.name,
+        mimeType: file.type,
+        sizeBytes: file.size,
+      });
+      if (!adapter) {
+        await store.delete(original.id);
+        originalId = undefined;
+        setErrors((current) => ({
+          ...current,
+          [intent.id]: "This file type is not supported by a local adapter.",
+        }));
+        return;
+      }
+      const output = await adapter.prepareForConstraints(
+        original,
+        intent.constraints,
+      );
+      await store.delete(original.id);
+      originalId = undefined;
+      if (!output.ok) {
+        setErrors((current) => ({
+          ...current,
+          [intent.id]: output.reason,
+        }));
+        return;
+      }
+      setPrepared((current) => {
+        const previous = current[intent.id];
+        if (previous) {
+          void Promise.all(
+            previous.cleanupIds.map((id) => previous.store.delete(id)),
+          );
+        }
+        return {
+          ...current,
+          [intent.id]: {
+            artifact: output.artifact,
+            store,
+            name: output.artifact.name,
+            size: output.artifact.sizeBytes,
+            mimeType: output.artifact.mimeType,
+            cleanupIds: [output.artifact.derived.id],
+          },
+        };
+      });
+    } catch {
+      if (storeForCleanup && originalId)
+        void storeForCleanup.delete(originalId);
+      setErrors((current) => ({
+        ...current,
+        [intent.id]: "Local preparation failed.",
+      }));
+    }
+  };
+
+  return (
+    <section className="flex flex-col gap-3 rounded-lg border border-primary/25 bg-card p-3 shadow-sm">
+      <div>
+        <p className="font-semibold text-sm">
+          {intents.length} upload{" "}
+          {intents.length === 1 ? "requirement" : "requirements"} detected
+        </p>
+        <p className="text-muted-foreground text-xs">
+          Original files stay unchanged. Prepared copies expire automatically.
+        </p>
+      </div>
+      {intents.map((intent) => (
+        <UploadIntentItem
+          key={intent.id}
+          intent={intent}
+          output={prepared[intent.id]}
+          error={errors[intent.id]}
+          onPrepare={(file) => prepare(intent, file)}
+        />
+      ))}
+    </section>
+  );
+};
 
 export const FillPanel = () => {
   const sound = useSound();
@@ -405,6 +673,8 @@ export const FillPanel = () => {
   const [confirmedIds, setConfirmedIds] = useState<Set<DecisionId>>(new Set());
   const [fillStatus, setFillStatus] = useState<FillStatus>({ kind: "ready" });
   const [scanUiState, setScanUiState] = useState<ScanUiState>("idle");
+  const [lastScannedAt, setLastScannedAt] = useState<Date>();
+  const [, setClockTick] = useState(0);
   const [grantedOrigins, setGrantedOrigins] = useState<readonly string[]>([]);
   const [activeTabId, setActiveTabId] = useState<number | undefined>();
   // Cached alongside `activeTabId` so `scan` can call
@@ -461,6 +731,16 @@ export const FillPanel = () => {
     };
   }, [refreshAccessState, applyActiveTab]);
 
+  useEffect(() => {
+    if (!lastScannedAt) return undefined;
+
+    const interval = window.setInterval(() => {
+      setClockTick((tick) => tick + 1);
+    }, 1000);
+
+    return () => window.clearInterval(interval);
+  }, [lastScannedAt]);
+
   const scan = async () => {
     setScanUiState("scanning");
     setFillStatus({ kind: "ready" });
@@ -513,7 +793,12 @@ export const FillPanel = () => {
       setProposalView("summary");
       setProposalViewTransition("none");
       setScanVersion((version) => version + 1);
-      setScanState({ kind: "proposals", proposals: result.proposals });
+      setScanState({
+        kind: "proposals",
+        proposals: result.proposals,
+        uploadIntents: result.uploadIntents,
+      });
+      setLastScannedAt(new Date());
       setScanUiState("results");
       sound.stopLoop("scan-page");
       sound.play("scanSucceeded");
@@ -537,6 +822,7 @@ export const FillPanel = () => {
       setScanState({ kind: "idle" });
       setFillStatus({ kind: "ready" });
       setScanUiState("idle");
+      setLastScannedAt(undefined);
       await refreshAccessState();
       sound.play("accessRevoked");
     } catch {
@@ -587,7 +873,10 @@ export const FillPanel = () => {
   const answerDetailProposals: FieldProposal[] =
     scanState.kind === "proposals"
       ? scanState.proposals.filter(
-          (p) => p.state === "pending" || p.state === "restricted",
+          (p) =>
+            p.state === "pending" ||
+            p.state === "restricted" ||
+            p.state === "choose_option",
         )
       : [];
 
@@ -628,93 +917,103 @@ export const FillPanel = () => {
   const showProposalDetails =
     scanState.kind === "proposals" &&
     (proposalView === "answers" || proposalView === "known");
+  const showAnswersSummary =
+    answerDetailProposals.length > 0 || fillStatus.kind !== "ready";
   const activeGrantedOrigin = activeTabGranted
     ? findGrantedOriginForUrl(activeTabUrl, grantedOrigins)
     : undefined;
 
   return (
-    <div className="flex w-full flex-col gap-4">
-      <ScanToolbar
-        state={scanUiState}
-        grantedOrigin={activeGrantedOrigin}
-        onScan={scan}
-        onRevoke={revoke}
-      />
+    <div className="flex w-full grow flex-col gap-4">
+      <div className="flex flex-col gap-4">
+        {scanState.kind === "not_granted" && (
+          <p className="text-muted-foreground text-sm">
+            This site needs access before it can be scanned. Use "Scan this
+            page" and approve the browser prompt to continue.
+          </p>
+        )}
 
-      <Separator />
-
-      {scanState.kind === "not_granted" && (
-        <p className="text-muted-foreground text-sm">
-          This site needs access before it can be scanned. Use "Scan this page"
-          and approve the browser prompt to continue.
-        </p>
-      )}
-
-      {scanState.kind === "proposals" && showProposalDetails ? (
-        <div
-          className={cn(
-            "flex flex-col gap-2 motion-reduce:animate-none",
-            proposalViewMotionClass,
-          )}
-        >
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="self-start"
-            onClick={() => {
-              setProposalViewTransition("back");
-              setProposalView("summary");
-              sound.play("proposalDetailsClosed");
-            }}
-          >
-            <ChevronLeft className="size-4" />
-            Back
-          </Button>
-          {detailsProposals.map((proposal) => (
-            <ProposalCard
-              key={proposal.fieldId}
-              proposal={proposal}
-              onConfirm={(decisionId) => confirm([decisionId])}
-              confirmed={
-                (proposal.state === "pending" ||
-                  proposal.state === "restricted") &&
-                confirmedIds.has(proposal.decisionId)
-              }
-            />
-          ))}
-        </div>
-      ) : (
-        scanState.kind === "proposals" && (
+        {scanState.kind === "proposals" && showProposalDetails ? (
           <div
             className={cn(
-              "flex flex-col gap-4 motion-reduce:animate-none",
+              "flex flex-col gap-2 motion-reduce:animate-none",
               proposalViewMotionClass,
             )}
           >
-            <AnswersSummaryCard
-              count={answeredDecisionIds.length}
-              fillStatus={fillStatus}
-              onOpenDetails={() => {
-                setProposalViewTransition("forward");
-                setProposalView("answers");
-                sound.play("proposalDetailsOpened");
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="self-start"
+              onClick={() => {
+                setProposalViewTransition("back");
+                setProposalView("summary");
+                sound.play("proposalDetailsClosed");
               }}
-              onFill={() => confirm(answeredDecisionIds)}
-            />
-            <KnownFieldsSummaryCard
-              count={knownNoAnswerProposals.length}
-              onOpenDetails={() => {
-                setProposalViewTransition("forward");
-                setProposalView("known");
-                sound.play("proposalDetailsOpened");
-              }}
-              tabId={activeTabId}
-              scanVersion={scanVersion}
-            />
+            >
+              <ChevronLeft className="size-4" />
+              Back
+            </Button>
+            {detailsProposals.map((proposal) => (
+              <ProposalCard
+                key={proposal.fieldId}
+                proposal={proposal}
+                onConfirm={(decisionId) => confirm([decisionId])}
+                confirmedIds={confirmedIds}
+              />
+            ))}
           </div>
-        )
-      )}
+        ) : (
+          scanState.kind === "proposals" && (
+            <div
+              className={cn(
+                "flex flex-col gap-4 motion-reduce:animate-none",
+                proposalViewMotionClass,
+              )}
+            >
+              {showAnswersSummary && (
+                <AnswersSummaryCard
+                  count={answeredDecisionIds.length}
+                  fillStatus={fillStatus}
+                  onOpenDetails={() => {
+                    setProposalViewTransition("forward");
+                    setProposalView("answers");
+                    sound.play("proposalDetailsOpened");
+                  }}
+                  onFill={() => confirm(answeredDecisionIds)}
+                />
+              )}
+              {knownNoAnswerProposals.length > 0 && (
+                <KnownFieldsSummaryCard
+                  count={knownNoAnswerProposals.length}
+                  onOpenDetails={() => {
+                    setProposalViewTransition("forward");
+                    setProposalView("known");
+                    sound.play("proposalDetailsOpened");
+                  }}
+                  tabId={activeTabId}
+                  scanVersion={scanVersion}
+                />
+              )}
+              {scanState.uploadIntents.length > 0 && (
+                <UploadIntentsCard intents={scanState.uploadIntents} />
+              )}
+            </div>
+          )
+        )}
+      </div>
+
+      <div className="mt-auto flex flex-col gap-4">
+        <Separator />
+
+        <ScanToolbar
+          state={scanUiState}
+          grantedOrigin={activeGrantedOrigin}
+          scannedAt={lastScannedAt}
+          onScan={scan}
+          onRevoke={revoke}
+        />
+      </div>
     </div>
   );
 };

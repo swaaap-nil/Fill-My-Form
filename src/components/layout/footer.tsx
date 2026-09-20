@@ -9,9 +9,9 @@ import { cn } from "~/lib/utils";
  * author; a footer is a good place for the privacy posture instead, because it
  * appears on every surface.
  */
-export const Footer = () => {
+export const Footer = ({ className }: { readonly className?: string }) => {
   return (
-    <footer className="flex w-full justify-center">
+    <footer className={cn("flex w-full justify-center", className)}>
       <p className="flex items-center justify-center gap-1 text-center text-muted-foreground text-xs">
         {browser.i18n.getMessage("privacyNote")}
         <a

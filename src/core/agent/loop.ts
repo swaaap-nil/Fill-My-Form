@@ -33,13 +33,9 @@
  */
 
 import type { FileComplianceAdapter } from "../files/types";
-import {
-  type FieldConstraint,
-  type FieldId,
-  FieldKind,
-  type Form,
-  type FormField,
-} from "../form/types";
+import { resolveStoredValueForField } from "../fill/driver";
+import type { FillPayload } from "../fill/types";
+import type { FieldConstraint, FieldId, Form, FormField } from "../form/types";
 import type { LLMProvider } from "../llm/provider";
 import type { Logger } from "../logging";
 import { tierToConfidence } from "../matching/confidence";
@@ -92,9 +88,11 @@ export const UPLOAD_FILE_TOOL = "upload_file";
 /** A field's resolved value, carried alongside the run so PLAN never re-asks. */
 export interface RetrievedValue {
   readonly value: MemoryValue;
+  readonly payload: FillPayload;
   readonly displayValue: string;
   readonly conceptKey: string;
   readonly sensitivity: Sensitivity;
+  readonly confidence: ConfidenceLevel;
   readonly confirmedInRun?: boolean;
   readonly stale?: boolean;
 }
@@ -133,7 +131,8 @@ export interface RunSnapshot {
 export interface LoopPorts {
   readonly tools: ToolRegistry;
   readonly policy: PolicyEngine;
-  readonly memory: MemoryStore;
+  readonly memory: Pick<MemoryStore, "get" | "search">;
+  readonly userMemory: Pick<MemoryStore, "get" | "set">;
   readonly ontology: ConceptIndex;
   readonly llm?: LLMProvider;
   readonly verifier: Verifier;
@@ -179,16 +178,6 @@ interface UploadFileInput {
   readonly ref: FileReference;
   readonly constraints: readonly FieldConstraint[];
 }
-
-const isTextValue = (value: MemoryValue): value is string | number | boolean =>
-  typeof value === "string" ||
-  typeof value === "number" ||
-  typeof value === "boolean";
-
-const displayValueOf = (value: MemoryValue): string =>
-  isFileReference(value)
-    ? `${value.name} (${Math.round(value.sizeBytes / 1024)} KB)`
-    : String(value);
 
 export const createRun = (
   ports: Pick<LoopPorts, "clock" | "generateId">,
@@ -369,16 +358,28 @@ const retrieveValuesFor = async (
 
     const item = await ports.memory.get(ports.profileId, concept.key);
     if (!item) continue;
-    if (field.kind === FieldKind.FILE && !isFileReference(item.value)) continue;
-    if (field.kind !== FieldKind.FILE && !isTextValue(item.value)) continue;
+
+    const isStale = freshness(item, ports.clock()) === FreshnessStatus.DUE;
+    const confidence = isStale
+      ? ConfidenceLevel.LOW
+      : tierToConfidence(candidate.tier);
+    const resolved = resolveStoredValueForField(
+      field,
+      item.value,
+      concept,
+      confidence,
+    );
+    if (resolved.kind !== "fillable") continue;
 
     values[field.id] = {
       value: item.value,
-      displayValue: displayValueOf(item.value),
+      payload: resolved.payload,
+      displayValue: resolved.displayValue,
       conceptKey: concept.key,
       sensitivity: concept.sensitivity,
+      confidence: resolved.confidence,
       confirmedInRun: false,
-      stale: freshness(item, ports.clock()) === FreshnessStatus.DUE,
+      stale: isStale,
     };
   }
 
@@ -491,9 +492,7 @@ const pickNextAction = (
       };
     }
 
-    const confidence = existing.stale
-      ? ConfidenceLevel.LOW
-      : tierToConfidence(candidate.tier);
+    const confidence = existing.confidence;
     const policyDecision = ports.policy.evaluate({
       risk: FILL_RISK,
       sensitivity: concept.sensitivity,
@@ -509,10 +508,10 @@ const pickNextAction = (
     }
 
     if (policyDecision.effect === PolicyEffect.ALLOW) {
-      if (field.kind === FieldKind.FILE && isFileReference(existing.value)) {
+      if (existing.payload.kind === "file") {
         const input: UploadFileInput = {
           fieldId: field.id,
-          ref: existing.value,
+          ref: existing.payload.ref,
           constraints: field.constraints,
         };
         return {
@@ -528,7 +527,7 @@ const pickNextAction = (
 
       const input: FillFieldInput = {
         fieldId: field.id,
-        value: String(existing.value),
+        value: existing.payload.value,
       };
       return {
         decision: {
@@ -617,7 +616,7 @@ const performFill = async (
   }
 
   // The pipeline succeeded either way. A control `writeFieldValue` cannot
-  // write (the controlled.html combobox, a radio group) still returns
+  // write (for example, the controlled.html combobox) still returns
   // successfully here, carrying `{ ok: false }` as *data* — that is not a
   // pipeline problem to retry, it is VERIFY's job to notice (as
   // NOT_APPLIED) and PLAN's job to give up on after repeated failures,
@@ -633,21 +632,14 @@ const performFileUpload = async (
   ref: FileReference,
   ports: LoopPorts,
 ): Promise<RunSnapshot> => {
-  const prepared = await ports.files?.prepareForUpload(ref, field.constraints);
   const withWrite: RunSnapshot = {
     ...snapshot,
     pendingWrite: { fieldId: field.id, value: ref.name },
   };
 
-  if (!prepared?.ok) {
-    return applyEvent(withWrite, { type: "acted", ok: false }, ports, {
-      toolName: UPLOAD_FILE_TOOL,
-    });
-  }
-
   const input: UploadFileInput = {
     fieldId: field.id,
-    ref: prepared.upload.ref,
+    ref,
     constraints: field.constraints,
   };
   const result = await executeTool(
@@ -678,14 +670,14 @@ const retryAct = async (
       const input = decision.action.input as UploadFileInput;
       const field = snapshot.fields.find((f) => f.id === input.fieldId);
       const value = field ? snapshot.values[input.fieldId] : undefined;
-      if (!field || !value || !isFileReference(value.value)) {
+      if (!field || value?.payload.kind !== "file") {
         return applyEvent(
           snapshot,
           { type: "failed", errorCode: "UPLOAD_FILE_MISSING_REFERENCE" },
           ports,
         );
       }
-      return performFileUpload(snapshot, field, value.value, ports);
+      return performFileUpload(snapshot, field, value.payload.ref, ports);
     }
 
     const input = decision.action.input as FillFieldInput;
@@ -711,14 +703,17 @@ const retryAct = async (
       );
     }
     const field = snapshot.fields.find((f) => f.id === fieldId);
-    if (
-      field &&
-      field.kind === FieldKind.FILE &&
-      isFileReference(answered.value)
-    ) {
-      return performFileUpload(snapshot, field, answered.value, ports);
+    if (field && answered.payload.kind === "file") {
+      return performFileUpload(snapshot, field, answered.payload.ref, ports);
     }
-    return performFill(snapshot, fieldId, String(answered.value), ports);
+    if (answered.payload.kind === "text") {
+      return performFill(snapshot, fieldId, answered.payload.value, ports);
+    }
+    return applyEvent(
+      snapshot,
+      { type: "failed", errorCode: "ASK_USER_UNSUPPORTED_PAYLOAD" },
+      ports,
+    );
   }
 
   if (decision.action.type === "request_review") {
@@ -768,8 +763,7 @@ const retryAct = async (
     // Re-run policy with userConfirmed: true rather than trusting the
     // earlier REQUIRE_CONFIRMATION outcome — mirrors `confirmDecision` in
     // `~/core/fill/driver`.
-    const tier = snapshot.matches[fieldId]?.candidates[0]?.tier;
-    const confidence = tier ? tierToConfidence(tier) : ConfidenceLevel.LOW;
+    const confidence = value.confidence;
     const reconfirmed = ports.policy.evaluate({
       risk: FILL_RISK,
       sensitivity: value.sensitivity,
@@ -798,7 +792,7 @@ const retryAct = async (
               bundledFreshnessDurationPolicy,
             )
           : undefined;
-      await recordAnswer(ports.memory, {
+      await recordAnswer(ports.userMemory, {
         profileId: ports.profileId,
         key: fieldValue.conceptKey,
         value: fieldValue.value,
@@ -810,15 +804,19 @@ const retryAct = async (
     }
 
     const field = snapshot.fields.find((f) => f.id === fieldId);
-    if (
-      field &&
-      field.kind === FieldKind.FILE &&
-      isFileReference(value.value)
-    ) {
-      return performFileUpload(snapshot, field, value.value, ports);
+    if (field && value.payload.kind === "file") {
+      return performFileUpload(snapshot, field, value.payload.ref, ports);
     }
 
-    return performFill(snapshot, fieldId, String(value.value), ports);
+    if (value.payload.kind === "text") {
+      return performFill(snapshot, fieldId, value.payload.value, ports);
+    }
+
+    return applyEvent(
+      snapshot,
+      { type: "failed", errorCode: "REVIEW_UNSUPPORTED_PAYLOAD" },
+      ports,
+    );
   }
 
   // "finish" never reaches ACT: `reduce` sends a finish decision straight to
@@ -1011,10 +1009,10 @@ export const drive = async (
 };
 
 /**
- * Resolves an `ask_user` pause. The answer is written to memory through
- * `recordAnswer` — the only write path, never through `executeTool` — before
- * the run resumes. If the field's concept can no longer be resolved (should
- * not happen; defensive), the run still resumes but the value is discarded
+ * Resolves an `ask_user` pause. The answer is written through the explicit
+ * user-memory write service, never through `executeTool`, before the run
+ * resumes. If the field's concept can no longer be resolved (should not
+ * happen; defensive), the run still resumes but the value is discarded
  * rather than recorded under a guessed key.
  */
 export const answerQuestion = async (
@@ -1044,7 +1042,7 @@ export const answerQuestion = async (
       confirmationTime,
       bundledFreshnessDurationPolicy,
     );
-    await recordAnswer(ports.memory, {
+    await recordAnswer(ports.userMemory, {
       profileId: ports.profileId,
       key: concept.key,
       value,
@@ -1057,14 +1055,27 @@ export const answerQuestion = async (
   }
 
   const values = concept
-    ? applyValueToMatchedConcept(snapshot, concept.key, {
-        value,
-        displayValue: displayValueOf(value),
-        conceptKey: concept.key,
-        sensitivity: concept.sensitivity,
-        confirmedInRun: true,
-        stale: false,
-      })
+    ? (() => {
+        if (!field) return snapshot.values;
+        const resolved = resolveStoredValueForField(
+          field,
+          value,
+          concept,
+          ConfidenceLevel.CERTAIN,
+        );
+        if (resolved.kind !== "fillable") return snapshot.values;
+
+        return applyValueToMatchedConcept(snapshot, concept.key, {
+          value,
+          payload: resolved.payload,
+          displayValue: resolved.displayValue,
+          conceptKey: concept.key,
+          sensitivity: concept.sensitivity,
+          confidence: resolved.confidence,
+          confirmedInRun: true,
+          stale: false,
+        });
+      })()
     : snapshot.values;
 
   return applyEvent({ ...snapshot, values }, { type: "user_responded" }, ports);

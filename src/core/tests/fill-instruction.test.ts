@@ -5,11 +5,9 @@ import {
 } from "~/core/messaging/fill-instruction";
 
 /**
- * `docs/agent.md`'s trust pipeline puts policy on the critical path. The
- * mechanism that keeps it there is structural, not a convention: the
- * content script's `fillField` handler calls this at the top, before
- * touching the DOM, and it throws on anything the background did not
- * actually issue a decision for.
+ * The content script's `fillField` handler calls this at the top, before
+ * touching the DOM. Policy and capability checks live in the background;
+ * this test covers the DOM-side backstop against malformed write messages.
  */
 describe("assertValidFillInstruction", () => {
   it("accepts a well-formed instruction", () => {

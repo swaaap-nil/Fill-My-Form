@@ -17,6 +17,8 @@ const createFakeBrowser = (
     registered: Set<string>;
     grantedOrigins: Set<string>;
     executedScripts: { tabId: number; files: string[] }[];
+    chromePermissions: SiteAccessBrowser["chromePermissions"];
+    chromeRuntime: SiteAccessBrowser["chromeRuntime"];
   }> = {},
 ): SiteAccessBrowser & {
   registered: Set<string>;
@@ -32,6 +34,8 @@ const createFakeBrowser = (
     registered,
     grantedOrigins,
     executedScripts,
+    chromePermissions: overrides.chromePermissions,
+    chromeRuntime: overrides.chromeRuntime,
     permissions: {
       async contains({ origins }) {
         return origins.every((o) => grantedOrigins.has(o));
@@ -129,48 +133,29 @@ describe("requestSiteAccess", () => {
   });
 
   it("uses Chrome's callback API directly when available", async () => {
-    const chromeHost = globalThis as typeof globalThis & {
-      chrome?: {
-        runtime?: { lastError?: { message?: string } };
-        permissions?: {
-          request(
-            query: { origins: string[] },
-            callback: (granted: boolean) => void,
-          ): void;
-        };
-      };
-    };
-    const previousChrome = chromeHost.chrome;
     const requestedOrigins: string[][] = [];
-
-    chromeHost.chrome = {
-      runtime: {},
-      permissions: {
+    const fake = createFakeBrowser({
+      chromeRuntime: {},
+      chromePermissions: {
         request(query, callback) {
           requestedOrigins.push([...query.origins]);
           callback(true);
         },
       },
-    };
+    });
+    const siteAccess = createSiteAccess(fake);
 
-    try {
-      const fake = createFakeBrowser();
-      const siteAccess = createSiteAccess(fake);
+    const granted = await siteAccess.requestSiteAccess(
+      "https://example.com/apply",
+      42,
+    );
 
-      const granted = await siteAccess.requestSiteAccess(
-        "https://example.com/apply",
-        42,
-      );
-
-      expect(granted).toBe(true);
-      expect(requestedOrigins).toEqual([["https://example.com/*"]]);
-      expect(fake.registered.size).toBe(1);
-      expect(fake.executedScripts).toEqual([
-        { tabId: 42, files: ["content-scripts/content.js"] },
-      ]);
-    } finally {
-      chromeHost.chrome = previousChrome;
-    }
+    expect(granted).toBe(true);
+    expect(requestedOrigins).toEqual([["https://example.com/*"]]);
+    expect(fake.registered.size).toBe(1);
+    expect(fake.executedScripts).toEqual([
+      { tabId: 42, files: ["content-scripts/content.js"] },
+    ]);
   });
 });
 

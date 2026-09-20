@@ -118,8 +118,10 @@ export const AgentRunPanel = ({ tabId }: AgentRunPanelProps) => {
     if (error) sound.play("agentFailed");
   };
 
-  const submitAnswerValue = async (value: string | FileReference) => {
-    if (tabId === undefined) return;
+  const submitAnswerValue = async (
+    value: string | FileReference,
+  ): Promise<boolean> => {
+    if (tabId === undefined) return false;
     setBusy(true);
     sound.startLoop("agent-run", "agentBusy");
     try {
@@ -134,9 +136,11 @@ export const AgentRunPanel = ({ tabId }: AgentRunPanelProps) => {
       sound.stopLoop("agent-run");
       sound.play(result.ok ? "agentAnswerSent" : "agentFailed");
       playRunStateCue(result.view);
+      return result.ok;
     } catch {
       sound.stopLoop("agent-run");
       sound.play("agentFailed");
+      return false;
     } finally {
       sound.stopLoop("agent-run");
       setBusy(false);
@@ -164,13 +168,15 @@ export const AgentRunPanel = ({ tabId }: AgentRunPanelProps) => {
     try {
       const store = await createIndexedDbFileReferenceStore();
       const ref = await store.save(file);
-      await submitAnswerValue(ref);
+      const submitted = await submitAnswerValue(ref);
+      if (!submitted) await store.delete(ref.id);
     } catch {
       sound.stopLoop("agent-run");
       sound.play("agentFailed");
       setFileError("Could not save that file.");
     } finally {
       sound.stopLoop("agent-run");
+      setBusy(false);
     }
   };
 

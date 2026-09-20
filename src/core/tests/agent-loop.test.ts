@@ -159,27 +159,21 @@ const buildPorts = (page: FakePage, policy: PolicyEngine): LoopPorts => {
   tools.register(inspectFormTool(page));
   tools.register(fillFieldTool(page));
   tools.register(uploadFileTool(page));
+  const memory = createInMemoryMemoryStore();
 
   return {
     tools,
     policy,
-    memory: createInMemoryMemoryStore(),
+    memory,
+    userMemory: memory,
     ontology,
     verifier: fakeVerifier(page),
     files: {
-      prepareForUpload: async (ref) => ({
-        ok: true,
-        upload: {
-          ref,
-          payload: {
-            name: ref.name,
-            mimeType: ref.mimeType,
-            sizeBytes: ref.sizeBytes,
-          },
-          transformed: false,
-          originalSizeBytes: ref.sizeBytes,
-        },
-      }),
+      prepareForUpload: async () => {
+        throw new Error(
+          "The loop should delegate file preparation to the tool.",
+        );
+      },
     },
     profileId: DEFAULT_PROFILE_ID,
     clock: fakeClock(),
@@ -198,7 +192,7 @@ describe("loop: a known field policy allows automatically", () => {
   it("fills it with no pause", async () => {
     const page: FakePage = { fields: [EMAIL_FIELD], values: {} };
     const ports = buildPorts(page, alwaysAllow);
-    await recordAnswer(ports.memory, {
+    await recordAnswer(ports.userMemory, {
       profileId: DEFAULT_PROFILE_ID,
       key: "contact.email",
       value: "ananya@example.com",
@@ -212,10 +206,41 @@ describe("loop: a known field policy allows automatically", () => {
     expect(snapshot.run.state.status).toBe(AgentStatus.COMPLETED);
     expect(page.values.f1).toBe("ananya@example.com");
   });
+
+  it("writes a closed-vocabulary field's page option value, not the raw stored text", async () => {
+    const page: FakePage = {
+      fields: [
+        makeField({
+          id: "nationality",
+          kind: "select",
+          label: "Nationality",
+          options: [
+            { value: "IN", label: "India" },
+            { value: "US", label: "United States" },
+          ],
+        }),
+      ],
+      values: {},
+    };
+    const ports = buildPorts(page, alwaysAllow);
+    await recordAnswer(ports.userMemory, {
+      profileId: DEFAULT_PROFILE_ID,
+      key: "identity.nationality",
+      value: "Indian",
+      source: MemorySource.USER_PROVIDED,
+      now: ports.clock(),
+    });
+
+    let snapshot = createRun(ports, "https://example.com", 1);
+    snapshot = await drive(snapshot, ports);
+
+    expect(snapshot.run.state.status).toBe(AgentStatus.COMPLETED);
+    expect(page.values.nationality).toBe("IN");
+  });
 });
 
 describe("loop: file references use the generic compliance/upload adapters", () => {
-  it("prepares a compliant copy and uploads by file metadata, leaving the reference untouched", async () => {
+  it("uploads the original reference and lets the upload tool prepare it once", async () => {
     const resumeRef: FileReference = {
       kind: "file_ref",
       id: "resume-1",
@@ -224,7 +249,6 @@ describe("loop: file references use the generic compliance/upload adapters", () 
       sizeBytes: 2048,
       createdAt: "2026-01-01T00:00:00.000Z",
     };
-    const seenConstraints: unknown[] = [];
     const page: FakePage = {
       fields: [
         makeField({
@@ -240,44 +264,19 @@ describe("loop: file references use the generic compliance/upload adapters", () 
       values: {},
     };
     const ports = buildPorts(page, alwaysAllow);
-    const customPorts: LoopPorts = {
-      ...ports,
-      files: {
-        prepareForUpload: async (ref, constraints) => {
-          seenConstraints.push(...constraints);
-          return {
-            ok: true,
-            upload: {
-              ref,
-              payload: {
-                name: ref.name,
-                mimeType: ref.mimeType,
-                sizeBytes: 512,
-              },
-              transformed: true,
-              originalSizeBytes: ref.sizeBytes,
-            },
-          };
-        },
-      },
-    };
-    await recordAnswer(customPorts.memory, {
+    await recordAnswer(ports.userMemory, {
       profileId: DEFAULT_PROFILE_ID,
       key: "documents.resume",
       value: resumeRef,
       source: MemorySource.USER_PROVIDED,
-      now: customPorts.clock(),
+      now: ports.clock(),
     });
 
-    let snapshot = createRun(customPorts, "https://example.com", 1);
-    snapshot = await drive(snapshot, customPorts);
+    let snapshot = createRun(ports, "https://example.com", 1);
+    snapshot = await drive(snapshot, ports);
 
     expect(snapshot.run.state.status).toBe(AgentStatus.COMPLETED);
     expect(page.values.resume).toBe("resume.pdf");
-    expect(seenConstraints).toContainEqual({
-      kind: "maxFileSizeBytes",
-      value: 1024,
-    });
     expect(resumeRef.sizeBytes).toBe(2048);
   });
 });
@@ -303,10 +302,12 @@ describe("loop: a fill_field tool call that succeeds but writes nothing", () => 
       execute: async () => ({ ok: false }),
     });
 
+    const memory = createInMemoryMemoryStore();
     const ports: LoopPorts = {
       tools,
       policy: alwaysAllow,
-      memory: createInMemoryMemoryStore(),
+      memory,
+      userMemory: memory,
       ontology,
       verifier: fakeVerifier(page),
       profileId: DEFAULT_PROFILE_ID,
@@ -314,7 +315,7 @@ describe("loop: a fill_field tool call that succeeds but writes nothing", () => 
       generateId: fakeIdGen(),
       logger: nullLogger,
     };
-    await recordAnswer(ports.memory, {
+    await recordAnswer(ports.userMemory, {
       profileId: DEFAULT_PROFILE_ID,
       key: "contact.email",
       value: "ananya@example.com",
@@ -346,7 +347,7 @@ describe("loop: the request_review round trip (defaultPolicy)", () => {
   const setup = async () => {
     const page: FakePage = { fields: [EMAIL_FIELD], values: {} };
     const ports = buildPorts(page, defaultPolicy);
-    await recordAnswer(ports.memory, {
+    await recordAnswer(ports.userMemory, {
       profileId: DEFAULT_PROFILE_ID,
       key: "contact.email",
       value: "ananya@example.com",
@@ -383,7 +384,7 @@ describe("loop: the request_review round trip (defaultPolicy)", () => {
       ...buildPorts(page, defaultPolicy),
       clock: () => "2026-01-01T00:00:00.000Z",
     };
-    await recordAnswer(ports.memory, {
+    await recordAnswer(ports.userMemory, {
       profileId: DEFAULT_PROFILE_ID,
       key: "employment.current.company",
       value: "Kirloskar Systems",
@@ -528,7 +529,7 @@ describe("loop: re-observation and FORM_CHANGED", () => {
   it("picks up a field that appears only after the action, without repeating the same write", async () => {
     const page: FakePage = { fields: [EMAIL_FIELD], values: {} };
     const ports = buildPorts(page, alwaysAllow);
-    await recordAnswer(ports.memory, {
+    await recordAnswer(ports.userMemory, {
       profileId: DEFAULT_PROFILE_ID,
       key: "contact.email",
       value: "ananya@example.com",
@@ -572,7 +573,7 @@ describe("loop: resumability — the run round-trips through JSON at every step"
   it("keeps AgentRun JSON-serialisable after every transition", async () => {
     const page: FakePage = { fields: [EMAIL_FIELD], values: {} };
     const ports = buildPorts(page, alwaysAllow);
-    await recordAnswer(ports.memory, {
+    await recordAnswer(ports.userMemory, {
       profileId: DEFAULT_PROFILE_ID,
       key: "contact.email",
       value: "ananya@example.com",

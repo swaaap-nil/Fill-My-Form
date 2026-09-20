@@ -102,6 +102,18 @@
     "aliases": {
       "en": ["nationality", "citizenship", "indian national"],
       "hi": ["राष्ट्रीयता", "नागरिकता"]
+    },
+    "valueAliases": {
+      "indian": "india",
+      "american": "united states",
+      "british": "united kingdom",
+      "pakistani": "pakistan",
+      "bangladeshi": "bangladesh",
+      "nepali": "nepal",
+      "sri lankan": "sri lanka",
+      "chinese": "china",
+      "australian": "australia",
+      "canadian": "canada"
     }
   },
   {
@@ -236,8 +248,16 @@
       "en": [
         "disability status",
         "do you have a disability",
+        "person with disability",
+        "pwd",
         "voluntary self-identification of disability"
       ]
+    },
+    "valueAliases": {
+      "true": "yes",
+      "false": "no",
+      "disabled": "yes",
+      "not disabled": "no"
     }
   },
   {

@@ -27,12 +27,12 @@ contracts, most of which have no implementation.
 | `src/core/policy/default.ts` | **Works.** Default-deny; submission denied unconditionally. |
 | `src/core/logging.ts`, `errors.ts` | **Works.** `LogFields` is a closed allowlist with no index signature. |
 | `src/lib/site-access.ts` | **Works (Phase 1c).** DI'd (`createSiteAccess(browser)`), unit-tested against a fake, reachable from the side panel's "Grant access" button. Covers spike 2's open-tab injection gap via a direct `executeScript`. |
-| `src/core/memory/` | **Works (Phase 1c), in-memory only.** `in-memory.ts` implements the real interface (profile-qualified keys, `schemaVersion`), `write-service.ts` is the only write path, `tools.ts` exposes two read-only tools. Lives in the background worker. No IndexedDB backend yet. |
-| `src/core/fill/`, `src/core/messaging/` | **Works (Phase 1c).** `planFill`/`confirmDecision` (straight-line, no agent loop yet) and the `decisionId`-gated fill-instruction schema. |
+| `src/core/memory/` | **Works (Phase 1c).** `in-memory.ts` and IndexedDB implement the real interface (profile-qualified keys, `schemaVersion`), `write-service.ts` owns user-answer writes, imports restore validated local exports, `tools.ts` exposes two read-only tools. Lives in the background worker. |
+| `src/core/fill/`, `src/core/messaging/` | **Works (Phase 1c).** `planFill`/`confirmDecision` (straight-line flow), tab-bound pending decisions in the background, and DOM-write payload validation in the content script. |
 | `src/core/agent/types.ts` | Types, `PHASE_TRANSITIONS`, `canTransition`. **No reducer, no loop.** |
 | `src/core/verification/types.ts` | Types only. **No `Verifier`.** |
 | `src/app/sidepanel`, `options` | **Sidepanel works (Phase 1c):** onboarding form (ontology-driven) and the fill panel (grant/scan/confirm), stacked behind two toggle buttons — no tab primitive exists yet. `options` still renders `<Layout />` only. |
-| `src/app/content/index.tsx` | **Works (Phase 1c).** `extractFullForm` and `fillField` message handlers, on top of the existing badge UI. Fill technique: native-setter + event, for text-like inputs/textarea/select only — radio/checkbox groups and ARIA widgets are not filled yet (Phase 2). |
+| `src/app/content/index.tsx` | **Works (Phase 1c).** `extractFullForm` and `fillField` message handlers, on top of the existing badge UI. Fill technique: native-setter + event, for text-like inputs/textarea/select/native radio/checkbox groups (`~/core/matching/resolve-option` resolves a stored value to the field's own option first). ARIA widgets whose options only exist in the DOM after an interaction (`controlled.html`'s combobox) are still not filled (Phase 2). |
 | `src/components/ui/` | shadcn-style primitives (button, card, input, form, …). Compose from these. No select/radio/checkbox/tabs primitive yet — onboarding and the fill panel work around this (see the phase 1c handback). |
 | `scripts/check-release-manifest.ts` | **Works,** wired into CI, with its own tests. Phase 0 built it. |
 

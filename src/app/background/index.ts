@@ -15,13 +15,19 @@ import {
 } from "~/core/agent/loop";
 import { Certainty, isTerminal } from "~/core/agent/types";
 import { confirmDecision, planFill } from "~/core/fill/driver";
-import type { DecisionId, PendingDecision } from "~/core/fill/types";
+import { PendingDecisionRegistry } from "~/core/fill/pending-decisions";
 import { FieldKind } from "~/core/form/types";
-import { createLogger } from "~/core/logging";
+import { createLogger, LogErrorCode } from "~/core/logging";
 import { resolve } from "~/core/matching/resolve";
 import { deriveFreshnessHorizon } from "~/core/memory/freshness";
 import { bundledFreshnessDurationPolicy } from "~/core/memory/freshness-policy";
-import { DEFAULT_PROFILE_ID, MemorySource } from "~/core/memory/types";
+import type { MemoryStore } from "~/core/memory/store";
+import {
+  DEFAULT_PROFILE_ID,
+  isFileReference,
+  MemorySource,
+  type MemoryValue,
+} from "~/core/memory/types";
 import { recordAnswer } from "~/core/memory/write-service";
 import { ontology } from "~/core/ontology";
 import { defaultPolicy } from "~/core/policy/default";
@@ -30,6 +36,7 @@ import { createToolRegistry } from "~/core/tools/registry";
 import { CapabilityDomain } from "~/core/tools/types";
 import type { Verifier } from "~/core/verification/types";
 import {
+  clearAllRunSnapshots,
   clearRunSnapshot,
   loadRunSnapshot,
   saveRunSnapshot,
@@ -71,9 +78,67 @@ const getLocalDataStore = (): Promise<PersistentLocalDataStore> => {
 
 let fileStore: Promise<FileReferenceStore> | undefined;
 const getFileStore = (): Promise<FileReferenceStore> => {
-  fileStore ??= createIndexedDbFileReferenceStore();
+  fileStore ??= createIndexedDbFileReferenceStore().then(async (store) => {
+    await store.purgeExpired();
+    return store;
+  });
   return fileStore;
 };
+
+const collectFileReferenceIds = (
+  value: MemoryValue | undefined,
+  ids = new Set<string>(),
+): Set<string> => {
+  if (isFileReference(value)) {
+    ids.add(value.id);
+    return ids;
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) return ids;
+  for (const nested of Object.values(value))
+    collectFileReferenceIds(nested, ids);
+  return ids;
+};
+
+const deleteFileReferences = async (ids: Iterable<string>): Promise<void> => {
+  const unique = [...new Set(ids)];
+  if (!unique.length) return;
+  const store = await getFileStore();
+  await Promise.all(unique.map((id) => store.delete(id)));
+};
+
+const deletedFileReferenceIds = (
+  previous: MemoryValue | undefined,
+  next?: MemoryValue,
+): string[] => {
+  const nextIds = collectFileReferenceIds(next);
+  return [...collectFileReferenceIds(previous)].filter(
+    (id) => !nextIds.has(id),
+  );
+};
+
+const withFileReferenceCleanup = <T extends MemoryStore>(store: T): T =>
+  ({
+    ...store,
+    async set(item) {
+      const existing = await store.get(item.profileId, item.key);
+      await store.set(item);
+      await deleteFileReferences(
+        deletedFileReferenceIds(existing?.value, item.value),
+      );
+    },
+    async update(profileId, key, value) {
+      const existing = await store.get(profileId, key);
+      await store.update(profileId, key, value);
+      await deleteFileReferences(
+        deletedFileReferenceIds(existing?.value, value),
+      );
+    },
+    async delete(profileId, key) {
+      const existing = await store.get(profileId, key);
+      await store.delete(profileId, key);
+      await deleteFileReferences(deletedFileReferenceIds(existing?.value));
+    },
+  }) as T;
 
 const bytesOf = async (blob: Blob): Promise<number[]> =>
   Array.from(new Uint8Array(await blob.arrayBuffer()));
@@ -95,12 +160,13 @@ const stageUpload = async (file: {
 };
 
 /**
- * decisionId -> what `planFill` decided about one field. Cleared per id
- * once acted on, so a decisionId cannot be replayed. Lives only as long as
- * the service worker does — a run that outlives a worker restart is
- * Phase 2's problem, not this straight-line driver's.
+ * decisionId -> what `planFill` decided about one field, scoped to the tab
+ * whose DOM was extracted. Cleared per id once acted on, and pruned by age,
+ * so a decisionId cannot be replayed against a later tab or page state.
+ * Lives only as long as the service worker does — a run that outlives a
+ * worker restart is Phase 2's problem, not this straight-line driver's.
  */
-const pendingDecisions = new Map<DecisionId, PendingDecision>();
+const pendingDecisions = new PendingDecisionRegistry();
 
 /**
  * The Phase 2 agent loop's `LoopPorts`, for one tab. Both browser tools are
@@ -112,7 +178,7 @@ const pendingDecisions = new Map<DecisionId, PendingDecision>();
  * for the straight-line flow above.
  */
 const buildLoopPorts = async (tabId: number): Promise<LoopPorts> => {
-  const memoryStore = await getLocalDataStore();
+  const memoryStore = withFileReferenceCleanup(await getLocalDataStore());
   const files = createBrowserFileComplianceAdapter(await getFileStore());
   const tools = createToolRegistry();
 
@@ -170,15 +236,21 @@ const buildLoopPorts = async (tabId: number): Promise<LoopPorts> => {
         input.constraints as Parameters<typeof files.prepareLocalFile>[1],
       );
       if (!prepared) return { ok: false };
-      return sendMessage(
-        "uploadFile",
-        {
-          decisionId: crypto.randomUUID(),
-          fieldId: input.fieldId,
-          uploadId: await stageUpload(prepared),
-        },
-        tabId,
-      );
+      try {
+        return await sendMessage(
+          "uploadFile",
+          {
+            decisionId: crypto.randomUUID(),
+            fieldId: input.fieldId,
+            uploadId: await stageUpload(prepared),
+          },
+          tabId,
+        );
+      } finally {
+        if (prepared.temporaryRef) {
+          await files.cleanupPreparedFile(prepared.temporaryRef);
+        }
+      }
     },
   });
 
@@ -195,6 +267,7 @@ const buildLoopPorts = async (tabId: number): Promise<LoopPorts> => {
     tools,
     policy: defaultPolicy,
     memory: memoryStore,
+    userMemory: memoryStore,
     journal: memoryStore,
     files,
     ontology,
@@ -259,10 +332,10 @@ const driveAndPersist = async (
 
 const main = () => {
   browser.storage.session
-    .setAccessLevel?.({ accessLevel: "TRUSTED_AND_UNTRUSTED_CONTEXTS" })
-    .catch((error: unknown) =>
-      logger.warn("could not expose session storage to content scripts", {
-        errorCode: String(error),
+    .setAccessLevel?.({ accessLevel: "TRUSTED_CONTEXTS" })
+    .catch(() =>
+      logger.warn("could not restrict session storage to extension contexts", {
+        errorCode: LogErrorCode.EXTENSION_API,
       }),
     );
 
@@ -279,11 +352,11 @@ const main = () => {
     const memoryStore = await getLocalDataStore();
     const tab = await browser.tabs.get(data.tabId);
     if (!tab.url) {
-      return { granted: false, proposals: [] };
+      return { granted: false, proposals: [], uploadIntents: [] };
     }
 
     const granted = await siteAccess.hasSiteAccess(tab.url);
-    if (!granted) return { granted: false, proposals: [] };
+    if (!granted) return { granted: false, proposals: [], uploadIntents: [] };
 
     const { forms } = await sendMessage(
       "extractFullForm",
@@ -291,6 +364,7 @@ const main = () => {
       data.tabId,
     );
     const fields = forms.flatMap((form) => form.fields);
+    const uploadIntents = forms.flatMap((form) => form.uploadIntents ?? []);
     const origin = new URL(tab.url).origin;
 
     const { proposals, decisions } = await planFill(
@@ -335,20 +409,20 @@ const main = () => {
     }
 
     for (const [decisionId, decision] of decisions) {
-      pendingDecisions.set(decisionId, decision);
+      pendingDecisions.remember(decisionId, data.tabId, decision);
     }
 
-    return { granted: true, proposals };
+    return { granted: true, proposals, uploadIntents };
   });
 
   onMessage("confirmFill", async ({ data }) => {
-    const memoryStore = await getLocalDataStore();
+    const memoryStore = withFileReferenceCleanup(await getLocalDataStore());
     const files = createBrowserFileComplianceAdapter(await getFileStore());
     const tabId = data.tabId;
 
     const results = await Promise.all(
       data.decisionIds.map(async (decisionId) => {
-        const decision = pendingDecisions.get(decisionId);
+        const decision = pendingDecisions.take(decisionId, tabId);
         if (!decision) return { decisionId, ok: false };
 
         const outcome = confirmDecision(decision, defaultPolicy);
@@ -361,16 +435,22 @@ const main = () => {
             decision.constraints ?? [],
           );
           if (prepared) {
-            const result = await sendMessage(
-              "uploadFile",
-              {
-                decisionId,
-                fieldId: outcome.fieldId,
-                uploadId: await stageUpload(prepared),
-              },
-              tabId,
-            );
-            ok = result.ok;
+            try {
+              const result = await sendMessage(
+                "uploadFile",
+                {
+                  decisionId,
+                  fieldId: outcome.fieldId,
+                  uploadId: await stageUpload(prepared),
+                },
+                tabId,
+              );
+              ok = result.ok;
+            } finally {
+              if (prepared.temporaryRef) {
+                await files.cleanupPreparedFile(prepared.temporaryRef);
+              }
+            }
           }
         } else {
           const result = await sendMessage(
@@ -388,10 +468,18 @@ const main = () => {
         if (ok) {
           const concept = ontology.byKey(decision.conceptKey);
           const confirmedAt = new Date().toISOString();
+          // A select/radio field's payload carries the page's own option
+          // value (an opaque code, sometimes) — never what memory should
+          // remember. `memoryValue` is the canonical text for that case;
+          // every other decision leaves it unset and falls back to the
+          // payload, unchanged from before this existed.
+          const textMemoryValue =
+            outcome.memoryValue ??
+            (outcome.payload.kind === "text" ? outcome.payload.value : "");
           const horizon = concept
             ? deriveFreshnessHorizon(
                 concept,
-                outcome.payload.kind === "text" ? outcome.payload.value : "",
+                textMemoryValue,
                 confirmedAt,
                 bundledFreshnessDurationPolicy,
               )
@@ -401,7 +489,7 @@ const main = () => {
             key: decision.conceptKey,
             value:
               outcome.payload.kind === "text"
-                ? outcome.payload.value
+                ? textMemoryValue
                 : outcome.payload.ref,
             source: MemorySource.USER_CONFIRMED,
             now: confirmedAt,
@@ -410,20 +498,16 @@ const main = () => {
           });
         }
 
-        // Consumed either way: a decisionId is single-use, so it cannot be
-        // replayed against a later, different page state.
-        pendingDecisions.delete(decisionId);
         return { decisionId, ok };
       }),
     );
 
     const filledCount = results.filter((result) => result.ok).length;
     if (filledCount > 0) {
-      await sendMessage("showFillFeedback", { filledCount }, tabId).catch(
-        (error: unknown) =>
-          logger.warn("could not show fill feedback", {
-            errorCode: String(error),
-          }),
+      await sendMessage("showFillFeedback", { filledCount }, tabId).catch(() =>
+        logger.warn("could not show fill feedback", {
+          errorCode: LogErrorCode.EXTENSION_API,
+        }),
       );
     }
 
@@ -431,17 +515,16 @@ const main = () => {
   });
 
   onMessage("recordOnboardingAnswer", async ({ data }) => {
-    const memoryStore = await getLocalDataStore();
+    const memoryStore = withFileReferenceCleanup(await getLocalDataStore());
     const concept = ontology.byKey(data.key);
+    if (!concept) return { ok: false };
     const savedAt = new Date().toISOString();
-    const horizon = concept
-      ? deriveFreshnessHorizon(
-          concept,
-          data.value,
-          savedAt,
-          bundledFreshnessDurationPolicy,
-        )
-      : undefined;
+    const horizon = deriveFreshnessHorizon(
+      concept,
+      data.value,
+      savedAt,
+      bundledFreshnessDurationPolicy,
+    );
     await recordAnswer(memoryStore, {
       profileId: DEFAULT_PROFILE_ID,
       key: data.key,
@@ -452,6 +535,14 @@ const main = () => {
       expiresAt: horizon?.expiresAt,
       freshnessRule: horizon?.freshnessRule,
     });
+    return { ok: true };
+  });
+
+  onMessage("deleteOnboardingAnswer", async ({ data }) => {
+    await withFileReferenceCleanup(await getLocalDataStore()).delete(
+      DEFAULT_PROFILE_ID,
+      data.key,
+    );
     return { ok: true };
   });
 
@@ -467,12 +558,17 @@ const main = () => {
 
   onMessage("importLocalData", async ({ data }) => {
     if (!isLocalDataExport(data.payload)) return { ok: false };
+    if (data.payload.memory.some((item) => !ontology.byKey(item.key))) {
+      return { ok: false };
+    }
     await (await getLocalDataStore()).importLocalData(data.payload);
     return { ok: true };
   });
 
   onMessage("wipeLocalData", async () => {
     await (await getLocalDataStore()).wipeLocalData();
+    await (await getFileStore()).clear();
+    await clearAllRunSnapshots();
     pendingDecisions.clear();
     return { ok: true };
   });

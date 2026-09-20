@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { deflateSync } from "node:zlib";
-import type { Page } from "@playwright/test";
+import type { BrowserContext, Page } from "@playwright/test";
 import { expect, test } from "./fill-fixtures";
 import {
   grantAccess,
@@ -91,6 +91,18 @@ const answerForQuestion = (question: string): string => {
   if (question.includes("College")) return "Example College";
   if (question.includes("Last name")) return "Rao";
   return "Ananya";
+};
+
+/**
+ * The editor runs in its own extension window. Match it by URL rather than
+ * taking the next `page` event: the popup is not necessarily the only page the
+ * context opens, and a mis-matched one fails far from the cause.
+ */
+const waitForEditorPage = async (context: BrowserContext): Promise<Page> => {
+  const isEditor = (page: Page) => page.url().includes("editor.html");
+  const existing = context.pages().find(isEditor);
+  if (existing) return existing;
+  return context.waitForEvent("page", { predicate: isEditor });
 };
 
 const advanceAgentToFileQuestion = async (panelPage: Page) => {
@@ -233,4 +245,243 @@ test("files: an oversized photo is transformed before upload", async ({
   expect(uploaded?.name).toBe("photo.jpg");
   expect(uploaded?.type).toBe("image/jpeg");
   expect(uploaded?.size).toBeLessThanOrEqual(8000);
+});
+
+test("files: standalone preparation tool creates a temporary image copy", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const photoPath = testInfo.outputPath("standalone-photo.png");
+  await writeFixture(photoPath, png(160, 120));
+
+  const panelPage = await openPanel(context, extensionId);
+  await panelPage.getByRole("button", { name: "Prepare file" }).click();
+  await panelPage.locator('input[type="file"]').setInputFiles(photoPath);
+  await expect(panelPage.getByText("standalone-photo.png")).toBeVisible();
+
+  await panelPage
+    .getByRole("button", { name: "Prepare temporary copy" })
+    .click();
+  await expect(panelPage.getByText("Ready to upload")).toBeVisible();
+  await expect(
+    panelPage.getByText("Drag this file to your form"),
+  ).toBeVisible();
+  await expect(
+    panelPage.getByTestId("prepared-file-drag-surface"),
+  ).toHaveAttribute("draggable", "true");
+  await expect(
+    panelPage.getByRole("link", { name: "Download prepared copy" }),
+  ).toBeVisible();
+});
+
+test("files: standalone preparation tool can use a saved onboarding document", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const photoPath = testInfo.outputPath("saved-photo.png");
+  await writeFixture(photoPath, png(180, 140));
+
+  const panelPage = await openPanel(context, extensionId);
+  await seedFile(panelPage, "Photograph", photoPath);
+
+  await panelPage.getByRole("button", { name: "Prepare file" }).click();
+  await expect(
+    panelPage.getByRole("combobox", { name: "Pick a saved file" }),
+  ).toBeVisible();
+
+  await panelPage.getByRole("combobox", { name: "Pick a saved file" }).click();
+  await panelPage
+    .getByRole("option", { name: /Photograph.*saved-photo\.png/ })
+    .click();
+  await panelPage.getByRole("button", { name: "Use this" }).click();
+  await expect(panelPage.getByText("saved-photo.png")).toBeVisible();
+
+  await panelPage
+    .getByRole("button", { name: "Prepare temporary copy" })
+    .click();
+  await expect(panelPage.getByText("Ready to upload")).toBeVisible();
+  await expect(
+    panelPage.getByTestId("prepared-file-drag-surface"),
+  ).toHaveAttribute("draggable", "true");
+});
+
+test("files: unsupported saved onboarding documents are shown but disabled", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const signaturePath = testInfo.outputPath("signature.txt");
+  await writeFixture(signaturePath, new TextEncoder().encode("signature"));
+
+  const panelPage = await openPanel(context, extensionId);
+  await seedFile(panelPage, "Signature", signaturePath);
+
+  await panelPage.getByRole("button", { name: "Prepare file" }).click();
+  await panelPage.getByRole("combobox", { name: "Pick a saved file" }).click();
+  await expect(
+    panelPage.getByRole("option", {
+      name: /Signature.*signature\.txt.*unsupported/,
+    }),
+  ).toBeDisabled();
+  await expect(
+    panelPage.getByText("Images and PDFs can be prepared here."),
+  ).toBeVisible();
+  await expect(
+    panelPage.getByRole("button", { name: "Use this" }),
+  ).toBeDisabled();
+});
+
+test("files: physical units and a size limit in MB reach the prepared copy", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const photoPath = testInfo.outputPath("units-photo.png");
+  await writeFixture(photoPath, png(640, 480));
+
+  const panelPage = await openPanel(context, extensionId);
+  await panelPage.getByRole("button", { name: "Prepare file" }).click();
+  await panelPage.locator('input[type="file"]').setInputFiles(photoPath);
+  await expect(panelPage.getByText("units-photo.png")).toBeVisible();
+
+  // A preset states its requirement in the unit the paperwork uses. The
+  // conversion to pixels is the thing worth pinning: it only works because a
+  // DPI is carried alongside the millimetres.
+  await panelPage.getByRole("combobox", { name: "Preset" }).click();
+  await panelPage.getByRole("option", { name: "Passport / ID photo" }).click();
+  await expect(
+    panelPage.getByText("35 × 45 mm at 300 DPI = 413 × 531 px"),
+  ).toBeVisible();
+
+  // The limit is expressible in MB, which the old KB-only field could not do.
+  await panelPage.getByLabel("Max file size").fill("2");
+  await panelPage.getByRole("combobox").nth(3).click();
+  await panelPage.getByRole("option", { name: "MB", exact: true }).click();
+
+  await panelPage
+    .getByRole("button", { name: "Prepare temporary copy" })
+    .click();
+  await expect(panelPage.getByText("Ready to upload")).toBeVisible();
+  await expect(
+    panelPage.getByText("Drag this passport / id photo to your form"),
+  ).toBeVisible();
+  await expect(panelPage.getByText("413 × 531px")).toBeVisible();
+});
+
+test("files: the aspect lock derives the other dimension", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const photoPath = testInfo.outputPath("lock-photo.png");
+  await writeFixture(photoPath, png(640, 480));
+
+  const panelPage = await openPanel(context, extensionId);
+  await panelPage.getByRole("button", { name: "Prepare file" }).click();
+  await panelPage.locator('input[type="file"]').setInputFiles(photoPath);
+  await expect(panelPage.getByText("lock-photo.png")).toBeVisible();
+
+  await panelPage.getByRole("checkbox", { name: "Lock aspect ratio" }).click();
+  await panelPage.getByRole("textbox", { name: "Aspect ratio" }).fill("4:5");
+  await panelPage.getByLabel("Width", { exact: true }).fill("400");
+
+  // Typing one side fills the other. Without the lock the export would keep
+  // the source's own height and silently stretch the image.
+  await expect(panelPage.getByLabel("Height", { exact: true })).toHaveValue(
+    "500",
+  );
+});
+
+test("files: the editor window opens and its crop cannot leave the image", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const photoPath = testInfo.outputPath("editor-photo.png");
+  await writeFixture(photoPath, png(640, 480));
+
+  const panelPage = await openPanel(context, extensionId);
+  await panelPage.getByRole("button", { name: "Prepare file" }).click();
+  await panelPage.locator('input[type="file"]').setInputFiles(photoPath);
+  await expect(panelPage.getByText("editor-photo.png")).toBeVisible();
+
+  await panelPage.getByRole("button", { name: "Edit image" }).click();
+  const editorPage = await waitForEditorPage(context);
+  await editorPage.waitForLoadState("domcontentloaded");
+
+  await expect(editorPage.getByTestId("editor-root")).toBeVisible();
+  await expect(
+    editorPage.getByRole("button", { name: "Apply crop" }),
+  ).toBeVisible();
+
+  const stage = editorPage.locator("cropper-canvas");
+  await expect(stage).toBeVisible();
+
+  // The regression test for the reported bug. Drag the selection hard past the
+  // top-left of the picture; it must stay inside it. Before the clamp, the box
+  // could be pulled off the image and the export gained blank strips.
+  const box = await stage.boundingBox();
+  if (!box) throw new Error("The crop stage did not render.");
+  await editorPage.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await editorPage.mouse.down();
+  await editorPage.mouse.move(box.x - 600, box.y - 600, { steps: 12 });
+  await editorPage.mouse.up();
+
+  const containment = await editorPage.evaluate(() => {
+    const image = document.querySelector("cropper-image");
+    const selection = document.querySelector("cropper-selection");
+    if (!image || !selection) return undefined;
+    const imageRect = image.getBoundingClientRect();
+    const selectionRect = selection.getBoundingClientRect();
+    return {
+      left: selectionRect.left - imageRect.left,
+      top: selectionRect.top - imageRect.top,
+      right: imageRect.right - selectionRect.right,
+      bottom: imageRect.bottom - selectionRect.bottom,
+    };
+  });
+  if (!containment) throw new Error("The cropper elements did not render.");
+
+  // A pixel of slack for sub-pixel layout rounding.
+  expect(containment.left).toBeGreaterThan(-1);
+  expect(containment.top).toBeGreaterThan(-1);
+  expect(containment.right).toBeGreaterThan(-1);
+  expect(containment.bottom).toBeGreaterThan(-1);
+
+  await editorPage.getByRole("button", { name: "Apply crop" }).click();
+  await expect(panelPage.getByText("Using cropped image")).toBeVisible();
+  await expect(panelPage.getByTestId("prepared-file-drag-surface")).toHaveCount(
+    0,
+  );
+
+  // Re-prepare at a form-required size must resize the editor crop, not re-slice
+  // the original using canvas-space crop coordinates (NW-corner regression).
+  await panelPage.getByLabel("Width", { exact: true }).fill("100");
+  await panelPage.getByLabel("Height", { exact: true }).fill("120");
+  await panelPage
+    .getByRole("button", { name: "Prepare temporary copy" })
+    .click();
+  await expect(
+    panelPage.getByTestId("prepared-file-drag-surface"),
+  ).toBeVisible();
+  await expect(panelPage.getByText("100 x 120 px")).toBeVisible();
+});
+
+test("files: cancelling the editor leaves the panel untouched", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const photoPath = testInfo.outputPath("cancel-photo.png");
+  await writeFixture(photoPath, png(320, 240));
+
+  const panelPage = await openPanel(context, extensionId);
+  await panelPage.getByRole("button", { name: "Prepare file" }).click();
+  await panelPage.locator('input[type="file"]').setInputFiles(photoPath);
+  await expect(panelPage.getByText("cancel-photo.png")).toBeVisible();
+
+  await panelPage.getByRole("button", { name: "Edit image" }).click();
+  const editorPage = await waitForEditorPage(context);
+  await editorPage.waitForLoadState("domcontentloaded");
+  await editorPage.getByRole("button", { name: "Cancel" }).click();
+
+  await expect(panelPage.getByText("Ready to upload")).toHaveCount(0);
+  await expect(
+    panelPage.getByRole("button", { name: "Prepare temporary copy" }),
+  ).toBeVisible();
 });

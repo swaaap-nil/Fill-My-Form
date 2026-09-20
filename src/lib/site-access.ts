@@ -19,6 +19,15 @@ import { browser as realBrowser } from "wxt/browser";
 
 /** The slice of the WebExtension `browser` API this module needs. Nothing more. */
 export interface SiteAccessBrowser {
+  readonly chromePermissions?: {
+    request(
+      query: { origins: string[] },
+      callback: (granted: boolean) => void,
+    ): void;
+  };
+  readonly chromeRuntime?: {
+    readonly lastError?: { readonly message?: string };
+  };
   readonly permissions: {
     contains(query: { origins: string[] }): Promise<boolean>;
     request(query: { origins: string[] }): Promise<boolean>;
@@ -54,31 +63,34 @@ const CONTENT_SCRIPT_CSS = ["content-scripts/content.css"];
 export const toOriginPattern = (url: string): string =>
   `${new URL(url).origin}/*`;
 
+/**
+ * Match patterns (and thus `permissions.contains`/`request`) only accept
+ * http/https/file/ftp schemes. Tabs showing the extension's own pages,
+ * `chrome://`, `about:`, etc. fail `new URL(url).protocol` checks silently
+ * in some browsers and log an "Invalid scheme" console error in others —
+ * treat them as never having site access rather than querying for one.
+ */
+const isPermissibleUrl = (url: string): boolean => {
+  try {
+    return /^https?:$/.test(new URL(url).protocol);
+  } catch {
+    return false;
+  }
+};
+
 const scriptIdFor = (origin: string) =>
   `${CONTENT_SCRIPT_ID}:${origin.replace(/[^a-zA-Z0-9]/g, "_")}`;
-
-type ChromePermissionsRequest = (
-  query: { origins: string[] },
-  callback: (granted: boolean) => void,
-) => void;
 
 const requestOriginsFromGesture = (
   browser: SiteAccessBrowser,
   origins: string[],
 ): Promise<boolean> => {
-  const chromeLike = globalThis as typeof globalThis & {
-    chrome?: {
-      runtime?: { lastError?: { message?: string } };
-      permissions?: { request?: ChromePermissionsRequest };
-    };
-  };
-  const chromePermissions = chromeLike.chrome?.permissions;
-  const request = chromePermissions?.request;
+  const request = browser.chromePermissions?.request;
 
   if (request) {
     return new Promise((resolve, reject) => {
-      request({ origins }, (granted) => {
-        const message = chromeLike.chrome?.runtime?.lastError?.message;
+      request.call(browser.chromePermissions, { origins }, (granted) => {
+        const message = browser.chromeRuntime?.lastError?.message;
         if (message) {
           reject(new Error(message));
           return;
@@ -138,7 +150,9 @@ export const createSiteAccess = (browser: SiteAccessBrowser): SiteAccess => {
 
   return {
     hasSiteAccess: (url) =>
-      browser.permissions.contains({ origins: [toOriginPattern(url)] }),
+      isPermissibleUrl(url)
+        ? browser.permissions.contains({ origins: [toOriginPattern(url)] })
+        : Promise.resolve(false),
 
     async requestSiteAccess(url, activeTabId) {
       const origin = toOriginPattern(url);
@@ -185,6 +199,20 @@ export const createSiteAccess = (browser: SiteAccessBrowser): SiteAccess => {
 };
 
 /** The real, wired-up instance. Use this everywhere except tests. */
-export const siteAccess: SiteAccess = createSiteAccess(
-  realBrowser as unknown as SiteAccessBrowser,
-);
+export const siteAccess: SiteAccess = createSiteAccess({
+  ...(realBrowser as unknown as SiteAccessBrowser),
+  chromePermissions: (
+    globalThis as typeof globalThis & {
+      readonly chrome?: {
+        readonly permissions?: SiteAccessBrowser["chromePermissions"];
+      };
+    }
+  ).chrome?.permissions,
+  chromeRuntime: (
+    globalThis as typeof globalThis & {
+      readonly chrome?: {
+        readonly runtime?: SiteAccessBrowser["chromeRuntime"];
+      };
+    }
+  ).chrome?.runtime,
+});

@@ -155,12 +155,13 @@ are only meaningful against a real page.
 Phase 0 emptied `src/lib/messaging.ts`. Define the real protocol: side panel ↔ background ↔
 content script. Keep it small and typed.
 
-**One rule that must survive:** the content script accepts no fill instruction that does not
-carry a `decisionId` issued by the background after a policy evaluation. Otherwise the panel
-can message the content script directly and policy becomes advisory.
+**One rule that must survive:** page writes are background-originated. Straight-line fills
+must confirm a live, tab-bound pending decision after policy evaluation; the content script's
+payload validation is the DOM-side backstop against malformed write messages.
 
-**Tests:** yes, unit — assert a fill message without a valid `decisionId` is rejected. **Why:**
-this is the seam that keeps `PolicyEngine.evaluate` on the critical path rather than beside it.
+**Tests:** yes, unit — assert malformed fill messages are rejected, plus background coverage
+for tab-bound pending decisions. **Why:** policy must stay on the critical path rather than
+beside it.
 
 ### 7. The e2e-only host permission
 

@@ -1,14 +1,13 @@
-import {
-  acceptsFileReference,
-  type FileComplianceAdapter,
-  maxFileSizeBytes,
-  type PrepareFileResult,
+import type {
+  FileComplianceAdapter,
+  PrepareFileResult,
 } from "~/core/files/types";
 import type { FieldConstraint } from "~/core/form/types";
 import type { FileReference } from "~/core/memory/types";
+import { createBrowserFilePreparationRegistry } from "./preparation-registry";
 
 const DB_NAME = "form-agent-files";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const FILE_STORE = "files";
 
 interface StoredFileRecord {
@@ -19,9 +18,18 @@ interface StoredFileRecord {
 
 export interface FileReferenceStore {
   save(file: File, now?: string): Promise<FileReference>;
+  saveDerived(
+    file: File,
+    source: FileReference,
+    now?: string,
+    ttlMs?: number,
+  ): Promise<FileReference>;
   get(refId: string): Promise<StoredFileRecord | null>;
+  getFile(refId: string): Promise<File | null>;
   delete(refId: string): Promise<void>;
+  clear(): Promise<void>;
   list(): Promise<FileReference[]>;
+  purgeExpired(now?: string): Promise<number>;
 }
 
 export interface BrowserPreparedFile {
@@ -31,6 +39,7 @@ export interface BrowserPreparedFile {
   readonly mimeType: string;
   readonly transformed: boolean;
   readonly originalSizeBytes: number;
+  readonly temporaryRef?: FileReference;
 }
 
 export interface BrowserFileUploadAdapter {
@@ -77,6 +86,30 @@ export const createIndexedDbFileReferenceStore = async (
         mimeType: file.type || "application/octet-stream",
         sizeBytes: file.size,
         createdAt: now,
+        artifactKind: "original",
+      };
+      const transaction = db.transaction(FILE_STORE, "readwrite");
+      transaction.objectStore(FILE_STORE).put({ id: ref.id, ref, blob: file });
+      await transactionDone(transaction);
+      return ref;
+    },
+
+    async saveDerived(
+      file,
+      source,
+      now = new Date().toISOString(),
+      ttlMs = 24 * 60 * 60 * 1000,
+    ) {
+      const ref: FileReference = {
+        kind: "file_ref",
+        id: crypto.randomUUID(),
+        name: file.name,
+        mimeType: file.type || "application/octet-stream",
+        sizeBytes: file.size,
+        createdAt: now,
+        artifactKind: "derived",
+        derivedFrom: source.id,
+        expiresAt: new Date(Date.parse(now) + ttlMs).toISOString(),
       };
       const transaction = db.transaction(FILE_STORE, "readwrite");
       transaction.objectStore(FILE_STORE).put({ id: ref.id, ref, blob: file });
@@ -94,9 +127,28 @@ export const createIndexedDbFileReferenceStore = async (
       return result ?? null;
     },
 
+    async getFile(refId) {
+      const transaction = db.transaction(FILE_STORE, "readonly");
+      const record = await requestToPromise(
+        transaction.objectStore(FILE_STORE).get(refId) as IDBRequest<
+          StoredFileRecord | undefined
+        >,
+      );
+      if (!record) return null;
+      return new File([record.blob], record.ref.name, {
+        type: record.ref.mimeType,
+      });
+    },
+
     async delete(refId) {
       const transaction = db.transaction(FILE_STORE, "readwrite");
       transaction.objectStore(FILE_STORE).delete(refId);
+      await transactionDone(transaction);
+    },
+
+    async clear() {
+      const transaction = db.transaction(FILE_STORE, "readwrite");
+      transaction.objectStore(FILE_STORE).clear();
       await transactionDone(transaction);
     },
 
@@ -109,27 +161,25 @@ export const createIndexedDbFileReferenceStore = async (
       );
       return records.map((record) => record.ref);
     },
+
+    async purgeExpired(now = new Date().toISOString()) {
+      const records = await requestToPromise(
+        db
+          .transaction(FILE_STORE, "readonly")
+          .objectStore(FILE_STORE)
+          .getAll() as IDBRequest<StoredFileRecord[]>,
+      );
+      const expired = records.filter(
+        (record) => record.ref.expiresAt && record.ref.expiresAt <= now,
+      );
+      if (!expired.length) return 0;
+      const transaction = db.transaction(FILE_STORE, "readwrite");
+      for (const record of expired)
+        transaction.objectStore(FILE_STORE).delete(record.id);
+      await transactionDone(transaction);
+      return expired.length;
+    },
   };
-};
-
-const blobForImage = async (
-  image: ImageBitmap,
-  type: string,
-  quality: number,
-): Promise<Blob | null> => {
-  const canvas = new OffscreenCanvas(image.width, image.height);
-  const context = canvas.getContext("2d");
-  if (!context) return null;
-  context.drawImage(image, 0, 0);
-  return canvas.convertToBlob({ type, quality });
-};
-
-const recompressedImageType = (mimeType: string): string =>
-  mimeType === "image/webp" ? "image/webp" : "image/jpeg";
-
-const recompressedImageName = (name: string, mimeType: string): string => {
-  if (mimeType === "image/webp") return name.replace(/\.[^.]+$/, ".webp");
-  return name.replace(/\.[^.]+$/, ".jpg");
 };
 
 export const createBrowserFileComplianceAdapter = (
@@ -139,51 +189,33 @@ export const createBrowserFileComplianceAdapter = (
     ref: FileReference,
     constraints: readonly FieldConstraint[],
   ): Promise<BrowserPreparedFile | null>;
+  cleanupPreparedFile(ref: FileReference): Promise<void>;
 } => {
   const prepareLocalFile = async (
     ref: FileReference,
     constraints: readonly FieldConstraint[],
   ): Promise<BrowserPreparedFile | null> => {
-    if (!acceptsFileReference(ref, constraints)) return null;
-
     const record = await store.get(ref.id);
     if (!record) return null;
-
-    const maxBytes = maxFileSizeBytes(constraints);
-    if (!maxBytes || record.blob.size <= maxBytes) {
-      return {
-        ref,
-        blob: record.blob,
-        name: ref.name,
-        mimeType: ref.mimeType,
-        transformed: false,
-        originalSizeBytes: ref.sizeBytes,
-      };
-    }
-
-    if (!ref.mimeType.startsWith("image/")) return null;
-
-    const image = await createImageBitmap(record.blob);
-    const outputType = recompressedImageType(ref.mimeType);
-    try {
-      for (const quality of [0.85, 0.72, 0.6, 0.48, 0.36, 0.25]) {
-        const blob = await blobForImage(image, outputType, quality);
-        if (blob && blob.size <= maxBytes) {
-          return {
-            ref,
-            blob,
-            name: recompressedImageName(ref.name, outputType),
-            mimeType: outputType,
-            transformed: true,
-            originalSizeBytes: ref.sizeBytes,
-          };
-        }
-      }
-    } finally {
-      image.close();
-    }
-
-    return null;
+    const registry = createBrowserFilePreparationRegistry(store);
+    const adapter = registry.adapterFor({
+      kind: "image",
+      name: ref.name,
+      mimeType: ref.mimeType,
+      sizeBytes: ref.sizeBytes,
+    });
+    if (!adapter) return null;
+    const prepared = await adapter.prepareForConstraints(ref, constraints);
+    if (!prepared.ok) return null;
+    return {
+      ref,
+      blob: prepared.artifact.blob,
+      name: prepared.artifact.name,
+      mimeType: prepared.artifact.mimeType,
+      transformed: prepared.artifact.transformed,
+      originalSizeBytes: ref.sizeBytes,
+      temporaryRef: prepared.artifact.derived,
+    };
   };
 
   return {
@@ -210,6 +242,7 @@ export const createBrowserFileComplianceAdapter = (
       };
     },
     prepareLocalFile,
+    cleanupPreparedFile: async (ref) => store.delete(ref.id),
   };
 };
 

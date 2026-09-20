@@ -3,12 +3,28 @@
     "description": "Name of the extension.",
     "message": "Fill My Form"
   },
+  "extensionByAuthor": {
+    "description": "Word before the author name in the header credit.",
+    "message": "by"
+  },
+  "extensionAuthorName": {
+    "description": "Author name linked in the header.",
+    "message": "Swapnil"
+  },
   "extensionDescription": {
     "description": "Description of the extension.",
     "message": "Privacy-first form assistant. Your personal information stays on your device."
   },
   "privacyNote": {
-    "message": "Your personal information stays on this device."
+    "message": "Your personal information stays on this device"
+  },
+  "supportPromptBody": {
+    "description": "Shown after a successful image prepare.",
+    "message": "If this saved you time, you can chip in —"
+  },
+  "supportLink": {
+    "description": "Link to Buy Me a Coffee after successful image prepare.",
+    "message": "buy me a coffee"
   },
   "headerSubtitle": {
     "message": "Saved on this device"
@@ -49,5 +65,35 @@
   },
   "localDataDeleted": {
     "message": "Deleted local data."
+  },
+  "editImageGuidanceTrigger": {
+    "description": "Help trigger shown near image editing controls.",
+    "message": "Should I use this?"
+  },
+  "editImageGuidanceEditHeading": {
+    "description": "Heading for examples where the user should open the image editor.",
+    "message": "Use Edit image when:"
+  },
+  "editImageGuidanceEditExtraBackground": {
+    "message": "There is extra background around the face."
+  },
+  "editImageGuidanceEditNotCentered": {
+    "message": "The face or signature is not centered."
+  },
+  "editImageGuidanceEditFrameShape": {
+    "message": "The form asks for a square, portrait, or landscape frame."
+  },
+  "editImageGuidanceOutputHeading": {
+    "description": "Heading for examples where the user should use final output settings.",
+    "message": "Use final output when the form says:"
+  },
+  "editImageGuidanceOutputPhysicalSize": {
+    "message": "3.5 cm × 2.5 cm"
+  },
+  "editImageGuidanceOutputPixelsDpi": {
+    "message": "413 × 295 px or 300 DPI"
+  },
+  "editImageGuidanceOutputFormatSize": {
+    "message": "JPG only or 20-50 KB"
   }
 }

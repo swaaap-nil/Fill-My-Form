@@ -1,4 +1,4 @@
-import type { Logger } from "~/core/logging";
+import { LogErrorCode, type Logger } from "~/core/logging";
 
 /** The slice of the WebExtension `browser` API {@link wireToolbarIconBehavior} needs. */
 export interface SidePanelBrowser {
@@ -34,16 +34,16 @@ export const wireToolbarIconBehavior = (
   if (browser.sidePanel) {
     browser.sidePanel
       .setPanelBehavior({ openPanelOnActionClick: true })
-      .catch((error: unknown) =>
+      .catch(() =>
         logger.warn("could not set side panel behavior", {
-          errorCode: String(error),
+          errorCode: LogErrorCode.EXTENSION_API,
         }),
       );
   } else {
     browser.action.onClicked.addListener(() => {
-      browser.sidebarAction?.toggle().catch((error: unknown) =>
+      browser.sidebarAction?.toggle().catch(() =>
         logger.warn("could not toggle sidebar", {
-          errorCode: String(error),
+          errorCode: LogErrorCode.EXTENSION_API,
         }),
       );
     });

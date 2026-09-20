@@ -37,6 +37,11 @@ nagged. See [ADR 006](../../../docs/adr/006-value-freshness-and-expiry.md).
 
 Aliases are surface forms seen on real forms, in any language. They power the
 deterministic and keyword tiers that run *before* any model is consulted.
+They map a *field's label* to this concept — don't confuse them with the
+optional `valueAliases`, which map a stored *value*'s synonyms to a page
+option's canonical form (`{ "indian": "india" }` on `identity.nationality`,
+so a `<select>` offering "India" still resolves). Only meaningful for
+closed-vocabulary concepts; see `~/core/matching/resolve-option`.
 
 ## What lands here next
 

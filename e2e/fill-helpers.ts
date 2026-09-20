@@ -33,7 +33,7 @@ export const seedAnswer = async (
   await panelPage.getByRole("button", { name: "My information" }).click();
   await panelPage.getByLabel(label, { exact: true }).fill(value);
   await waitForSavedCount(panelPage, 1);
-  await panelPage.getByRole("button", { name: "Current page" }).click();
+  await panelPage.getByRole("button", { name: "Back to home" }).click();
 };
 
 /**
@@ -51,7 +51,7 @@ export const seedAnswers = async (
     await expect(input).toHaveValue(value);
     await waitForSavedCount(panelPage, index + 1);
   }
-  await panelPage.getByRole("button", { name: "Current page" }).click();
+  await panelPage.getByRole("button", { name: "Back to home" }).click();
 };
 
 export const seedFile = async (
@@ -69,7 +69,7 @@ export const seedFile = async (
     );
   }
   await waitForSavedCount(panelPage, 1);
-  await panelPage.getByRole("button", { name: "Current page" }).click();
+  await panelPage.getByRole("button", { name: "Back to home" }).click();
 };
 
 /**

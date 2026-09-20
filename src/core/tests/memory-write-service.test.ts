@@ -3,7 +3,7 @@ import { createInMemoryMemoryStore } from "~/core/memory/in-memory";
 import { DEFAULT_PROFILE_ID, MemorySource } from "~/core/memory/types";
 import { recordAnswer } from "~/core/memory/write-service";
 
-describe("recordAnswer: the only path from an answer to a stored value", () => {
+describe("recordAnswer: the user-answer path to stored memory", () => {
   it("writes a user-provided answer as confirmed, at full confidence by default", async () => {
     const store = createInMemoryMemoryStore();
 

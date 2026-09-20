@@ -56,8 +56,21 @@ and never opens it. Values that appear on a document, like a passport number, ar
 typed by the user once and stored as ordinary concepts.
 
 Making a file *fit* a form — cropping to 35×45mm, recompressing under 100 KB — is
-allowed and runs on canvas in the tab. It is pixel and byte work that never
-interprets meaning, and the original is not modified.
+allowed only after the user explicitly chooses local preparation. Cropper.js and
+Compressor.js decode pixels in the extension page; they do not interpret or upload
+the image. Preparation always writes a separate derived artifact, while the
+original reference and bytes remain unchanged. Derived artifacts are local,
+marked temporary, expire after 24 hours, and are deleted sooner after a
+successful upload.
+
+Preparation also reads and writes the image's **density header** — the DPI a
+file declares, in JFIF/EXIF for JPEG and a `pHYs` chunk for PNG — because forms
+ask for "300 DPI" and a canvas produces files that declare nothing. That is
+container metadata sitting beside the width and height, not document content:
+no pixel is interpreted and nothing is learned about the person. It is read from
+the file's own header locally, is never transmitted, and is written only to the
+derived copy. The original's bytes are never patched. See
+[ADR 008](./adr/008-image-metadata-writing.md).
 
 The claim is therefore checkable by looking for the capability and not finding
 it, rather than by trusting that it only happens locally. See

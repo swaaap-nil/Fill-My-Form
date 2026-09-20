@@ -7,9 +7,12 @@
  * the side panel after the user has actually answered or confirmed —
  * never through `executeTool`, never reachable from model-proposed input.
  *
- * ```
- * ask_user answer / confirmed fill → side panel → recordAnswer() → MemoryStore
- * ```
+ * `ask_user` answer / confirmed fill -> side panel/background ->
+ * `recordAnswer()` -> `MemoryStore`.
+ *
+ * Full local-data restore is intentionally separate: import preserves a
+ * previously exported store, but UI/model-proposed answers still come through
+ * this service.
  *
  * This is intentionally a plain function over the `MemoryStore` interface,
  * not a class or a registered tool: the smaller the surface, the easier it
@@ -49,8 +52,10 @@ export interface RecordAnswerInput {
   readonly now: string;
 }
 
+type UserAnswerMemoryStore = Pick<MemoryStore, "get" | "set">;
+
 export const recordAnswer = async (
-  store: MemoryStore,
+  store: UserAnswerMemoryStore,
   input: RecordAnswerInput,
 ): Promise<void> => {
   const existing = await store.get(input.profileId, input.key);

@@ -1,11 +1,12 @@
 import {
   CheckCircle2,
   HelpCircle,
+  ListChecks,
   ShieldAlert,
   SplitSquareVertical,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import type { FieldProposal } from "~/lib/messaging";
+import type { DecisionId, FieldProposal } from "~/lib/messaging";
 
 /**
  * One card per {@link FieldProposal} state. Deliverable 5 asks for a
@@ -19,7 +20,7 @@ import type { FieldProposal } from "~/lib/messaging";
 interface ProposalCardProps {
   readonly proposal: FieldProposal;
   readonly onConfirm: (decisionId: string) => void;
-  readonly confirmed: boolean;
+  readonly confirmedIds: ReadonlySet<DecisionId>;
 }
 
 const fieldName = (proposal: FieldProposal): string =>
@@ -94,6 +95,48 @@ const AmbiguousProposal = ({
   </CardShell>
 );
 
+const ChooseOptionProposal = ({
+  proposal,
+  onConfirm,
+  confirmedIds,
+}: {
+  readonly proposal: Extract<FieldProposal, { state: "choose_option" }>;
+  readonly onConfirm: (decisionId: string) => void;
+  readonly confirmedIds: ReadonlySet<DecisionId>;
+}) => {
+  const chosen = proposal.choices.find((c) => confirmedIds.has(c.decisionId));
+  return (
+    <CardShell
+      icon={<ListChecks className="size-4 text-muted-foreground" />}
+      tone="muted"
+    >
+      <p className="text-sm">
+        <span className="font-medium">{proposal.conceptKey}</span>: we have "
+        {proposal.storedValue}" saved, but this field's own choices don't match
+        it exactly. Which one did you mean?
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {proposal.choices.map((choice) => (
+          <Button
+            key={choice.decisionId}
+            type="button"
+            size="sm"
+            variant={
+              chosen?.decisionId === choice.decisionId ? "default" : "outline"
+            }
+            disabled={!!chosen}
+            onClick={() => onConfirm(choice.decisionId)}
+          >
+            {chosen?.decisionId === choice.decisionId
+              ? `Filled: ${choice.label}`
+              : choice.label}
+          </Button>
+        ))}
+      </div>
+    </CardShell>
+  );
+};
+
 const PendingProposal = ({
   proposal,
   onConfirm,
@@ -145,7 +188,7 @@ const PendingProposal = ({
 export const ProposalCard = ({
   proposal,
   onConfirm,
-  confirmed,
+  confirmedIds,
 }: ProposalCardProps) => {
   switch (proposal.state) {
     case "unknown":
@@ -154,12 +197,20 @@ export const ProposalCard = ({
       return <NoValueProposal conceptKey={proposal.conceptKey} />;
     case "ambiguous":
       return <AmbiguousProposal candidates={proposal.candidates} />;
+    case "choose_option":
+      return (
+        <ChooseOptionProposal
+          proposal={proposal}
+          onConfirm={onConfirm}
+          confirmedIds={confirmedIds}
+        />
+      );
     case "pending":
       return (
         <PendingProposal
           proposal={proposal}
           onConfirm={onConfirm}
-          confirmed={confirmed}
+          confirmed={confirmedIds.has(proposal.decisionId)}
           restricted={false}
         />
       );
@@ -168,7 +219,7 @@ export const ProposalCard = ({
         <PendingProposal
           proposal={proposal}
           onConfirm={onConfirm}
-          confirmed={confirmed}
+          confirmed={confirmedIds.has(proposal.decisionId)}
           restricted={true}
         />
       );

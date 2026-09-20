@@ -28,6 +28,33 @@ learns which file answers an upload field and never opens it.
 `OffscreenCanvas` plus `canvas.toBlob(quality)`, in-tab, with the original never modified. This
 transforms a file; it never interprets one.
 
+**Millimetres, kilobytes and DPI are all one problem.** The goal line above says 35×45 mm, and
+making that literally true took three things that did not exist at first:
+
+- *Units.* `src/core/files/units.ts` converts px/in/cm/mm, always at an explicit DPI. There is no
+  such thing as "35 mm in pixels" without a resolution.
+- *DPI.* `canvas.toBlob` writes no density header, so a correctly sized photo still failed a
+  portal that checks resolution. `src/core/files/dpi.ts` reads and writes JFIF, EXIF and PNG
+  `pHYs` — container metadata, never content. WebP is read-only; it has no density field. See
+  [ADR 008](../adr/008-image-metadata-writing.md).
+- *Two compliance levers, not one.* The quality ladder alone cannot shrink a PNG, whose encoder
+  is lossless, so a PNG over `maxFileSizeBytes` used to fail outright. The adapter now falls back
+  to downscaling in 0.85 steps down to a 64px floor. Sizing is therefore a negotiation between
+  dimensions and bytes, and the result reports which lever moved.
+
+**Cropping needs a window, not a panel.** Chrome frames the side panel, so a dialog inside it is
+clipped to the panel's width — the reason the first cropper was a 176px-tall strip whose selection
+could be dragged clean off the image. The editor is now a separate extension window
+(`src/app/editor`), handing its result back through `chrome.storage.session`. Cropper.js v2 has no
+bounding option of its own, so the selection is clamped by refusing out-of-bounds `change` events
+against `rectContains` — a rule that lives in `src/core/files/geometry.ts` and is unit-tested
+without a browser. See [architecture.md](../architecture.md) for the window handshake.
+
+**Prepared output explains itself.** `PreparedArtifact.validation` carries what actually happened
+— the crop applied, the encoder quality chosen, how many downscale steps were needed, the DPI
+written — rather than a fixed list of reassurances. A failure names the lever that ran out, so
+"try JPEG instead of PNG" is advice the user can act on.
+
 **All file work goes through generic adapters.** The first adapter set is browser-native and
 IndexedDB-backed, but the interfaces are deliberately generic:
 

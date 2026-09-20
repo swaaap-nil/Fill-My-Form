@@ -1,14 +1,18 @@
-import { FileText, UserRound } from "lucide-react";
+import { ChevronLeft, FileImage, UserRound } from "lucide-react";
 import React, { useState } from "react";
 import ReactDOM from "react-dom/client";
-
+import { FilePreparationTool } from "~/components/files/file-preparation-tool";
 import { FillPanel } from "~/components/fill/fill-panel";
 import { Layout } from "~/components/layout/layout";
 import { OnboardingForm } from "~/components/memory/onboarding-form";
 import { Button } from "~/components/ui/button";
 import { useSound } from "~/lib/sfx/react";
 
-const View = { FILL: "fill", ONBOARDING: "onboarding" } as const;
+const View = {
+  FILL: "fill",
+  ONBOARDING: "onboarding",
+  PREPARE: "prepare",
+} as const;
 type View = (typeof View)[keyof typeof View];
 
 const SidePanel = () => {
@@ -23,15 +27,38 @@ const SidePanel = () => {
 
   const headerAction =
     view === View.FILL ? (
+      <>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="font-normal"
+          onClick={() => selectView(View.PREPARE)}
+        >
+          <FileImage className="size-4" />
+          Prepare file
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="font-normal"
+          onClick={() => selectView(View.ONBOARDING)}
+        >
+          <UserRound className="size-4" />
+          My information
+        </Button>
+      </>
+    ) : view === View.PREPARE ? (
       <Button
         type="button"
         variant="outline"
         size="sm"
         className="font-normal"
-        onClick={() => selectView(View.ONBOARDING)}
+        onClick={() => selectView(View.FILL)}
       >
-        <UserRound className="size-4" />
-        My information
+        <ChevronLeft className="size-4" />
+        Back to home
       </Button>
     ) : (
       <Button
@@ -41,15 +68,21 @@ const SidePanel = () => {
         className="font-normal"
         onClick={() => selectView(View.FILL)}
       >
-        <FileText className="size-4" />
-        Current page
+        <ChevronLeft className="size-4" />
+        Back to home
       </Button>
     );
 
   return (
     <Layout headerAction={headerAction}>
       <div className="flex w-full flex-col gap-4">
-        {view === View.FILL ? <FillPanel /> : <OnboardingForm />}
+        {view === View.FILL ? (
+          <FillPanel />
+        ) : view === View.PREPARE ? (
+          <FilePreparationTool />
+        ) : (
+          <OnboardingForm />
+        )}
       </div>
     </Layout>
   );
