@@ -51,6 +51,15 @@ export const clampRectTo = (outer: CropRect, inner: CropRect): CropRect => {
   return { x, y, width, height };
 };
 
+export const boundCropSelection = (
+  bounds: CropRect,
+  selection: CropRect,
+  ratio?: number,
+): CropRect =>
+  typeof ratio === "number" && Number.isFinite(ratio) && ratio > 0
+    ? fitWithinRatio(selection, ratio, bounds)
+    : clampRectTo(bounds, selection);
+
 /** Scales a rect about its own centre, which is what a zoom step should do. */
 export const scaleRect = (rect: CropRect, factor: number): CropRect => {
   const width = rect.width * factor;

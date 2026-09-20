@@ -161,7 +161,7 @@ export const PreparationSettings = ({
       <p className="text-muted-foreground text-xs">
         Leave file size blank unless the form gives a KB or MB limit.
       </p>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid gap-2">
         <div className="flex min-w-0 items-end gap-1.5">
           <label
             htmlFor="prepare-max-size"
@@ -184,32 +184,6 @@ export const PreparationSettings = ({
             label=""
             value={values.maxSizeUnit}
             onValueChange={(next) => setValue("maxSizeUnit", next as ByteUnit)}
-            options={unitOptions(BYTE_UNITS)}
-            className="w-18 shrink-0"
-          />
-        </div>
-        <div className="flex min-w-0 items-end gap-1.5">
-          <label
-            htmlFor="prepare-min-size"
-            className="flex min-w-0 flex-1 flex-col gap-1 text-xs"
-          >
-            <span className="text-muted-foreground">Min file size</span>
-            <Input
-              id="prepare-min-size"
-              type="number"
-              min="0"
-              step="any"
-              inputMode="decimal"
-              placeholder="Optional"
-              value={values.minSizeValue}
-              onChange={(event) => setValue("minSizeValue", event.target.value)}
-            />
-          </label>
-          <SelectField
-            id="prepare-min-size-unit"
-            label=""
-            value={values.minSizeUnit}
-            onValueChange={(next) => setValue("minSizeUnit", next as ByteUnit)}
             options={unitOptions(BYTE_UNITS)}
             className="w-18 shrink-0"
           />

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import {
+  boundCropSelection,
   clampRectTo,
   fitWithinRatio,
   rectContains,
@@ -115,6 +116,25 @@ describe("clampRectTo", () => {
     expect(
       clampRectTo(offset, { x: 0, y: 0, width: 100, height: 100 }),
     ).toEqual({ x: 100, y: 50, width: 100, height: 100 });
+  });
+});
+
+describe("boundCropSelection", () => {
+  it("clamps freeform selections to the image bounds", () => {
+    expect(
+      boundCropSelection(image, { x: -20, y: 10, width: 100, height: 100 }),
+    ).toEqual({ x: 0, y: 10, width: 100, height: 100 });
+  });
+
+  it("fits aspect-locked selections before returning them to the cropper", () => {
+    const bounded = boundCropSelection(
+      image,
+      { x: -50, y: -50, width: 1000, height: 1000 },
+      4 / 5,
+    );
+
+    expect(bounded.width / bounded.height).toBeCloseTo(4 / 5, 6);
+    expect(rectContains(image, bounded)).toBe(true);
   });
 });
 

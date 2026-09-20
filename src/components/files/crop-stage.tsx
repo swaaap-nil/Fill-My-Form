@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { clampRectTo, rectContains } from "~/core/files/geometry";
+import { boundCropSelection, rectContains } from "~/core/files/geometry";
 import type { CropRect } from "~/core/files/preparation";
 
 /**
@@ -134,7 +134,7 @@ export const CropStage = ({
       height: selection.height,
     };
     if (rectContains(bounds, current)) return;
-    const clamped = clampRectTo(bounds, current);
+    const clamped = boundCropSelection(bounds, current, aspectRatio);
     selection.$change(
       clamped.x,
       clamped.y,
@@ -151,23 +151,40 @@ export const CropStage = ({
     const selection = selectionRef.current;
     if (!canvas || !image || !selection) return;
 
+    let clampFrame: number | undefined;
     const onChange = (event: Event) => {
       const detail = (event as CustomEvent<CropRect>).detail;
       const bounds = imageBounds(canvas, image);
       if (!bounds) return;
-      // The bounds fix: refuse any change that leaves the picture. Using the
-      // rect the event proposes, rather than the committed one, means the
-      // selection never visibly escapes and snaps back.
+      // Correct the proposed rect rather than cancelling the gesture outright;
+      // otherwise an initially invalid box can become impossible to move.
       if (!rectContains(bounds, detail)) {
         event.preventDefault();
+        const clamped = boundCropSelection(bounds, detail, aspectRatio);
+        if (clampFrame) cancelAnimationFrame(clampFrame);
+        clampFrame = requestAnimationFrame(() => {
+          clampFrame = undefined;
+          if (!selection.isConnected) return;
+          selection.$change(
+            clamped.x,
+            clamped.y,
+            clamped.width,
+            clamped.height,
+            aspectRatio,
+            true,
+          );
+        });
         return;
       }
       onSelectionChange?.(detail);
     };
 
     selection.addEventListener("change", onChange);
-    return () => selection.removeEventListener("change", onChange);
-  }, [onSelectionChange]);
+    return () => {
+      if (clampFrame) cancelAnimationFrame(clampFrame);
+      selection.removeEventListener("change", onChange);
+    };
+  }, [aspectRatio, onSelectionChange]);
 
   // A resize changes the painted image rect, so a selection that was legal can
   // be stranded outside the new one.
@@ -220,6 +237,7 @@ export const CropStage = ({
 
     void whenPainted().then(() => {
       if (cancelled) return;
+      clampToImage();
       onReady({
         getSelection: () => ({
           x: selection.x,
@@ -235,7 +253,9 @@ export const CropStage = ({
             width: rect.width ?? selection.width,
             height: rect.height ?? selection.height,
           };
-          const safe = bounds ? clampRectTo(bounds, next) : next;
+          const safe = bounds
+            ? boundCropSelection(bounds, next, aspectRatio)
+            : next;
           selection.$change(
             safe.x,
             safe.y,

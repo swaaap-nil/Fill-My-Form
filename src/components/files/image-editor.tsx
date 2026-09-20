@@ -27,6 +27,7 @@ import {
 import { ImagePreparationAdapter } from "~/lib/files/image-preparation-adapter";
 import { useSound } from "~/lib/sfx/react";
 import { CropStage, type CropStageHandle } from "./crop-stage";
+import { EditImageGuidanceTooltip } from "./edit-image-guidance";
 import { FileMetadataCards } from "./file-metadata-cards";
 import { useObjectUrl } from "./use-object-url";
 import { usePreparationSettings } from "./use-preparation-settings";
@@ -373,6 +374,7 @@ export const ImageEditor = ({ sessionId }: { readonly sessionId: string }) => {
                 </label>
               ))}
             </div>
+            <EditImageGuidanceTooltip />
           </div>
 
           <div className="flex flex-wrap gap-1">

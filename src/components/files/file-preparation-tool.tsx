@@ -44,6 +44,7 @@ import { createBrowserFilePreparationRegistry } from "~/lib/files/preparation-re
 import { sendMessage } from "~/lib/messaging";
 import { useSound } from "~/lib/sfx/react";
 import { cn } from "~/lib/utils";
+import { EditImageGuidanceTooltip } from "./edit-image-guidance";
 import { FileMetadataCards } from "./file-metadata-cards";
 import { PreparationSettings } from "./preparation-settings";
 import { PreparedFileHandoff } from "./prepared-file-handoff";
@@ -676,11 +677,9 @@ export const FilePreparationTool = () => {
                 <p className="text-muted-foreground text-xs">
                   {settings.values.crop
                     ? `Cropped to ${Math.round(settings.values.crop.width)} × ${Math.round(settings.values.crop.height)} px`
-                    : "Using the whole image"}
+                    : "Using uncropped image"}
                 </p>
-                <p className="text-muted-foreground text-xs">
-                  Crop selects the part of the picture you want to keep.
-                </p>
+                <EditImageGuidanceTooltip />
                 <Button
                   type="button"
                   variant="outline"
