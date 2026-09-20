@@ -22,6 +22,7 @@ import { sendMessage } from "~/lib/messaging";
 import { useSound } from "~/lib/sfx/react";
 import { siteAccess, toOriginPattern } from "~/lib/site-access";
 import { cn } from "~/lib/utils";
+import { PreparationSuccessSupport } from "../files/preparation-success-support";
 import { PreparedFileHandoff } from "../files/prepared-file-handoff";
 import { useObjectUrl } from "../files/use-object-url";
 import { AgentRunPanel } from "./agent-run-panel";
@@ -515,11 +516,16 @@ const UploadIntentItem = ({
         {intent.description}
       </p>
       {output && (
-        <PreparedFileHandoff
-          artifact={output.artifact}
-          store={output.store}
-          label={intent.label ?? intent.kind}
-        />
+        <>
+          <PreparedFileHandoff
+            artifact={output.artifact}
+            store={output.store}
+            label={intent.label ?? intent.kind}
+          />
+          {output.artifact.mimeType.startsWith("image/") ? (
+            <PreparationSuccessSupport />
+          ) : null}
+        </>
       )}
       {error && <p className="text-destructive text-xs">{error}</p>}
     </div>

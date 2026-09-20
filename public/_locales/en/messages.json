@@ -3,12 +3,28 @@
     "description": "Name of the extension.",
     "message": "Fill My Form"
   },
+  "extensionByAuthor": {
+    "description": "Word before the author name in the header credit.",
+    "message": "by"
+  },
+  "extensionAuthorName": {
+    "description": "Author name linked in the header.",
+    "message": "Swapnil"
+  },
   "extensionDescription": {
     "description": "Description of the extension.",
     "message": "Privacy-first form assistant. Your personal information stays on your device."
   },
   "privacyNote": {
     "message": "Your personal information stays on this device"
+  },
+  "supportPromptBody": {
+    "description": "Shown after a successful image prepare.",
+    "message": "If this saved you time, you can chip in —"
+  },
+  "supportLink": {
+    "description": "Link to Buy Me a Coffee after successful image prepare.",
+    "message": "buy me a coffee"
   },
   "headerSubtitle": {
     "message": "Saved on this device"

@@ -75,7 +75,7 @@ const SidePanel = () => {
 
   return (
     <Layout headerAction={headerAction}>
-      <div className="flex w-full grow flex-col gap-4">
+      <div className="flex w-full flex-col gap-4">
         {view === View.FILL ? (
           <FillPanel />
         ) : view === View.PREPARE ? (

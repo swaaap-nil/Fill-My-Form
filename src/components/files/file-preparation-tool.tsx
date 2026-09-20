@@ -22,7 +22,12 @@ import type {
   FileInspection,
   PreparedArtifact,
 } from "~/core/files/preparation";
-import { resolvePrepareInput } from "~/core/files/preparation-form";
+import {
+  type PreparationFormValues,
+  preparationFormValuesEqual,
+  resolvePrepareInput,
+  snapshotPreparationFormValues,
+} from "~/core/files/preparation-form";
 import { CUSTOM_PRESET_ID, presetById } from "~/core/files/presets";
 import { type FileReference, isFileReference } from "~/core/memory/types";
 import { concepts } from "~/core/ontology";
@@ -48,6 +53,12 @@ import { cn } from "~/lib/utils";
 import { EditImageGuidanceTooltip } from "./edit-image-guidance";
 import { FileMetadataCards } from "./file-metadata-cards";
 import { PreparationSettings } from "./preparation-settings";
+import { PreparationSuccessSupport } from "./preparation-success-support";
+import {
+  PrepareStepBody,
+  PrepareStepHeading,
+  prepareStepPanelClass,
+} from "./prepare-step-chrome";
 import { PreparedFileHandoff } from "./prepared-file-handoff";
 import { useObjectUrl } from "./use-object-url";
 import { usePreparationSettings } from "./use-preparation-settings";
@@ -71,6 +82,12 @@ const canPrepareSavedDocument = (ref: FileReference): boolean =>
 const SAVED_DOCUMENT_PLACEHOLDER = "saved-document-placeholder";
 type SourceMode = "saved" | "upload";
 
+interface EditorCropDraft {
+  readonly derived: FileReference;
+  readonly blob: Blob;
+  readonly inspection: FileInspection;
+}
+
 const sourceInspectionFor = (ref: FileReference): FileInspection => ({
   kind: "unsupported",
   name: ref.name,
@@ -92,6 +109,9 @@ export const FilePreparationTool = () => {
   const [inspection, setInspection] = useState<FileInspection>();
   const [sourceFile, setSourceFile] = useState<File>();
   const [prepared, setPrepared] = useState<PreparedArtifact>();
+  const [editorCrop, setEditorCrop] = useState<EditorCropDraft>();
+  const [valuesWhenPrepared, setValuesWhenPrepared] =
+    useState<PreparationFormValues>();
   const [savedDocuments, setSavedDocuments] = useState<
     readonly SavedDocument[]
   >([]);
@@ -108,10 +128,24 @@ export const FilePreparationTool = () => {
   const editorWatch = useRef<(() => void) | null>(null);
   const editorWindowRemoved = useRef<((closedId: number) => void) | null>(null);
   const storedRefIds = useRef<Set<string>>(new Set());
-  const sourceUrl = useObjectUrl(sourceFile);
-
   const settings = usePreparationSettings(inspection);
+  const cropPreviewBlob = useMemo(() => {
+    if (settings.values.cropAppliedInEditor && editorCrop?.blob) {
+      return editorCrop.blob;
+    }
+    return sourceFile;
+  }, [settings.values.cropAppliedInEditor, editorCrop?.blob, sourceFile]);
+  const cropPreviewUrl = useObjectUrl(cropPreviewBlob);
   const { setValues } = settings;
+  const prepareSettingsChanged = useMemo(
+    () =>
+      Boolean(
+        prepared &&
+          valuesWhenPrepared &&
+          !preparationFormValuesEqual(settings.values, valuesWhenPrepared),
+      ),
+    [prepared, valuesWhenPrepared, settings.values],
+  );
   const supportedSavedDocuments = useMemo(
     () => savedDocuments.filter((document) => document.supported),
     [savedDocuments],
@@ -217,8 +251,9 @@ export const FilePreparationTool = () => {
     await deleteStoredRefs([
       ...(original ? [original.id] : []),
       ...(prepared ? [prepared.derived.id] : []),
+      ...(editorCrop ? [editorCrop.derived.id] : []),
     ]);
-  }, [deleteStoredRefs, original, prepared]);
+  }, [deleteStoredRefs, original, prepared, editorCrop]);
 
   const inspectSourceFile = useCallback(
     async (file: File, ref: FileReference) => {
@@ -256,7 +291,7 @@ export const FilePreparationTool = () => {
         const store = await storePromise;
         const record = await store.get(session.derivedId);
         if (record) {
-          await deleteStoredRefs(prepared ? [prepared.derived.id] : []);
+          await deleteStoredRefs(editorCrop ? [editorCrop.derived.id] : []);
           storedRefIds.current.add(record.ref.id);
           const derivedFile = await store.getFile(session.derivedId);
           let derivedInspection: FileInspection = {
@@ -272,16 +307,10 @@ export const FilePreparationTool = () => {
               derivedInspection = await adapter.inspect(derivedFile);
             }
           }
-          setPrepared({
-            original: original ?? record.ref,
+          setEditorCrop({
             derived: record.ref,
             blob: record.blob,
-            name: record.ref.name,
-            mimeType: record.ref.mimeType,
-            sizeBytes: record.ref.sizeBytes,
-            transformed: true,
             inspection: derivedInspection,
-            validation: ["Prepared in the image editor"],
           });
           setValues(session.values);
           sound.play("fileEditorSaved");
@@ -302,7 +331,7 @@ export const FilePreparationTool = () => {
       setEditing(undefined);
       await clearEditorSession(sessionId);
     },
-    [storePromise, deleteStoredRefs, prepared, original, setValues, sound],
+    [storePromise, deleteStoredRefs, editorCrop, setValues, sound],
   );
   const adoptEditorResultRef = useRef(adoptEditorResult);
 
@@ -321,6 +350,11 @@ export const FilePreparationTool = () => {
       }
     }
     setError(undefined);
+    if (prepared) {
+      await deleteStoredRefs([prepared.derived.id]);
+      setPrepared(undefined);
+      setValuesWhenPrepared(undefined);
+    }
     let opened: { sessionId: string; windowId?: number };
     try {
       opened = await openPreparationEditor({
@@ -366,6 +400,7 @@ export const FilePreparationTool = () => {
     if (!file) return;
     setError(undefined);
     setPrepared(undefined);
+    setEditorCrop(undefined);
     await clearCurrentSource();
     setOriginal(undefined);
     setInspection(undefined);
@@ -387,6 +422,7 @@ export const FilePreparationTool = () => {
     if (!document.supported) return;
     setError(undefined);
     setPrepared(undefined);
+    setEditorCrop(undefined);
     await clearCurrentSource();
     setOriginal(undefined);
     setInspection(undefined);
@@ -446,6 +482,7 @@ export const FilePreparationTool = () => {
       }
       const resolved = resolvePrepareInput({
         original,
+        editorCropDerived: editorCrop?.derived,
         prepared,
         values: settings.values,
         spec: settings.spec,
@@ -461,12 +498,17 @@ export const FilePreparationTool = () => {
         outcome = "filePrepareFailed";
         return;
       }
-      await deleteStoredRefs(prepared ? [prepared.derived.id] : []);
+      await deleteStoredRefs([
+        ...(prepared ? [prepared.derived.id] : []),
+        ...(editorCrop ? [editorCrop.derived.id] : []),
+      ]);
       storedRefIds.current.add(result.artifact.derived.id);
+      setEditorCrop(undefined);
       setPrepared({
         ...result.artifact,
         original,
       });
+      setValuesWhenPrepared(snapshotPreparationFormValues(settings.values));
       outcome = "filePrepareSucceeded";
     } catch {
       setError("Local preparation failed. The original file was not changed.");
@@ -483,10 +525,55 @@ export const FilePreparationTool = () => {
     setOriginal(undefined);
     setInspection(undefined);
     setPrepared(undefined);
+    setEditorCrop(undefined);
+    setValuesWhenPrepared(undefined);
     setSourceFile(undefined);
     setError(undefined);
     settings.resetFor(undefined);
   };
+
+  const showCropHint =
+    settings.values.cropAppliedInEditor && !editorCrop && !prepared;
+  const showPrepareAction = busy || !prepared || prepareSettingsChanged;
+  const prepareStepFooter =
+    !showCropHint && !showPrepareAction ? undefined : (
+      <>
+        {showCropHint && (
+          <p className="text-muted-foreground text-xs">
+            Open the editor and apply crop before preparing again.
+          </p>
+        )}
+        {showPrepareAction && (
+          <>
+            <Button
+              type="button"
+              disabled={
+                busy ||
+                (settings.values.cropAppliedInEditor === true &&
+                  !editorCrop &&
+                  !prepared)
+              }
+              onClick={() => void prepare()}
+            >
+              {busy ? (
+                <>
+                  <LoaderCircle className="animate-spin" /> Preparing...
+                </>
+              ) : prepareSettingsChanged ? (
+                "Prepare Temporary copy with new settings"
+              ) : (
+                "Prepare temporary copy"
+              )}
+            </Button>
+            <p className="text-center text-muted-foreground text-xs">
+              {prepareSettingsChanged
+                ? "Form settings changed. Prepare again to replace the upload copy."
+                : "Creates a temporary upload copy. Your original file stays unchanged."}
+            </p>
+          </>
+        )}
+      </>
+    );
 
   return (
     <div className="flex w-full flex-col gap-4">
@@ -664,107 +751,104 @@ export const FilePreparationTool = () => {
         <section className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 shadow-sm">
           {/* The chosen file, stated once. The dropzone used to repeat the
               name directly above this card. */}
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-2">
-              {inspection.kind === "pdf" ? (
-                <FileText className="size-5 shrink-0 text-primary" />
-              ) : (
-                <FileImage className="size-5 shrink-0 text-primary" />
-              )}
-              <div className="min-w-0 space-y-2">
-                <FileMetadataCards inspection={inspection} />
-                <p className="truncate text-muted-foreground text-xs">
-                  {inspection.name}
-                </p>
+          <div className={prepareStepPanelClass}>
+            <PrepareStepHeading step={1} title="Your file" />
+            <PrepareStepBody className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                {inspection.kind === "pdf" ? (
+                  <FileText className="size-5 shrink-0 text-primary" />
+                ) : (
+                  <FileImage className="size-5 shrink-0 text-primary" />
+                )}
+                <div className="min-w-0 space-y-2">
+                  <FileMetadataCards inspection={inspection} />
+                  <p className="truncate text-muted-foreground text-xs">
+                    {inspection.name}
+                  </p>
+                </div>
               </div>
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="shrink-0 font-normal"
-              onClick={reset}
-            >
-              <RefreshCcw className="size-3.5" />
-              Replace
-            </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="shrink-0 font-normal"
+                onClick={reset}
+              >
+                <RefreshCcw className="size-3.5" />
+                Replace
+              </Button>
+            </PrepareStepBody>
           </div>
 
-          {sourceUrl && inspection.kind === "image" && (
-            <div className="flex items-center gap-3 rounded-md border border-border bg-muted/20 p-2">
-              <img
-                src={sourceUrl}
-                alt=""
-                className="size-16 shrink-0 rounded object-contain"
+          {cropPreviewUrl && inspection.kind === "image" && (
+            <div className={prepareStepPanelClass}>
+              <PrepareStepHeading
+                step={2}
+                title={
+                  <>
+                    Crop{" "}
+                    <span className="font-normal text-muted-foreground">
+                      (optional)
+                    </span>
+                  </>
+                }
               />
-              <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <p className="text-muted-foreground text-xs">
-                  {settings.values.cropAppliedInEditor && prepared?.inspection
-                    ? prepared.inspection.width && prepared.inspection.height
-                      ? `Crop applied in editor · ${prepared.inspection.width} × ${prepared.inspection.height} px`
-                      : "Crop applied in editor"
-                    : settings.values.crop
-                      ? `Cropped to ${Math.round(settings.values.crop.width)} × ${Math.round(settings.values.crop.height)} px`
-                      : "Using uncropped image"}
-                </p>
-                <EditImageGuidanceTooltip />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-fit font-normal"
-                  onClick={() => void openEditor()}
-                >
-                  <Crop className="size-3.5" />
-                  {editing ? "Editing in window" : "Edit image"}
-                </Button>
-              </div>
+              <PrepareStepBody className="flex items-center gap-3">
+                <img
+                  src={cropPreviewUrl}
+                  alt=""
+                  className="size-16 shrink-0 rounded object-contain"
+                />
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <p className="text-muted-foreground text-xs">
+                    {settings.values.cropAppliedInEditor
+                      ? "Using cropped image"
+                      : settings.values.crop
+                        ? `Cropped to ${Math.round(settings.values.crop.width)} × ${Math.round(settings.values.crop.height)} px`
+                        : "Using the full photo"}
+                  </p>
+                  <EditImageGuidanceTooltip />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-fit font-normal"
+                    onClick={() => void openEditor()}
+                  >
+                    <Crop className="size-3.5" />
+                    {editing ? "Editing in window" : "Edit image"}
+                  </Button>
+                </div>
+              </PrepareStepBody>
             </div>
           )}
 
-          <PreparationSettings inspection={inspection} settings={settings} />
-
-          <p className="text-muted-foreground text-xs">
-            This creates a new upload-ready copy. Your original file stays
-            unchanged.
-          </p>
-          {settings.values.cropAppliedInEditor && !prepared && (
-            <p className="text-muted-foreground text-xs">
-              Open the editor and apply crop before preparing again.
-            </p>
-          )}
-          <Button
-            type="button"
-            disabled={
-              busy ||
-              (settings.values.cropAppliedInEditor === true && !prepared)
-            }
-            onClick={() => void prepare()}
-          >
-            {busy ? (
-              <>
-                <LoaderCircle className="animate-spin" /> Preparing...
-              </>
-            ) : (
-              "Prepare temporary copy"
-            )}
-          </Button>
+          <PreparationSettings
+            inspection={inspection}
+            settings={settings}
+            footer={prepareStepFooter}
+          />
           {error && <p className="text-destructive text-xs">{error}</p>}
         </section>
       )}
 
       {prepared && store && (
-        <PreparedFileHandoff
-          artifact={prepared}
-          store={store}
-          // The preset names the preview for screen readers. Custom names
-          // nothing, so fall back to the generic noun.
-          label={
-            settings.values.presetId === CUSTOM_PRESET_ID
-              ? undefined
-              : presetById(settings.values.presetId)?.label.toLowerCase()
-          }
-        />
+        <>
+          <PreparedFileHandoff
+            artifact={prepared}
+            store={store}
+            // The preset names the preview for screen readers. Custom names
+            // nothing, so fall back to the generic noun.
+            label={
+              settings.values.presetId === CUSTOM_PRESET_ID
+                ? undefined
+                : presetById(settings.values.presetId)?.label.toLowerCase()
+            }
+          />
+          {prepared.mimeType.startsWith("image/") ? (
+            <PreparationSuccessSupport />
+          ) : null}
+        </>
       )}
     </div>
   );

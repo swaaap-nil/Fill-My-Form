@@ -1,8 +1,31 @@
+import { Tooltip } from "@base-ui/react/tooltip";
+
 import { formatBytes } from "~/core/files/byte-units";
 import type { FileInspection } from "~/core/files/preparation";
 
 const DPI_UNAVAILABLE_HELP =
   "Some images do not store DPI. That is okay: the pixels are still there. Only set DPI if the form asks for it.";
+
+const MetadataHelpTooltip = ({ text }: { readonly text: string }) => (
+  <Tooltip.Root>
+    <Tooltip.Trigger
+      type="button"
+      delay={150}
+      closeDelay={100}
+      closeOnClick={false}
+      className="cursor-help border-0 bg-transparent p-0 text-muted-foreground normal-case underline decoration-dotted underline-offset-2 outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40"
+    >
+      why?
+    </Tooltip.Trigger>
+    <Tooltip.Portal>
+      <Tooltip.Positioner side="top" align="start" sideOffset={8}>
+        <Tooltip.Popup className="z-50 max-w-72 rounded-md border border-border bg-popover px-3 py-2 text-popover-foreground text-xs shadow-lg">
+          {text}
+        </Tooltip.Popup>
+      </Tooltip.Positioner>
+    </Tooltip.Portal>
+  </Tooltip.Root>
+);
 
 const MetadataCard = ({
   label,
@@ -19,15 +42,7 @@ const MetadataCard = ({
     </p>
     <p className="flex items-center gap-1 text-muted-foreground text-[11px] uppercase">
       {label}
-      {help && (
-        <button
-          type="button"
-          title={help}
-          className="cursor-help border-0 bg-transparent p-0 text-muted-foreground normal-case underline decoration-dotted underline-offset-2"
-        >
-          why?
-        </button>
-      )}
+      {help ? <MetadataHelpTooltip text={help} /> : null}
     </p>
   </div>
 );

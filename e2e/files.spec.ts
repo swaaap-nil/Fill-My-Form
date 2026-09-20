@@ -445,7 +445,10 @@ test("files: the editor window opens and its crop cannot leave the image", async
   expect(containment.bottom).toBeGreaterThan(-1);
 
   await editorPage.getByRole("button", { name: "Apply crop" }).click();
-  await expect(panelPage.getByText("Ready to upload")).toBeVisible();
+  await expect(panelPage.getByText("Using cropped image")).toBeVisible();
+  await expect(panelPage.getByTestId("prepared-file-drag-surface")).toHaveCount(
+    0,
+  );
 
   // Re-prepare at a form-required size must resize the editor crop, not re-slice
   // the original using canvas-space crop coordinates (NW-corner regression).

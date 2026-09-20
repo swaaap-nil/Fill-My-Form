@@ -68,6 +68,51 @@ export interface PreparationFormValues {
   readonly pageHeight: string;
 }
 
+/** Immutable snapshot for comparing whether step 3 changed after a prepare. */
+export const snapshotPreparationFormValues = (
+  values: PreparationFormValues,
+): PreparationFormValues => ({
+  ...values,
+  crop: values.crop ? { ...values.crop } : undefined,
+});
+
+const cropRectsEqual = (
+  a: CropRect | undefined,
+  b: CropRect | undefined,
+): boolean => {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return (
+    a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height
+  );
+};
+
+export const preparationFormValuesEqual = (
+  a: PreparationFormValues,
+  b: PreparationFormValues,
+): boolean =>
+  a.presetId === b.presetId &&
+  a.widthValue === b.widthValue &&
+  a.heightValue === b.heightValue &&
+  a.lengthUnit === b.lengthUnit &&
+  a.lockAspect === b.lockAspect &&
+  a.aspectRatioInput === b.aspectRatioInput &&
+  a.maxSizeValue === b.maxSizeValue &&
+  a.maxSizeUnit === b.maxSizeUnit &&
+  a.minSizeValue === b.minSizeValue &&
+  a.minSizeUnit === b.minSizeUnit &&
+  a.format === b.format &&
+  a.dpiValue === b.dpiValue &&
+  a.cropAppliedInEditor === b.cropAppliedInEditor &&
+  a.rotationDegrees === b.rotationDegrees &&
+  a.flipHorizontal === b.flipHorizontal &&
+  a.flipVertical === b.flipVertical &&
+  a.pageStart === b.pageStart &&
+  a.pageEnd === b.pageEnd &&
+  a.pageWidth === b.pageWidth &&
+  a.pageHeight === b.pageHeight &&
+  cropRectsEqual(a.crop, b.crop);
+
 export const emptyPreparationFormValues: PreparationFormValues = {
   presetId: CUSTOM_PRESET_ID,
   widthValue: "",
@@ -107,6 +152,13 @@ export const effectiveDpi = (
 ): number =>
   numberOrUndefined(values.dpiValue) ?? inspection?.dpi?.x ?? DEFAULT_DPI;
 
+/** DPI the UI may cite — user target or file header, never the internal default. */
+export const explicitDpi = (
+  values: PreparationFormValues,
+  inspection?: FileInspection,
+): number | undefined =>
+  numberOrUndefined(values.dpiValue) ?? inspection?.dpi?.x;
+
 /** Seeds the form from a freshly inspected file. */
 export const preparationFormValuesFrom = (
   inspection: FileInspection,
@@ -119,7 +171,7 @@ export const preparationFormValuesFrom = (
     ...emptyPreparationFormValues,
     lockAspect: Boolean(sourceRatio),
     aspectRatioInput: sourceRatio,
-    dpiValue: inspection.dpi ? `${Math.round(inspection.dpi.x)}` : "",
+    dpiValue: "",
     pageEnd: inspection.pageCount ? `${inspection.pageCount}` : "",
   };
 };
@@ -293,7 +345,7 @@ export const resolvePreparationSpec = (
     !inspection.dpi
   ) {
     issues.push(
-      `This file declares no DPI, so ${values.lengthUnit} is being converted at ${DEFAULT_DPI} DPI. Set a DPI if the form requires one.`,
+      "This file declares no DPI. Set one if the form requires it to convert physical units to pixels.",
     );
   }
 
@@ -350,6 +402,9 @@ const specWithoutEditorCrop = (spec: PreparationSpec): PreparationSpec => ({
  */
 export const resolvePrepareInput = (args: {
   readonly original: FileReference;
+  /** Cropped copy from the editor, before the user runs Prepare. */
+  readonly editorCropDerived?: FileReference;
+  /** Final handoff artifact; used when re-preparing after a prior Prepare. */
   readonly prepared?: PreparedArtifact;
   readonly values: PreparationFormValues;
   readonly spec: PreparationSpec;
@@ -358,12 +413,13 @@ export const resolvePrepareInput = (args: {
     return { input: args.original, spec: args.spec };
   }
 
-  const derived = args.prepared?.derived;
-  if (
-    !derived ||
-    !args.prepared ||
-    args.prepared.original.id !== args.original.id
-  ) {
+  const derived =
+    args.editorCropDerived ??
+    (args.prepared?.original.id === args.original.id
+      ? args.prepared.derived
+      : undefined);
+
+  if (!derived) {
     return {
       input: args.original,
       spec: args.spec,

@@ -1,11 +1,14 @@
 import {
+  Check,
   CheckCircle2,
+  Copy,
   Download,
   FileImage,
   FileText,
   LoaderCircle,
 } from "lucide-react";
-import { type DragEvent, useEffect, useState } from "react";
+import { type DragEvent, useEffect, useRef, useState } from "react";
+import { Button } from "~/components/ui/button";
 import type { PreparedArtifact } from "~/core/files/preparation";
 import type { FileReferenceStore } from "~/lib/files/adapters";
 import { useSound } from "~/lib/sfx/react";
@@ -14,13 +17,24 @@ import { FileMetadataCards } from "./file-metadata-cards";
 import { useObjectUrl } from "./use-object-url";
 
 type DragState = "loading" | "ready" | "dragging" | "finished" | "failed";
+type CopyState = "idle" | "copying" | "copied" | "failed";
 
-const formatExpiry = (expiresAt?: string) => {
-  if (!expiresAt) return "temporary copy";
-  const date = new Date(expiresAt);
-  return Number.isNaN(date.getTime())
-    ? "temporary copy"
-    : `expires ${date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+const createHandoffFile = (blob: Blob, name: string, mimeType: string): File =>
+  new File([blob], name, {
+    type: mimeType || "application/octet-stream",
+    lastModified: Date.now(),
+  });
+
+const writeFileToClipboard = async (file: File): Promise<void> => {
+  if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") {
+    throw new Error("Clipboard is unavailable.");
+  }
+  const type = file.type || "application/octet-stream";
+  await navigator.clipboard.write([
+    new ClipboardItem({
+      [type]: file,
+    }),
+  ]);
 };
 
 export const PreparedFileHandoff = ({
@@ -33,8 +47,10 @@ export const PreparedFileHandoff = ({
   readonly label?: string;
 }) => {
   const sound = useSound();
+  const previewImgRef = useRef<HTMLImageElement>(null);
   const [dragFile, setDragFile] = useState<File>();
   const [dragState, setDragState] = useState<DragState>("loading");
+  const [copyState, setCopyState] = useState<CopyState>("idle");
   const isImage = artifact.mimeType.startsWith("image/");
   const previewUrl = useObjectUrl(isImage ? artifact.blob : undefined);
   const downloadUrl = useObjectUrl(artifact.blob);
@@ -52,8 +68,13 @@ export const PreparedFileHandoff = ({
     };
   }, [artifact.derived.id, store]);
 
-  const handleDragStart = (event: DragEvent<HTMLFieldSetElement>) => {
-    if (!dragFile) {
+  const handleDragStart = (event: DragEvent<HTMLDivElement>) => {
+    const file =
+      dragFile ??
+      (artifact.blob.size > 0
+        ? createHandoffFile(artifact.blob, artifact.name, artifact.mimeType)
+        : undefined);
+    if (!file) {
       event.preventDefault();
       setDragState("failed");
       sound.play("fileDragFailed");
@@ -62,8 +83,18 @@ export const PreparedFileHandoff = ({
     try {
       event.dataTransfer.clearData();
       event.dataTransfer.effectAllowed = "copy";
-      event.dataTransfer.items.add(dragFile);
-      event.dataTransfer.setData("text/plain", dragFile.name);
+      event.dataTransfer.dropEffect = "copy";
+      event.dataTransfer.items.add(
+        createHandoffFile(file, file.name, file.type),
+      );
+      if (previewImgRef.current) {
+        const { width, height } = previewImgRef.current.getBoundingClientRect();
+        event.dataTransfer.setDragImage(
+          previewImgRef.current,
+          width / 2,
+          height / 2,
+        );
+      }
       setDragState("dragging");
       sound.play("fileDragStarted");
     } catch {
@@ -77,6 +108,23 @@ export const PreparedFileHandoff = ({
     setDragState("finished");
     sound.play("fileDragFinished");
   };
+
+  const copyPreparedFile = async () => {
+    const file =
+      dragFile ??
+      createHandoffFile(artifact.blob, artifact.name, artifact.mimeType);
+    setCopyState("copying");
+    try {
+      await writeFileToClipboard(file);
+      setCopyState("copied");
+      sound.play("filePrepareSucceeded");
+      window.setTimeout(() => setCopyState("idle"), 2000);
+    } catch {
+      setCopyState("failed");
+      sound.play("filePrepareFailed");
+    }
+  };
+
   return (
     <section className="flex flex-col gap-3 rounded-lg border border-emerald-500/35 bg-emerald-50/60 p-4 shadow-sm dark:bg-emerald-950/20">
       <div className="flex items-start gap-3">
@@ -84,16 +132,20 @@ export const PreparedFileHandoff = ({
           <CheckCircle2 className="size-5" aria-hidden="true" />
         </span>
         <div className="min-w-0">
-          <h2 className="font-semibold text-base">Drag and drop the image</h2>
+          <h2 className="font-semibold text-base">Drag and drop the file</h2>
           <p className="text-muted-foreground text-xs">
-            Original unchanged · {formatExpiry(artifact.derived.expiresAt)}
+            Drop onto the form’s upload area. Side panel drags are not always
+            accepted like a file from Finder—use copy or download if drop fails.
           </p>
         </div>
       </div>
 
-      <fieldset
+      {/* biome-ignore lint/a11y/useSemanticElements: fieldset breaks native file drag from the handoff surface */}
+      <div
+        role="group"
+        aria-label={`Drag prepared ${label} to your form upload box`}
         data-testid="prepared-file-drag-surface"
-        draggable={Boolean(dragFile)}
+        draggable={Boolean(dragFile) || artifact.blob.size > 0}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         className={cn(
@@ -103,15 +155,12 @@ export const PreparedFileHandoff = ({
           dragState === "finished" &&
             "border-emerald-500/60 ring-2 ring-emerald-500/25",
           dragState === "failed" && "border-destructive/50 bg-destructive/10",
-          !dragFile && "cursor-wait opacity-70",
+          !dragFile && artifact.blob.size === 0 && "cursor-wait opacity-70",
         )}
-        aria-label={`Drag prepared ${label} to your form upload box`}
       >
-        <legend className="sr-only">
-          Drag prepared {label} to your form upload box
-        </legend>
         {isImage && previewUrl ? (
           <img
+            ref={previewImgRef}
             src={previewUrl}
             alt={`Prepared ${label} preview`}
             draggable={false}
@@ -131,7 +180,7 @@ export const PreparedFileHandoff = ({
             />
           </div>
         )}
-      </fieldset>
+      </div>
 
       {dragState === "failed" && (
         <p className="text-destructive text-xs">
@@ -163,7 +212,7 @@ export const PreparedFileHandoff = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-2">
+      <div className="flex flex-col gap-2">
         <a
           href={downloadUrl ?? "#"}
           download={artifact.name}
@@ -173,7 +222,40 @@ export const PreparedFileHandoff = ({
           <Download className="size-4" aria-hidden="true" />
           Download prepared copy
         </a>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-9 font-semibold"
+          disabled={
+            copyState === "copying" || (!dragFile && !artifact.blob.size)
+          }
+          data-testid="copy-prepared-file"
+          onClick={() => void copyPreparedFile()}
+        >
+          {copyState === "copying" ? (
+            <>
+              <LoaderCircle className="animate-spin" aria-hidden="true" />
+              Copying...
+            </>
+          ) : copyState === "copied" ? (
+            <>
+              <Check className="size-4" aria-hidden="true" />
+              Copied to clipboard
+            </>
+          ) : (
+            <>
+              <Copy className="size-4" aria-hidden="true" />
+              Copy to clipboard
+            </>
+          )}
+        </Button>
       </div>
+      {copyState === "failed" && (
+        <p className="text-destructive text-xs">
+          Copy was not accepted. Download the file and choose it in the upload
+          field.
+        </p>
+      )}
 
       <p
         className="text-center text-muted-foreground text-[11px]"

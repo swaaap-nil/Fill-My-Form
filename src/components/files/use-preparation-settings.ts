@@ -2,8 +2,8 @@ import { useCallback, useMemo, useState } from "react";
 import type { CropRect, FileInspection } from "~/core/files/preparation";
 import {
   applyPreset as applyPresetValues,
-  effectiveDpi,
   emptyPreparationFormValues,
+  explicitDpi,
   type PreparationFormValues,
   preparationFormValuesFrom,
   resolvePixelSize,
@@ -85,7 +85,7 @@ export const usePreparationSettings = (inspection?: FileInspection) => {
     spec: resolved?.spec,
     issues: resolved?.issues ?? [],
     pixelSize: resolvePixelSize(values, inspection),
-    dpi: effectiveDpi(values, inspection),
+    displayDpi: explicitDpi(values, inspection),
   };
 };
 

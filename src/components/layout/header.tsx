@@ -4,6 +4,7 @@ import { browser } from "wxt/browser";
 import { Logo } from "~/components/common/logo";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
+import { AUTHOR_WEBSITE_URL } from "~/lib/author-link";
 import { useSound } from "~/lib/sfx/react";
 
 export const Header = ({ action }: { readonly action?: React.ReactNode }) => {
@@ -13,8 +14,22 @@ export const Header = ({ action }: { readonly action?: React.ReactNode }) => {
         <div className="flex min-w-0 items-center gap-2">
           <Logo className="size-8 shrink-0 text-primary" />
           <div className="min-w-0">
-            <p className="truncate font-semibold text-sm leading-tight">
-              {browser.i18n.getMessage("extensionName")}
+            <p className="overflow-visible text-sm leading-tight">
+              <span className="font-semibold">
+                {browser.i18n.getMessage("extensionName")}
+              </span>
+              <span className="pr-0.5 font-normal text-[11px] text-muted-foreground/80 italic">
+                {" "}
+                {browser.i18n.getMessage("extensionByAuthor")}{" "}
+                <a
+                  className="text-muted-foreground/90 underline-offset-2 transition-colors hover:text-foreground hover:underline"
+                  href={AUTHOR_WEBSITE_URL}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  {browser.i18n.getMessage("extensionAuthorName")}
+                </a>
+              </span>
             </p>
           </div>
         </div>

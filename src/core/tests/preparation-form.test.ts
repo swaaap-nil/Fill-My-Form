@@ -7,7 +7,9 @@ import {
   applyPreset,
   effectiveDpi,
   emptyPreparationFormValues,
+  explicitDpi,
   type PreparationFormValues,
+  preparationFormValuesEqual,
   preparationFormValuesFrom,
   resolveLockedRatio,
   resolvePixelSize,
@@ -15,6 +17,7 @@ import {
   resolvePrepareInput,
   setDimension,
   setLengthUnit,
+  snapshotPreparationFormValues,
 } from "~/core/files/preparation-form";
 import { presetById } from "~/core/files/presets";
 import type { FileReference } from "~/core/memory/types";
@@ -55,6 +58,18 @@ describe("effectiveDpi", () => {
   it("ignores junk in the DPI field", () => {
     expect(effectiveDpi(values({ dpiValue: "abc" }), image)).toBe(96);
     expect(effectiveDpi(values({ dpiValue: "0" }), image)).toBe(96);
+  });
+});
+
+describe("explicitDpi", () => {
+  it("never returns the internal default fallback", () => {
+    expect(explicitDpi(values(), image)).toBeUndefined();
+  });
+
+  it("uses the file header when the field is empty", () => {
+    expect(explicitDpi(values(), { ...image, dpi: { x: 200, y: 200 } })).toBe(
+      200,
+    );
   });
 });
 
@@ -368,6 +383,17 @@ describe("resolveLockedRatio", () => {
   });
 });
 
+describe("preparationFormValuesEqual", () => {
+  it("detects a changed output dimension", () => {
+    const before = values({ widthValue: "600" });
+    const after = values({ widthValue: "100" });
+    expect(preparationFormValuesEqual(before, after)).toBe(false);
+    expect(
+      preparationFormValuesEqual(before, snapshotPreparationFormValues(before)),
+    ).toBe(true);
+  });
+});
+
 describe("resolvePreparationSpec with editor crop", () => {
   it("omits crop from the spec when the crop was applied in the editor", () => {
     const crop = { x: 40, y: 55, width: 490, height: 631 };
@@ -453,7 +479,7 @@ describe("resolvePrepareInput", () => {
     expect(result.spec).toBe(baseSpec);
   });
 
-  it("uses the derived file and strips crop when the editor crop flag is set", () => {
+  it("uses the editor crop draft and strips crop from the spec", () => {
     const crop = { x: 10, y: 20, width: 490, height: 631 };
     const spec = resolvePreparationSpec(
       values({
@@ -466,7 +492,7 @@ describe("resolvePrepareInput", () => {
     ).spec;
     const result = resolvePrepareInput({
       original,
-      prepared: prepared(),
+      editorCropDerived: derived,
       values: values({ cropAppliedInEditor: true }),
       spec,
     });
@@ -475,6 +501,17 @@ describe("resolvePrepareInput", () => {
     expect(result.spec.crop).toBeUndefined();
     expect(result.spec.targetWidth).toBe(100);
     expect(result.spec.targetHeight).toBe(120);
+  });
+
+  it("re-prepares from the handoff artifact when the editor draft is gone", () => {
+    const result = resolvePrepareInput({
+      original,
+      prepared: prepared(),
+      values: values({ cropAppliedInEditor: true }),
+      spec: baseSpec,
+    });
+    expect(result.error).toBeUndefined();
+    expect(result.input).toBe(derived);
   });
 
   it("errors when the editor crop flag is set but the derived copy is missing", () => {
@@ -486,7 +523,7 @@ describe("resolvePrepareInput", () => {
     expect(result.error).toMatch(/apply crop again/i);
   });
 
-  it("errors when the prepared artifact belongs to a different original", () => {
+  it("errors when the handoff artifact belongs to a different original", () => {
     const otherOriginal: FileReference = { ...original, id: "other-original" };
     const result = resolvePrepareInput({
       original: otherOriginal,
@@ -499,15 +536,13 @@ describe("resolvePrepareInput", () => {
 });
 
 describe("preparationFormValuesFrom", () => {
-  it("seeds the DPI field from the file's own header", () => {
-    const seeded = preparationFormValuesFrom({
-      ...image,
-      dpi: { x: 300, y: 300 },
-    });
-    expect(seeded.dpiValue).toBe("300");
-  });
-
-  it("leaves DPI blank when the file declares none", () => {
+  it("leaves DPI blank so the field stays optional in the UI", () => {
+    expect(
+      preparationFormValuesFrom({
+        ...image,
+        dpi: { x: 300, y: 300 },
+      }).dpiValue,
+    ).toBe("");
     expect(preparationFormValuesFrom(image).dpiValue).toBe("");
   });
 
