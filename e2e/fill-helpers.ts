@@ -112,7 +112,14 @@ export const driveAgentToCompletion = async (
   panelPage: Page,
   maxClicks = 15,
 ) => {
-  await panelPage.getByRole("button", { name: "Scan this page" }).click();
+  // After a completed scan the toolbar relabels to "Rescan page" / "Scan
+  // again". A second run (step-2 fields, a fresh observation) has to click
+  // that, not the idle "Scan this page" label that is no longer there.
+  await panelPage
+    .getByRole("button", {
+      name: /^(Scan this page|Rescan page|Scan again)$/,
+    })
+    .click();
   await panelPage.getByRole("button", { name: "Answer now" }).click();
 
   for (let i = 0; i < maxClicks; i++) {

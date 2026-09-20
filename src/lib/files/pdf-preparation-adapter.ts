@@ -137,10 +137,45 @@ export class PdfPreparationAdapter implements FilePreparationAdapter {
       };
     }
     const range = fileSizeRangeBytes(constraints);
-    return this.prepare(file, {
-      minBytes: range?.min,
-      maxBytes: maxFileSizeBytes(constraints) ?? range?.max,
-    });
+    const minBytes = range?.min;
+    const maxBytes = maxFileSizeBytes(constraints) ?? range?.max;
+    const alreadyFits =
+      (minBytes === undefined || file.sizeBytes >= minBytes) &&
+      (maxBytes === undefined || file.sizeBytes <= maxBytes);
+
+    // A form upload that already meets type and size should go through as-is.
+    // Re-encoding would reject encrypted, malformed, or otherwise uneditable
+    // PDFs that the site itself would still accept.
+    if (alreadyFits) {
+      const record = await this.store.get(file.id);
+      if (!record) {
+        return {
+          ok: false as const,
+          reason: "The original file is no longer available.",
+        };
+      }
+      return {
+        ok: true as const,
+        artifact: {
+          original: file,
+          derived: file,
+          blob: record.blob,
+          name: file.name,
+          mimeType: file.mimeType,
+          sizeBytes: file.sizeBytes,
+          transformed: false,
+          inspection: {
+            kind: "pdf" as const,
+            name: file.name,
+            mimeType: file.mimeType,
+            sizeBytes: file.sizeBytes,
+          },
+          validation: ["Original already satisfies the upload constraints"],
+        },
+      };
+    }
+
+    return this.prepare(file, { minBytes, maxBytes });
   }
 
   async cleanup(artifact: { readonly derived: FileReference }) {
