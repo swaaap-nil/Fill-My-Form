@@ -13,6 +13,7 @@
  * argues with you while you are still typing is worse than one that waits.
  */
 
+import type { FileReference } from "../memory/types";
 import { parseAspectRatio, ratioOf } from "./aspect-ratio";
 import {
   type ByteUnit,
@@ -20,7 +21,12 @@ import {
   pickByteUnit,
   toBytes,
 } from "./byte-units";
-import type { CropRect, FileInspection, PreparationSpec } from "./preparation";
+import type {
+  CropRect,
+  FileInspection,
+  PreparationSpec,
+  PreparedArtifact,
+} from "./preparation";
 import { CUSTOM_PRESET_ID, type PreparationPreset } from "./presets";
 import {
   DEFAULT_DPI,
@@ -47,6 +53,12 @@ export interface PreparationFormValues {
   readonly format: OutputFormat;
   readonly dpiValue: string;
   readonly crop?: CropRect;
+  /**
+   * Set when the user applied a crop in the image editor. The crop rectangle in
+   * `crop` is in cropper canvas space and must not be passed to `prepare()` on
+   * the original file — only the derived artifact carries the cropped pixels.
+   */
+  readonly cropAppliedInEditor?: boolean;
   readonly rotationDegrees?: number;
   readonly flipHorizontal?: boolean;
   readonly flipVertical?: boolean;
@@ -73,6 +85,7 @@ export const emptyPreparationFormValues: PreparationFormValues = {
   pageEnd: "",
   pageWidth: "",
   pageHeight: "",
+  cropAppliedInEditor: false,
 };
 
 const numberOrUndefined = (value: string): number | undefined => {
@@ -289,7 +302,7 @@ export const resolvePreparationSpec = (
     targetWidth: width,
     targetHeight: height,
     lockedAspectRatio,
-    crop: values.crop,
+    crop: values.cropAppliedInEditor ? undefined : values.crop,
     minBytes,
     maxBytes,
     dpi: numberOrUndefined(values.dpiValue),
@@ -313,4 +326,54 @@ export const resolvePreparationSpec = (
   }
 
   return { spec, issues };
+};
+
+export interface ResolvedPrepareInput {
+  readonly input: FileReference;
+  readonly spec: PreparationSpec;
+  readonly error?: string;
+}
+
+const specWithoutEditorCrop = (spec: PreparationSpec): PreparationSpec => ({
+  ...spec,
+  crop: undefined,
+  rotationDegrees: undefined,
+  flipHorizontal: undefined,
+  flipVertical: undefined,
+});
+
+/**
+ * Chooses which file ref and spec the panel prepare action should use. Editor
+ * crops are already baked into the derived artifact; re-applying `values.crop`
+ * on the original uses canvas coordinates as source pixels and exports the
+ * wrong region.
+ */
+export const resolvePrepareInput = (args: {
+  readonly original: FileReference;
+  readonly prepared?: PreparedArtifact;
+  readonly values: PreparationFormValues;
+  readonly spec: PreparationSpec;
+}): ResolvedPrepareInput => {
+  if (!args.values.cropAppliedInEditor) {
+    return { input: args.original, spec: args.spec };
+  }
+
+  const derived = args.prepared?.derived;
+  if (
+    !derived ||
+    !args.prepared ||
+    args.prepared.original.id !== args.original.id
+  ) {
+    return {
+      input: args.original,
+      spec: args.spec,
+      error:
+        "The cropped copy is missing. Open the editor and apply crop again.",
+    };
+  }
+
+  return {
+    input: derived,
+    spec: specWithoutEditorCrop(args.spec),
+  };
 };

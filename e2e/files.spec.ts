@@ -446,6 +446,18 @@ test("files: the editor window opens and its crop cannot leave the image", async
 
   await editorPage.getByRole("button", { name: "Apply crop" }).click();
   await expect(panelPage.getByText("Ready to upload")).toBeVisible();
+
+  // Re-prepare at a form-required size must resize the editor crop, not re-slice
+  // the original using canvas-space crop coordinates (NW-corner regression).
+  await panelPage.getByLabel("Width", { exact: true }).fill("100");
+  await panelPage.getByLabel("Height", { exact: true }).fill("120");
+  await panelPage
+    .getByRole("button", { name: "Prepare temporary copy" })
+    .click();
+  await expect(
+    panelPage.getByTestId("prepared-file-drag-surface"),
+  ).toBeVisible();
+  await expect(panelPage.getByText("100 x 120 px")).toBeVisible();
 });
 
 test("files: cancelling the editor leaves the panel untouched", async ({

@@ -22,6 +22,7 @@ import type {
   FileInspection,
   PreparedArtifact,
 } from "~/core/files/preparation";
+import { resolvePrepareInput } from "~/core/files/preparation-form";
 import { CUSTOM_PRESET_ID, presetById } from "~/core/files/presets";
 import { type FileReference, isFileReference } from "~/core/memory/types";
 import { concepts } from "~/core/ontology";
@@ -257,6 +258,20 @@ export const FilePreparationTool = () => {
         if (record) {
           await deleteStoredRefs(prepared ? [prepared.derived.id] : []);
           storedRefIds.current.add(record.ref.id);
+          const derivedFile = await store.getFile(session.derivedId);
+          let derivedInspection: FileInspection = {
+            kind: "image",
+            name: record.ref.name,
+            mimeType: record.ref.mimeType,
+            sizeBytes: record.ref.sizeBytes,
+          };
+          if (derivedFile) {
+            const registry = createBrowserFilePreparationRegistry(store);
+            const adapter = registry.adapterFor(derivedInspection);
+            if (adapter) {
+              derivedInspection = await adapter.inspect(derivedFile);
+            }
+          }
           setPrepared({
             original: original ?? record.ref,
             derived: record.ref,
@@ -265,12 +280,7 @@ export const FilePreparationTool = () => {
             mimeType: record.ref.mimeType,
             sizeBytes: record.ref.sizeBytes,
             transformed: true,
-            inspection: {
-              kind: "image",
-              name: record.ref.name,
-              mimeType: record.ref.mimeType,
-              sizeBytes: record.ref.sizeBytes,
-            },
+            inspection: derivedInspection,
             validation: ["Prepared in the image editor"],
           });
           setValues(session.values);
@@ -434,7 +444,18 @@ export const FilePreparationTool = () => {
         outcome = "filePrepareFailed";
         return;
       }
-      const result = await adapter.prepare(original, settings.spec);
+      const resolved = resolvePrepareInput({
+        original,
+        prepared,
+        values: settings.values,
+        spec: settings.spec,
+      });
+      if (resolved.error) {
+        setError(resolved.error);
+        outcome = "filePrepareFailed";
+        return;
+      }
+      const result = await adapter.prepare(resolved.input, resolved.spec);
       if (!result.ok) {
         setError(result.reason);
         outcome = "filePrepareFailed";
@@ -442,7 +463,10 @@ export const FilePreparationTool = () => {
       }
       await deleteStoredRefs(prepared ? [prepared.derived.id] : []);
       storedRefIds.current.add(result.artifact.derived.id);
-      setPrepared(result.artifact);
+      setPrepared({
+        ...result.artifact,
+        original,
+      });
       outcome = "filePrepareSucceeded";
     } catch {
       setError("Local preparation failed. The original file was not changed.");
@@ -675,9 +699,13 @@ export const FilePreparationTool = () => {
               />
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <p className="text-muted-foreground text-xs">
-                  {settings.values.crop
-                    ? `Cropped to ${Math.round(settings.values.crop.width)} × ${Math.round(settings.values.crop.height)} px`
-                    : "Using uncropped image"}
+                  {settings.values.cropAppliedInEditor && prepared?.inspection
+                    ? prepared.inspection.width && prepared.inspection.height
+                      ? `Crop applied in editor · ${prepared.inspection.width} × ${prepared.inspection.height} px`
+                      : "Crop applied in editor"
+                    : settings.values.crop
+                      ? `Cropped to ${Math.round(settings.values.crop.width)} × ${Math.round(settings.values.crop.height)} px`
+                      : "Using uncropped image"}
                 </p>
                 <EditImageGuidanceTooltip />
                 <Button
@@ -700,7 +728,19 @@ export const FilePreparationTool = () => {
             This creates a new upload-ready copy. Your original file stays
             unchanged.
           </p>
-          <Button type="button" disabled={busy} onClick={() => void prepare()}>
+          {settings.values.cropAppliedInEditor && !prepared && (
+            <p className="text-muted-foreground text-xs">
+              Open the editor and apply crop before preparing again.
+            </p>
+          )}
+          <Button
+            type="button"
+            disabled={
+              busy ||
+              (settings.values.cropAppliedInEditor === true && !prepared)
+            }
+            onClick={() => void prepare()}
+          >
             {busy ? (
               <>
                 <LoaderCircle className="animate-spin" /> Preparing...

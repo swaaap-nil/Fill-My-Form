@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import type { FileInspection } from "~/core/files/preparation";
+import type {
+  FileInspection,
+  PreparedArtifact,
+} from "~/core/files/preparation";
 import {
   applyPreset,
   effectiveDpi,
@@ -9,10 +12,12 @@ import {
   resolveLockedRatio,
   resolvePixelSize,
   resolvePreparationSpec,
+  resolvePrepareInput,
   setDimension,
   setLengthUnit,
 } from "~/core/files/preparation-form";
 import { presetById } from "~/core/files/presets";
+import type { FileReference } from "~/core/memory/types";
 
 const image: FileInspection = {
   kind: "image",
@@ -360,6 +365,136 @@ describe("resolveLockedRatio", () => {
 
   it("is undefined when there is nothing to infer from", () => {
     expect(resolveLockedRatio(values())).toBeUndefined();
+  });
+});
+
+describe("resolvePreparationSpec with editor crop", () => {
+  it("omits crop from the spec when the crop was applied in the editor", () => {
+    const crop = { x: 40, y: 55, width: 490, height: 631 };
+    const { spec } = resolvePreparationSpec(
+      values({
+        crop,
+        cropAppliedInEditor: true,
+        widthValue: "100",
+        heightValue: "120",
+      }),
+      image,
+    );
+    expect(spec.crop).toBeUndefined();
+    expect(spec.targetWidth).toBe(100);
+    expect(spec.targetHeight).toBe(120);
+  });
+
+  it("keeps crop on the spec for non-editor crops", () => {
+    const crop = { x: 0, y: 0, width: 800, height: 600 };
+    const { spec } = resolvePreparationSpec(
+      values({ crop, cropAppliedInEditor: false }),
+      image,
+    );
+    expect(spec.crop).toEqual(crop);
+  });
+});
+
+describe("resolvePrepareInput", () => {
+  const original: FileReference = {
+    kind: "file_ref",
+    id: "original-id",
+    name: "photo.jpg",
+    mimeType: "image/jpeg",
+    sizeBytes: 1000,
+    createdAt: "2026-01-01T00:00:00.000Z",
+  };
+  const derived: FileReference = {
+    kind: "file_ref",
+    id: "derived-id",
+    name: "photo.jpg",
+    mimeType: "image/jpeg",
+    sizeBytes: 500,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    artifactKind: "derived",
+    derivedFrom: original.id,
+  };
+  const baseSpec = resolvePreparationSpec(
+    values({ widthValue: "100", heightValue: "120" }),
+    image,
+  ).spec;
+
+  const prepared = (
+    overrides: Partial<PreparedArtifact> = {},
+  ): PreparedArtifact => ({
+    original,
+    derived,
+    blob: new Blob(),
+    name: derived.name,
+    mimeType: derived.mimeType,
+    sizeBytes: derived.sizeBytes,
+    transformed: true,
+    inspection: {
+      kind: "image",
+      name: derived.name,
+      mimeType: derived.mimeType,
+      sizeBytes: derived.sizeBytes,
+      width: 490,
+      height: 631,
+    },
+    validation: [],
+    ...overrides,
+  });
+
+  it("uses the original file when no editor crop was applied", () => {
+    const result = resolvePrepareInput({
+      original,
+      prepared: prepared(),
+      values: values(),
+      spec: baseSpec,
+    });
+    expect(result.error).toBeUndefined();
+    expect(result.input).toBe(original);
+    expect(result.spec).toBe(baseSpec);
+  });
+
+  it("uses the derived file and strips crop when the editor crop flag is set", () => {
+    const crop = { x: 10, y: 20, width: 490, height: 631 };
+    const spec = resolvePreparationSpec(
+      values({
+        crop,
+        cropAppliedInEditor: true,
+        widthValue: "100",
+        heightValue: "120",
+      }),
+      image,
+    ).spec;
+    const result = resolvePrepareInput({
+      original,
+      prepared: prepared(),
+      values: values({ cropAppliedInEditor: true }),
+      spec,
+    });
+    expect(result.error).toBeUndefined();
+    expect(result.input).toBe(derived);
+    expect(result.spec.crop).toBeUndefined();
+    expect(result.spec.targetWidth).toBe(100);
+    expect(result.spec.targetHeight).toBe(120);
+  });
+
+  it("errors when the editor crop flag is set but the derived copy is missing", () => {
+    const result = resolvePrepareInput({
+      original,
+      values: values({ cropAppliedInEditor: true }),
+      spec: baseSpec,
+    });
+    expect(result.error).toMatch(/apply crop again/i);
+  });
+
+  it("errors when the prepared artifact belongs to a different original", () => {
+    const otherOriginal: FileReference = { ...original, id: "other-original" };
+    const result = resolvePrepareInput({
+      original: otherOriginal,
+      prepared: prepared(),
+      values: values({ cropAppliedInEditor: true }),
+      spec: baseSpec,
+    });
+    expect(result.error).toMatch(/apply crop again/i);
   });
 });
 

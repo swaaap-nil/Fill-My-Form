@@ -253,7 +253,11 @@ export const ImageEditor = ({ sessionId }: { readonly sessionId: string }) => {
       await updateEditorSession(sessionId, {
         status: "saved",
         derivedId: result.artifact.derived.id,
-        values: { ...settings.values, crop: handle.getSelection() },
+        values: {
+          ...settings.values,
+          crop: handle.getSelection(),
+          cropAppliedInEditor: true,
+        },
       });
       setPhase("done");
       setMessage(
