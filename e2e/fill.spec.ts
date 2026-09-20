@@ -96,6 +96,27 @@ test("propose: scanning shows every field's proposal and fills nothing", async (
   await expect(formPage.getByLabel("First name")).toHaveValue("");
 });
 
+test("empty scan: shows localized message instead of Answer now", async ({
+  context,
+  extensionId,
+}) => {
+  const formPage = await context.newPage();
+  await formPage.goto("/");
+
+  const panelPage = await openPanel(context, extensionId);
+  await grantAccess(formPage, panelPage);
+
+  await formPage.bringToFront();
+  await panelPage.getByRole("button", { name: "Scan this page" }).click();
+
+  await expect(panelPage.getByTestId("scan-no-fields-found")).toHaveText(
+    "Sorry, you're on your own on this one.",
+  );
+  await expect(
+    panelPage.getByRole("button", { name: "Answer now" }),
+  ).toBeHidden();
+});
+
 test("summary cards: hides answers summary when no answers are detected", async ({
   context,
   extensionId,

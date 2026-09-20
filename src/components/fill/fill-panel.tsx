@@ -922,6 +922,10 @@ export const FillPanel = () => {
     (proposalView === "answers" || proposalView === "known");
   const showAnswersSummary =
     answerDetailProposals.length > 0 || fillStatus.kind !== "ready";
+  const scanLiterallyEmpty =
+    scanState.kind === "proposals" &&
+    scanState.proposals.length === 0 &&
+    scanState.uploadIntents.length === 0;
   const activeGrantedOrigin = activeTabGranted
     ? findGrantedOriginForUrl(activeTabUrl, grantedOrigins)
     : undefined;
@@ -1002,9 +1006,18 @@ export const FillPanel = () => {
                   scanVersion={scanVersion}
                 />
               )}
-              {!showAnswersSummary && knownNoAnswerProposals.length === 0 && (
-                <AgentRunPanel key={scanVersion} tabId={activeTabId} />
-              )}
+              {!showAnswersSummary &&
+                knownNoAnswerProposals.length === 0 &&
+                (scanLiterallyEmpty ? (
+                  <p
+                    className="text-muted-foreground text-sm"
+                    data-testid="scan-no-fields-found"
+                  >
+                    {browser.i18n.getMessage("scanNoFieldsFound")}
+                  </p>
+                ) : (
+                  <AgentRunPanel key={scanVersion} tabId={activeTabId} />
+                ))}
               {scanState.uploadIntents.length > 0 && (
                 <UploadIntentsCard intents={scanState.uploadIntents} />
               )}

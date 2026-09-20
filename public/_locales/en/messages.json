@@ -36,6 +36,10 @@
     "description": "Badge shown on a page the user has granted access to.",
     "message": "Active on this page, with your permission"
   },
+  "scanNoFieldsFound": {
+    "description": "Shown after a scan when no form fields or upload intents were detected on the page.",
+    "message": "Sorry, you're on your own on this one."
+  },
   "localDataExport": {
     "message": "Export"
   },
@@ -84,8 +88,8 @@
     "message": "The form asks for a square, portrait, or landscape frame."
   },
   "editImageGuidanceOutputHeading": {
-    "description": "Heading for examples where the user should use final output settings.",
-    "message": "Use final output when the form says:"
+    "description": "Heading for examples where the user should not use the image editor because the form specifies final output settings.",
+    "message": "Do NOT use edit because form says"
   },
   "editImageGuidanceOutputPhysicalSize": {
     "message": "3.5 cm × 2.5 cm"
