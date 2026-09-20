@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.3.1...v1.4.0) (2026-09-20)
+
+
+### Features
+
+* define store links config ([2096800](https://github.com/swaaap-nil/Fill-My-Form/commit/2096800b73bc37839e141fe5c04d2ac4bb9ae883))
+
 ## [1.3.1](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.3.0...v1.3.1) (2026-09-20)
 
 
