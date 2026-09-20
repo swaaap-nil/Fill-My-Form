@@ -328,7 +328,9 @@ test("files: standalone preparation tool can use a saved onboarding document", a
     .getByRole("option", { name: /Photograph.*saved-photo\.png/ })
     .click();
   await panelPage.getByRole("button", { name: "Use this" }).click();
-  await expect(panelPage.getByRole("button", { name: "Replace" })).toBeVisible();
+  await expect(
+    panelPage.getByRole("button", { name: "Replace" }),
+  ).toBeVisible();
   await expect(panelPage.getByText("Your file", { exact: true })).toBeVisible();
   await expect(
     panelPage.getByText("saved-photo.png", { exact: true }),
