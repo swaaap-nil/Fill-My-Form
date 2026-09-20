@@ -16,7 +16,14 @@ const VENDORED_ICON_FIXTURE = join(
 
 const CLEAN_MANIFEST: ManifestLike = {
   manifest_version: 3,
-  permissions: ["storage", "sidePanel", "activeTab", "tabs", "scripting"],
+  permissions: [
+    "storage",
+    "sidePanel",
+    "activeTab",
+    "tabs",
+    "scripting",
+    "notifications",
+  ],
   optional_host_permissions: ["https://*/*", "http://*/*"],
   content_scripts: [],
   content_security_policy: {
@@ -32,7 +39,7 @@ const CLEAN_CHROME_MANIFEST: ManifestLike = {
 
 const CLEAN_FIREFOX_MANIFEST: ManifestLike = {
   ...CLEAN_MANIFEST,
-  permissions: ["storage", "activeTab", "tabs", "scripting"],
+  permissions: ["storage", "activeTab", "tabs", "scripting", "notifications"],
   browser_specific_settings: {
     gecko: {
       id: "ff@swapnilsuman.me",

@@ -1,16 +1,20 @@
 import { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
-import { browser } from "wxt/browser";
 import { createShadowRootUi, defineContentScript } from "#imports";
-import { Logo } from "@/components/common/logo";
+import {
+  DETECTION_NUDGE_AUTO_HIDE_MS,
+  DetectionNudgeBanner,
+} from "~/components/fill/detection-nudge-banner";
 import type { FieldElements } from "~/lib/form/extract";
 import { extractFullWithElements } from "~/lib/form/extract";
 import { uploadFieldFile, writeFieldValue } from "~/lib/form/fill";
+import { evaluateFormPageHeuristic } from "~/lib/form/form-page-heuristic";
 import { compareFieldValue } from "~/lib/form/verify";
 import {
   assertValidFillInstruction,
   assertValidUploadInstruction,
   onMessage,
+  sendMessage,
 } from "~/lib/messaging";
 
 import "~/assets/styles/globals.css";
@@ -24,15 +28,32 @@ import "~/assets/styles/globals.css";
  */
 let lastElementsById: ReadonlyMap<string, FieldElements> = new Map();
 const fillFeedbackEvent = "form-agent-fill-feedback";
+const detectionNudgeEvent = "form-agent-detection-nudge";
 
 interface FillFeedbackDetail {
   readonly filledCount: number;
+}
+
+interface DetectionNudgeDetail {
+  readonly knownFieldCount: number;
+  readonly answerCount: number;
 }
 
 const announceFillFeedback = (filledCount: number) => {
   window.dispatchEvent(
     new CustomEvent<FillFeedbackDetail>(fillFeedbackEvent, {
       detail: { filledCount },
+    }),
+  );
+};
+
+const announceDetectionNudge = (
+  knownFieldCount: number,
+  answerCount: number,
+) => {
+  window.dispatchEvent(
+    new CustomEvent<DetectionNudgeDetail>(detectionNudgeEvent, {
+      detail: { knownFieldCount, answerCount },
     }),
   );
 };
@@ -68,6 +89,11 @@ const registerFillHandlers = () => {
     return { ok: true };
   });
 
+  onMessage("showFormDetectionNudge", ({ data }) => {
+    announceDetectionNudge(data.knownFieldCount, data.answerCount);
+    return { ok: true };
+  });
+
   onMessage("verifyField", ({ data }) => {
     // Same cache `fillField` reads: a verify must check the same element the
     // fill wrote to, from the same extraction pass a `FieldId` came from.
@@ -76,6 +102,61 @@ const registerFillHandlers = () => {
       data.expectedValue,
     );
   });
+
+  onMessage("ackFormPageDetected", ({ data }) => {
+    ackedGeneration = data.generation;
+    return { ok: true };
+  });
+};
+
+const DETECTION_DEBOUNCE_MS = 900;
+let ackedGeneration = "";
+let detectionTimer: number | undefined;
+
+const schedulePassiveDetection = () => {
+  if (detectionTimer !== undefined) {
+    window.clearTimeout(detectionTimer);
+  }
+  detectionTimer = window.setTimeout(() => {
+    detectionTimer = undefined;
+    void runPassiveDetection();
+  }, DETECTION_DEBOUNCE_MS);
+};
+
+const runPassiveDetection = async () => {
+  const url = location.href;
+  const generation = url;
+  if (generation === ackedGeneration) return;
+
+  const { mayDetect } = await sendMessage("getPageAccessForUrl", { url });
+  if (!mayDetect) return;
+
+  const heuristic = evaluateFormPageHeuristic(document);
+  if (!heuristic.likelyFormPage) return;
+
+  const { ack } = await sendMessage("formPageDetected", {
+    url,
+    reason: heuristic.reason,
+    generation,
+  });
+  if (ack) ackedGeneration = generation;
+};
+
+const startPassiveDetection = () => {
+  const onNavigate = () => {
+    ackedGeneration = "";
+    schedulePassiveDetection();
+  };
+
+  window.addEventListener("load", schedulePassiveDetection);
+  window.addEventListener("pageshow", onNavigate);
+
+  const observer = new MutationObserver(() => schedulePassiveDetection());
+  if (document.body) {
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  schedulePassiveDetection();
 };
 
 /**
@@ -94,6 +175,26 @@ const ContentScriptUI = () => {
   const [fillFeedback, setFillFeedback] = useState<FillFeedbackDetail | null>(
     null,
   );
+  const [detectionNudge, setDetectionNudge] =
+    useState<DetectionNudgeDetail | null>(null);
+
+  useEffect(() => {
+    let hideTimer: number | undefined;
+    const handleDetectionNudge = (event: Event) => {
+      const detail = (event as CustomEvent<DetectionNudgeDetail>).detail;
+      if (hideTimer !== undefined) window.clearTimeout(hideTimer);
+      setDetectionNudge(detail);
+      hideTimer = window.setTimeout(() => {
+        setDetectionNudge(null);
+      }, DETECTION_NUDGE_AUTO_HIDE_MS);
+    };
+
+    window.addEventListener(detectionNudgeEvent, handleDetectionNudge);
+    return () => {
+      if (hideTimer !== undefined) window.clearTimeout(hideTimer);
+      window.removeEventListener(detectionNudgeEvent, handleDetectionNudge);
+    };
+  }, []);
 
   useEffect(() => {
     let hideTimer: number | undefined;
@@ -115,6 +216,17 @@ const ContentScriptUI = () => {
 
   return (
     <>
+      {detectionNudge && (
+        <DetectionNudgeBanner
+          knownFieldCount={detectionNudge.knownFieldCount}
+          answerCount={detectionNudge.answerCount}
+          onReview={() => {
+            void sendMessage("openFillUiFromTab");
+            setDetectionNudge(null);
+          }}
+          onDismiss={() => setDetectionNudge(null)}
+        />
+      )}
       {fillFeedback && (
         <div
           className="pointer-events-none fixed inset-x-4 top-6 z-[2147483647] flex justify-center motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-4 motion-safe:zoom-in-95 motion-safe:duration-300 motion-reduce:animate-none"
@@ -156,10 +268,6 @@ const ContentScriptUI = () => {
           </div>
         </div>
       )}
-      <div className="pointer-events-none fixed right-4 bottom-4 z-[2147483646] flex items-center gap-2 rounded-lg bg-background/90 px-3 py-2 text-foreground text-sm shadow-lg ring-1 ring-border">
-        <Logo className="w-4 text-primary" />
-        <span>{browser.i18n.getMessage("contentScriptActive")}</span>
-      </div>
     </>
   );
 };
@@ -171,6 +279,7 @@ export default defineContentScript({
 
   async main(ctx) {
     registerFillHandlers();
+    startPassiveDetection();
 
     const ui = await createShadowRootUi(ctx, {
       name: "form-agent-ui",

@@ -1,4 +1,5 @@
 import { LogErrorCode, type Logger } from "~/core/logging";
+import { clearDetectionBadge } from "~/lib/detection-nudge";
 
 /** The slice of the WebExtension `browser` API {@link wireToolbarIconBehavior} needs. */
 export interface SidePanelBrowser {
@@ -7,7 +8,16 @@ export interface SidePanelBrowser {
   };
   /** Firefox-only; not in `@wxt-dev/browser`'s Chrome-derived types. */
   readonly sidebarAction?: { toggle(): Promise<void> };
-  readonly action: { onClicked: { addListener(fn: () => void): void } };
+  readonly tabs?: {
+    query(query: {
+      active: boolean;
+      currentWindow: boolean;
+    }): Promise<readonly { id?: number }[]>;
+  };
+  readonly action: {
+    onClicked: { addListener(fn: () => void): void };
+    setBadgeText(details: { text: string; tabId?: number }): Promise<void>;
+  };
 }
 
 /**
@@ -41,6 +51,18 @@ export const wireToolbarIconBehavior = (
       );
   } else {
     browser.action.onClicked.addListener(() => {
+      browser.action.setBadgeText({ text: "" }).catch(() => undefined);
+      void (async () => {
+        const tabId = (
+          await browser.tabs?.query({
+            active: true,
+            currentWindow: true,
+          })
+        )?.[0]?.id;
+        if (tabId !== undefined) {
+          await clearDetectionBadge(browser, tabId);
+        }
+      })();
       browser.sidebarAction?.toggle().catch(() =>
         logger.warn("could not toggle sidebar", {
           errorCode: LogErrorCode.EXTENSION_API,

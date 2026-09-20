@@ -12,6 +12,17 @@ import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import type { PreparedArtifact } from "~/core/files/preparation";
 import type { UploadIntent } from "~/core/form/types";
+import { getActiveBrowserTab } from "~/lib/active-browser-tab";
+import {
+  ALL_SITES_UPGRADE_FULL_STRIP_MAX_IMPRESSIONS,
+  type AllSitesUpgradeState,
+  clearAllSitesUpgradeSnooze,
+  loadAllSitesUpgradeState,
+  persistUpgradeImpression,
+  shouldShowAllSitesUpgradeLink,
+  shouldShowAllSitesUpgradeStrip,
+  snoozeAllSitesUpgrade,
+} from "~/lib/all-sites-upgrade-prompt";
 import {
   createIndexedDbFileReferenceStore,
   type FileReferenceStore,
@@ -19,8 +30,25 @@ import {
 import { createBrowserFilePreparationRegistry } from "~/lib/files/preparation-registry";
 import type { DecisionId, FieldProposal } from "~/lib/messaging";
 import { sendMessage } from "~/lib/messaging";
+import {
+  consumePendingFillTabId,
+  peekPendingFillTabId,
+} from "~/lib/pending-fill-tab";
 import { useSound } from "~/lib/sfx/react";
-import { siteAccess, toOriginPattern } from "~/lib/site-access";
+import {
+  isAllSiteOriginPattern,
+  isPermissibleUrl,
+  siteAccess,
+  toOriginPattern,
+} from "~/lib/site-access";
+import {
+  clearTabFillSnapshot,
+  loadTabFillSnapshot,
+  panelStateFromSnapshot,
+  saveTabFillSnapshot,
+  snapshotFromPanelState,
+  type TabFillPanelState,
+} from "~/lib/tab-fill-snapshot";
 import { cn } from "~/lib/utils";
 import { PreparationSuccessSupport } from "../files/preparation-success-support";
 import { PreparedFileHandoff } from "../files/prepared-file-handoff";
@@ -93,10 +121,7 @@ type ScanUiState =
  * the id through explicitly rather than letting the background re-derive
  * (and potentially mis-derive) it.
  */
-const getActiveTab = () =>
-  browser.tabs
-    .query({ active: true, currentWindow: true })
-    .then(([tab]) => tab);
+const getActiveTab = () => getActiveBrowserTab();
 
 const pluralizeAnswer = (count: number) =>
   count === 1 ? "answer detected" : "answers detected";
@@ -116,6 +141,10 @@ const findGrantedOriginForUrl = (
 ) => {
   if (!url) return undefined;
 
+  if (grantedOrigins.some(isAllSiteOriginPattern)) {
+    return grantedOrigins.find(isAllSiteOriginPattern) ?? "https://*/*";
+  }
+
   try {
     const origin = toOriginPattern(url);
     return grantedOrigins.find((grantedOrigin) => grantedOrigin === origin);
@@ -125,8 +154,12 @@ const findGrantedOriginForUrl = (
 };
 
 const formatGrantedOrigin = (origin: string) => {
+  if (isAllSiteOriginPattern(origin)) {
+    return "All websites";
+  }
+  const bare = origin.replace(/\/\*$/, "");
   try {
-    return new URL(origin).host;
+    return new URL(bare).host;
   } catch {
     return origin;
   }
@@ -226,12 +259,22 @@ const ScanToolbar = ({
   scannedAt,
   onScan,
   onRevoke,
+  showAllSitesUpgradeStrip,
+  showAllSitesUpgradeLink,
+  onEnableAllSites,
+  onSnoozeAllSitesUpgrade,
+  perSiteAccessOnly,
 }: {
   readonly state: ScanUiState;
   readonly grantedOrigin: string | undefined;
   readonly scannedAt: Date | undefined;
   readonly onScan: () => void;
   readonly onRevoke: (origin: string) => void;
+  readonly showAllSitesUpgradeStrip: boolean;
+  readonly showAllSitesUpgradeLink: boolean;
+  readonly onEnableAllSites: () => void;
+  readonly onSnoozeAllSitesUpgrade: () => void;
+  readonly perSiteAccessOnly: boolean;
 }) => {
   const scanning = state === "scanning";
   const hasScanResult = state === "results" || state === "filled";
@@ -282,13 +325,73 @@ const ScanToolbar = ({
           </span>
         </Button>
       )}
+      {showAllSitesUpgradeStrip && (
+        <div
+          className="flex flex-col gap-2 rounded-md border border-primary/20 bg-primary/5 px-2.5 py-2 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1 motion-reduce:animate-none"
+          data-testid="all-sites-upgrade-strip"
+        >
+          <p className="text-foreground text-xs leading-relaxed">
+            {browser.i18n.getMessage("allSitesUpgradeBenefit")}
+          </p>
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            {browser.i18n.getMessage("allSitesUpgradeTrust")}
+          </p>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={onEnableAllSites}
+            >
+              {browser.i18n.getMessage("allSitesUpgradeEnable")}
+            </Button>
+            <Button
+              type="button"
+              variant="link"
+              size="xs"
+              className="h-auto px-0 text-muted-foreground text-xs hover:text-primary"
+              onClick={onSnoozeAllSitesUpgrade}
+            >
+              {browser.i18n.getMessage("allSitesUpgradeNotNow")}
+            </Button>
+          </div>
+        </div>
+      )}
+      {showAllSitesUpgradeLink && (
+        <div
+          className="px-1 text-muted-foreground text-xs"
+          data-testid="all-sites-upgrade-link"
+        >
+          <Button
+            type="button"
+            variant="link"
+            size="xs"
+            className="h-auto px-0 text-xs"
+            onClick={onEnableAllSites}
+          >
+            {browser.i18n.getMessage("allSitesUpgradeEnable")}
+          </Button>
+        </div>
+      )}
       {grantedOrigin && (
         <div className="flex min-w-0 items-center justify-between gap-2 px-1 text-muted-foreground text-xs transition-all duration-300 ease-out motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1 motion-reduce:transition-none">
           <span className="min-w-0 truncate">
-            Access is on for{" "}
-            <span className="text-foreground">
-              {formatGrantedOrigin(grantedOrigin)}
-            </span>
+            {perSiteAccessOnly ? (
+              <>
+                {browser.i18n.getMessage("accessThisSiteOnly")}{" "}
+                <span className="text-foreground">
+                  {formatGrantedOrigin(grantedOrigin)}
+                </span>
+              </>
+            ) : (
+              <>
+                {browser.i18n.getMessage("accessOnFor")}{" "}
+                <span className="text-foreground">
+                  {formatGrantedOrigin(grantedOrigin)}
+                </span>
+              </>
+            )}
           </span>
           <Button
             type="button"
@@ -310,13 +413,11 @@ const AnswersSummaryCard = ({
   fillStatus,
   onOpenDetails,
   onFill,
-  children,
 }: {
   readonly count: number;
   readonly fillStatus: FillStatus;
   readonly onOpenDetails: () => void;
   readonly onFill: () => void;
-  readonly children?: React.ReactNode;
 }) => {
   const filling = fillStatus.kind === "filling";
   const filled = fillStatus.kind === "filled";
@@ -415,7 +516,6 @@ const AnswersSummaryCard = ({
           >
             {filling ? "Filling..." : "Fill My Form 😡"}
           </Button>
-          {children}
         </div>
       )}
     </SummaryCardShell>
@@ -676,6 +776,7 @@ export const FillPanel = () => {
   const [confirmedIds, setConfirmedIds] = useState<Set<DecisionId>>(new Set());
   const [fillStatus, setFillStatus] = useState<FillStatus>({ kind: "ready" });
   const [scanUiState, setScanUiState] = useState<ScanUiState>("idle");
+  const [scanAccessHint, setScanAccessHint] = useState<string | undefined>();
   const [lastScannedAt, setLastScannedAt] = useState<Date>();
   const [, setClockTick] = useState(0);
   const [grantedOrigins, setGrantedOrigins] = useState<readonly string[]>([]);
@@ -694,6 +795,18 @@ export const FillPanel = () => {
   // page" only ever means the active tab, so scan asks for that specific
   // origin when needed rather than assuming any granted origin is enough.
   const [activeTabGranted, setActiveTabGranted] = useState(false);
+  const [hasAllSiteAccess, setHasAllSiteAccess] = useState(false);
+  const [allSitesUpgradeState, setAllSitesUpgradeState] =
+    useState<AllSitesUpgradeState>({
+      snoozedUntilIso: null,
+      impressionCount: 0,
+    });
+  const upgradeStripImpressionRecordedRef = useRef(false);
+  const [fullStripPinnedForSession, setFullStripPinnedForSession] =
+    useState(false);
+  const [allSitesEnableError, setAllSitesEnableError] = useState<
+    string | undefined
+  >();
 
   const applyActiveTab = useCallback(
     async (tab: Browser.tabs.Tab | undefined) => {
@@ -708,10 +821,12 @@ export const FillPanel = () => {
 
   const refreshAccessState = useCallback(async () => {
     setGrantedOrigins(await siteAccess.listGrantedOrigins());
+    setHasAllSiteAccess(await siteAccess.hasAllSiteAccess());
     await applyActiveTab(await getActiveTab());
   }, [applyActiveTab]);
 
   useEffect(() => {
+    void loadAllSitesUpgradeState().then(setAllSitesUpgradeState);
     refreshAccessState();
 
     const handleActivated = ({ tabId }: { tabId: number }) => {
@@ -734,6 +849,63 @@ export const FillPanel = () => {
     };
   }, [refreshAccessState, applyActiveTab]);
 
+  const scanRef = useRef<() => Promise<void>>(async () => {});
+
+  const resetPanelForTabWithoutSnapshot = useCallback(() => {
+    setScanState({ kind: "idle" });
+    setScanUiState("idle");
+    setLastScannedAt(undefined);
+    setFillStatus({ kind: "ready" });
+    setProposalView("summary");
+    setProposalViewTransition("none");
+    setConfirmedIds(new Set());
+    setScanAccessHint(undefined);
+  }, []);
+
+  const hydrateFromTabSnapshot = useCallback((panel: TabFillPanelState) => {
+    setScanState(panel.scanState);
+    setScanUiState(panel.scanUiState);
+    setFillStatus(panel.fillStatus);
+    setLastScannedAt(panel.lastScannedAt);
+    setConfirmedIds(new Set(panel.confirmedIds));
+    setScanVersion(panel.scanVersion);
+    setProposalView("summary");
+    setProposalViewTransition("none");
+    setScanAccessHint(undefined);
+  }, []);
+
+  useEffect(() => {
+    if (activeTabId === undefined) return;
+    void (async () => {
+      const pending = await peekPendingFillTabId();
+      const isPendingTarget = pending === activeTabId;
+      const snapshot = await loadTabFillSnapshot(activeTabId, {
+        currentUrl: activeTabUrl,
+      });
+
+      if (isPendingTarget) {
+        await consumePendingFillTabId();
+        if (snapshot) {
+          hydrateFromTabSnapshot(panelStateFromSnapshot(snapshot));
+          return;
+        }
+        await scanRef.current();
+        return;
+      }
+
+      if (snapshot) {
+        hydrateFromTabSnapshot(panelStateFromSnapshot(snapshot));
+      } else {
+        resetPanelForTabWithoutSnapshot();
+      }
+    })();
+  }, [
+    activeTabId,
+    activeTabUrl,
+    hydrateFromTabSnapshot,
+    resetPanelForTabWithoutSnapshot,
+  ]);
+
   useEffect(() => {
     if (!lastScannedAt) return undefined;
 
@@ -746,6 +918,7 @@ export const FillPanel = () => {
 
   const scan = async () => {
     setScanUiState("scanning");
+    setScanAccessHint(undefined);
     setFillStatus({ kind: "ready" });
     sound.startLoop("scan-page", "scanStarted");
     // The user gesture that fires this handler is what makes
@@ -760,6 +933,20 @@ export const FillPanel = () => {
     // last `refreshAccessState()` so this handler's first async call can be
     // `requestSiteAccess` itself when access is missing.
     if (activeTabId === undefined || activeTabUrl === undefined) {
+      setScanAccessHint(
+        "No active tab was found. Focus a browser tab with a form, then scan again.",
+      );
+      setScanState({ kind: "not_granted" });
+      setScanUiState("blocked");
+      sound.stopLoop("scan-page");
+      sound.play("scanBlocked");
+      return;
+    }
+
+    if (!isPermissibleUrl(activeTabUrl)) {
+      setScanAccessHint(
+        "This tab cannot be scanned (internal browser pages). Open an http or https page, then scan again.",
+      );
       setScanState({ kind: "not_granted" });
       setScanUiState("blocked");
       sound.stopLoop("scan-page");
@@ -768,13 +955,37 @@ export const FillPanel = () => {
     }
 
     try {
-      if (!activeTabGranted) {
+      const alreadyGranted = await siteAccess.hasSiteAccess(activeTabUrl);
+      if (!alreadyGranted) {
         const granted = await siteAccess.requestSiteAccess(
           activeTabUrl,
           activeTabId,
         );
         await refreshAccessState();
         if (!granted) {
+          setScanAccessHint(
+            "Permission was not granted. If no prompt appeared, check the extension’s site access in chrome://extensions (or use Allow on all sites from the first-run screen).",
+          );
+          setScanState({ kind: "not_granted" });
+          setScanUiState("blocked");
+          sound.stopLoop("scan-page");
+          sound.play("scanBlocked");
+          return;
+        }
+      } else {
+        await siteAccess.syncScriptsForGrantedAccess(activeTabUrl, activeTabId);
+        await refreshAccessState();
+      }
+
+      let fillResult = await sendMessage("runFill", { tabId: activeTabId });
+      if (!fillResult.granted) {
+        await siteAccess.syncScriptsForGrantedAccess(activeTabUrl, activeTabId);
+        fillResult = await sendMessage("runFill", { tabId: activeTabId });
+        if (!fillResult.granted) {
+          setActiveTabGranted(false);
+          setScanAccessHint(
+            "Access looks granted but this page still cannot be read. Reload the tab, then scan again.",
+          );
           setScanState({ kind: "not_granted" });
           setScanUiState("blocked");
           sound.stopLoop("scan-page");
@@ -782,27 +993,35 @@ export const FillPanel = () => {
           return;
         }
       }
-
-      const result = await sendMessage("runFill", { tabId: activeTabId });
-      if (!result.granted) {
-        setActiveTabGranted(false);
-        setScanState({ kind: "not_granted" });
-        setScanUiState("blocked");
-        sound.stopLoop("scan-page");
-        sound.play("scanBlocked");
-        return;
-      }
       setConfirmedIds(new Set());
       setProposalView("summary");
       setProposalViewTransition("none");
-      setScanVersion((version) => version + 1);
+      const scannedAt = new Date();
+      const nextScanVersion = scanVersion + 1;
+      setScanVersion(nextScanVersion);
       setScanState({
         kind: "proposals",
-        proposals: result.proposals,
-        uploadIntents: result.uploadIntents,
+        proposals: fillResult.proposals,
+        uploadIntents: fillResult.uploadIntents,
       });
-      setLastScannedAt(new Date());
+      setLastScannedAt(scannedAt);
       setScanUiState("results");
+      await saveTabFillSnapshot(
+        snapshotFromPanelState({
+          tabId: activeTabId,
+          scanState: {
+            kind: "proposals",
+            proposals: fillResult.proposals,
+            uploadIntents: fillResult.uploadIntents,
+          },
+          scanUiState: "results",
+          fillStatus: { kind: "ready" },
+          lastScannedAt: scannedAt,
+          confirmedIds: new Set(),
+          scanVersion: nextScanVersion,
+          pageUrl: activeTabUrl,
+        }),
+      );
       sound.stopLoop("scan-page");
       sound.play("scanSucceeded");
     } catch {
@@ -817,6 +1036,8 @@ export const FillPanel = () => {
     }
   };
 
+  scanRef.current = scan;
+
   const revoke = async (origin: string) => {
     try {
       await siteAccess.revokeSiteAccess(origin);
@@ -826,6 +1047,9 @@ export const FillPanel = () => {
       setFillStatus({ kind: "ready" });
       setScanUiState("idle");
       setLastScannedAt(undefined);
+      if (activeTabId !== undefined) {
+        await clearTabFillSnapshot(activeTabId);
+      }
       await refreshAccessState();
       sound.play("accessRevoked");
     } catch {
@@ -841,34 +1065,57 @@ export const FillPanel = () => {
     setFillStatus({ kind: "filling", attemptedCount: decisionIds.length });
     sound.startLoop("confirm-fill", "fillStarted");
     let outcome: "fillSucceeded" | "fillFailed" = "fillFailed";
+    let nextConfirmedIds = confirmedIds;
+    let nextFillStatus: FillStatus = { kind: "ready" };
+    let nextScanUiState: ScanUiState = scanUiState;
     try {
       const { results } = await sendMessage("confirmFill", {
         decisionIds,
         tabId: activeTabId,
       });
       const ok = new Set(results.filter((r) => r.ok).map((r) => r.decisionId));
-      setConfirmedIds((prev) => new Set([...prev, ...ok]));
+      nextConfirmedIds = new Set([...confirmedIds, ...ok]);
+      setConfirmedIds(nextConfirmedIds);
       if (ok.size === decisionIds.length) {
-        setFillStatus({ kind: "filled", filledCount: ok.size });
-        setScanUiState("filled");
+        nextFillStatus = { kind: "filled", filledCount: ok.size };
+        nextScanUiState = "filled";
+        setFillStatus(nextFillStatus);
+        setScanUiState(nextScanUiState);
         outcome = "fillSucceeded";
       } else if (ok.size > 0) {
-        setFillStatus({
+        nextFillStatus = {
           kind: "partial",
           attemptedCount: decisionIds.length,
           filledCount: ok.size,
-        });
+        };
+        setFillStatus(nextFillStatus);
       } else {
-        setFillStatus({
+        nextFillStatus = {
           kind: "failed",
           attemptedCount: decisionIds.length,
-        });
+        };
+        setFillStatus(nextFillStatus);
       }
     } catch {
-      setFillStatus({ kind: "failed", attemptedCount: decisionIds.length });
+      nextFillStatus = { kind: "failed", attemptedCount: decisionIds.length };
+      setFillStatus(nextFillStatus);
       outcome = "fillFailed";
     } finally {
       sound.stopLoop("confirm-fill");
+    }
+    if (scanState.kind === "proposals") {
+      await saveTabFillSnapshot(
+        snapshotFromPanelState({
+          tabId: activeTabId,
+          scanState: scanState,
+          scanUiState: nextScanUiState,
+          fillStatus: nextFillStatus,
+          lastScannedAt,
+          confirmedIds: nextConfirmedIds,
+          scanVersion,
+          pageUrl: activeTabUrl,
+        }),
+      );
     }
     sound.play(outcome);
   };
@@ -930,13 +1177,82 @@ export const FillPanel = () => {
     ? findGrantedOriginForUrl(activeTabUrl, grantedOrigins)
     : undefined;
 
+  const hasSuccessfulScan =
+    scanUiState === "results" || scanUiState === "filled";
+  const nowIso = new Date().toISOString();
+  const showAllSitesUpgradeStripBase = shouldShowAllSitesUpgradeStrip(
+    allSitesUpgradeState,
+    nowIso,
+    hasAllSiteAccess,
+    hasSuccessfulScan,
+  );
+  const showAllSitesUpgradeStrip =
+    showAllSitesUpgradeStripBase || fullStripPinnedForSession;
+  const showAllSitesUpgradeLink =
+    shouldShowAllSitesUpgradeLink(
+      allSitesUpgradeState,
+      nowIso,
+      hasAllSiteAccess,
+      hasSuccessfulScan,
+    ) && !showAllSitesUpgradeStrip;
+  const perSiteAccessOnly =
+    Boolean(activeGrantedOrigin) &&
+    !hasAllSiteAccess &&
+    !isAllSiteOriginPattern(activeGrantedOrigin ?? "");
+
+  useEffect(() => {
+    if (!showAllSitesUpgradeStripBase) {
+      upgradeStripImpressionRecordedRef.current = false;
+      setFullStripPinnedForSession(false);
+      return;
+    }
+    if (upgradeStripImpressionRecordedRef.current) return;
+    upgradeStripImpressionRecordedRef.current = true;
+    void persistUpgradeImpression().then((next) => {
+      setAllSitesUpgradeState(next);
+      if (
+        next.impressionCount >= ALL_SITES_UPGRADE_FULL_STRIP_MAX_IMPRESSIONS
+      ) {
+        setFullStripPinnedForSession(true);
+      }
+    });
+  }, [showAllSitesUpgradeStripBase]);
+
+  const enableAllSitesAccess = async () => {
+    setAllSitesEnableError(undefined);
+    if (activeTabId === undefined) {
+      setAllSitesEnableError(
+        "No active tab was found. Focus a browser tab, then try again.",
+      );
+      return;
+    }
+    const granted = await siteAccess.requestAllSiteAccess(activeTabId);
+    if (!granted) {
+      setAllSitesEnableError(
+        "Permission was not granted. Try again when the browser prompt appears.",
+      );
+      return;
+    }
+    if (activeTabUrl) {
+      await siteAccess.syncScriptsForGrantedAccess(activeTabUrl, activeTabId);
+    }
+    await clearAllSitesUpgradeSnooze();
+    setAllSitesUpgradeState(await loadAllSitesUpgradeState());
+    await refreshAccessState();
+  };
+
+  const snoozeAllSitesUpgradePrompt = async () => {
+    setFullStripPinnedForSession(false);
+    setAllSitesUpgradeState(await snoozeAllSitesUpgrade());
+  };
+
   return (
     <div className="flex w-full grow flex-col gap-4">
       <div className="flex flex-col gap-4">
         {scanState.kind === "not_granted" && (
           <p className="text-muted-foreground text-sm">
-            This site needs access before it can be scanned. Use "Scan this
-            page" and approve the browser prompt to continue.
+            {scanAccessHint ??
+              'This site needs access before it can be scanned. Use "Scan this page" and approve the browser prompt to continue.'}
           </p>
         )}
 
@@ -988,11 +1304,7 @@ export const FillPanel = () => {
                     sound.play("proposalDetailsOpened");
                   }}
                   onFill={() => confirm(answeredDecisionIds)}
-                >
-                  {knownNoAnswerProposals.length === 0 && (
-                    <AgentRunPanel key={scanVersion} tabId={activeTabId} />
-                  )}
-                </AnswersSummaryCard>
+                />
               )}
               {knownNoAnswerProposals.length > 0 && (
                 <KnownFieldsSummaryCard
@@ -1029,12 +1341,23 @@ export const FillPanel = () => {
       <div className="mt-auto flex flex-col gap-4">
         <Separator />
 
+        {allSitesEnableError && (
+          <p className="text-destructive text-sm" role="alert">
+            {allSitesEnableError}
+          </p>
+        )}
+
         <ScanToolbar
           state={scanUiState}
           grantedOrigin={activeGrantedOrigin}
           scannedAt={lastScannedAt}
           onScan={scan}
           onRevoke={revoke}
+          showAllSitesUpgradeStrip={showAllSitesUpgradeStrip}
+          showAllSitesUpgradeLink={showAllSitesUpgradeLink}
+          onEnableAllSites={() => void enableAllSitesAccess()}
+          onSnoozeAllSitesUpgrade={() => void snoozeAllSitesUpgradePrompt()}
+          perSiteAccessOnly={perSiteAccessOnly}
         />
       </div>
     </div>

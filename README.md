@@ -157,8 +157,9 @@ More in [docs/architecture.md](./docs/architecture.md) and
 The extension requests **no site access at install time**. It ships with
 `activeTab`, `tabs`, and an empty host-permission list; `tabs` is used to read
 the active tab's URL so the extension can request access to exactly that origin.
-Access to a site is granted by the user, one origin at a time, and the content
-script is registered for that origin only (`src/lib/site-access.ts`).
+On first open, the side panel may request access to all websites for automatic
+form detection; if declined, access is still granted one origin at a time when
+you scan a page (`src/lib/site-access.ts`).
 
 Full detail, including how each rule is enforced, in
 [docs/privacy.md](./docs/privacy.md).

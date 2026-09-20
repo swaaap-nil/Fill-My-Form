@@ -104,6 +104,7 @@ export default defineConfig({
       "activeTab",
       "tabs",
       "scripting",
+      "notifications",
     ],
     optional_host_permissions: ["https://*/*", "http://*/*"],
 

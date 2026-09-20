@@ -109,19 +109,18 @@ permission. One paragraph each, reusable for both stores.
 > page before that grant.
 
 **`optional_host_permissions` (`http://*/*`, `https://*/*`)**
-> The extension's purpose — filling forms — is not limited to a fixed list
-> of websites; forms exist on arbitrary domains, from job boards to
-> government portals. Rather than declare broad access at install time,
-> this permission is requested *at runtime, per origin, from a direct user
-> gesture* (a button click in the extension's own panel), and only for the
-> single origin the user is currently on. **The extension ships with no
-> host permissions granted at install** — `chrome://extensions` shows no
-> site access immediately after installing it. Access can be revoked for
-> any origin at any time from the same panel that granted it. This is
-> deliberately the opposite of the common pattern of requesting `<all_urls>`
-> once at install time: the user grants (and can review, and can revoke)
-> access one site at a time, only when they intend to use the extension
-> there.
+> Forms exist on arbitrary domains. The extension ships with **no** host
+> permissions at install. On first opening the side panel, the user may
+> grant all http(s) sites in one runtime prompt (local form detection and
+> notifications with counts only — no auto-fill). If they decline, access
+> is requested *per origin* when they scan a page. Access can be revoked in
+> the panel or browser settings.
+
+**`notifications`**
+> Used only to tell the user that fillable fields matching their saved
+> answers were detected on a page they are viewing. Notification text
+> contains counts only, not personal data. Clicking focuses the tab and
+> opens the fill panel.
 
 ## Screenshots (1280×800)
 

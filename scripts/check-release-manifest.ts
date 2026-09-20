@@ -153,6 +153,7 @@ export const evaluateTargetManifest = (
         "activeTab",
         "tabs",
         "scripting",
+        "notifications",
       ]),
     );
 
@@ -211,6 +212,7 @@ export const evaluateTargetManifest = (
         "activeTab",
         "tabs",
         "scripting",
+        "notifications",
       ]),
     );
 

@@ -99,5 +99,49 @@
   },
   "editImageGuidanceOutputFormatSize": {
     "message": "JPG only or 20-50 KB"
+  },
+  "proactiveDetectionTitle": {
+    "description": "System notification title when fillable fields are detected.",
+    "message": "Fill My Form"
+  },
+  "proactiveDetectionBody": {
+    "description": "System notification body; $1 = known field count, $2 = answer count.",
+    "message": "$1 known fields, $2 answers ready to review"
+  },
+  "detectionNudgeBannerTitle": {
+    "description": "In-page banner title when fillable fields are detected.",
+    "message": "Forms ready to review"
+  },
+  "detectionNudgeBannerAction": {
+    "description": "Primary action on the in-page detection banner.",
+    "message": "Review answers"
+  },
+  "detectionNudgeBannerDismiss": {
+    "description": "Dismiss control on the in-page detection banner.",
+    "message": "Dismiss"
+  },
+  "allSitesUpgradeBenefit": {
+    "description": "Benefit line in the scan toolbar all-sites upgrade strip.",
+    "message": "Get notified when we can fill a form on any site you visit."
+  },
+  "allSitesUpgradeTrust": {
+    "description": "Trust line in the scan toolbar all-sites upgrade strip.",
+    "message": "Detection stays on this device."
+  },
+  "allSitesUpgradeEnable": {
+    "description": "Primary action to grant all-site access from the scan toolbar.",
+    "message": "Enable on all websites"
+  },
+  "allSitesUpgradeNotNow": {
+    "description": "Dismiss the scan toolbar all-sites upgrade strip for seven days.",
+    "message": "Not now"
+  },
+  "accessThisSiteOnly": {
+    "description": "Prefix before the host when access is limited to the current site.",
+    "message": "This site only:"
+  },
+  "accessOnFor": {
+    "description": "Prefix before granted scope in the scan toolbar footer.",
+    "message": "Access is on for"
   }
 }

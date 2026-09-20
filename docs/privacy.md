@@ -80,12 +80,16 @@ it, rather than by trusting that it only happens locally. See
 
 The manifest ships with `activeTab`, `tabs`, and **no** `host_permissions`.
 `tabs` lets the side panel read the active tab's URL so it can ask for the
-right origin; it does not grant page-content access. Access to a site is
-granted by the user, one origin at a time, through
-`requestSiteAccess()` in `src/lib/site-access.ts`, and the content script is
-registered for that origin only.
-
-The content script uses `registration: "runtime"` so it is not declared in the
+right origin; it does not grant page-content access. On first opening the side
+panel, the user may grant all http(s) sites at once via
+`requestAllSiteAccess()`; if they decline, each origin is granted when they
+scan that page via `requestSiteAccess()` in `src/lib/site-access.ts`. Passive
+detection and notifications (field counts only) run on granted origins. After
+you grant a single site and scan successfully, the side panel may show an
+optional prompt to enable all websites; that nudge is local-only (snooze and
+dismiss counts stay in `browser.storage.local`) and does not collect new data.
+The
+content script uses `registration: "runtime"` so it is not declared in the
 manifest — a declared content script matching `<all_urls>` would grant injection
 into every page at install time and show "read and change all your data on all
 websites" regardless of the permission list.
