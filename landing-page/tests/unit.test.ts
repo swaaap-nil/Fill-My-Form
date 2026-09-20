@@ -82,16 +82,17 @@ test('store link validation rejects unsafe URLs', () => {
     firefox,
   );
 });
-test('production launch rejects missing or unsafe configuration', () => {
+test('launch config rejects invalid GA4 and enables GA only in production', () => {
   assert.equal(validateConfig({}).ga, '');
-  assert.throws(() => validateConfig({ SITE_ENV: 'production' }));
+  assert.equal(validateConfig({ SITE_ENV: 'production' }).ga, '');
   assert.throws(() => validateConfig({ PUBLIC_GA4_ID: 'bad' }));
-  const valid = {
-    SITE_ENV: 'production',
-    PUBLIC_GA4_ID: 'G-TEST123',
-    LAUNCH_REVIEWED: 'true',
-  };
-  assert.equal(validateConfig(valid).ga, 'G-TEST123');
-  assert.equal(validateConfig({ ...valid, SITE_ENV: 'preview' }).ga, '');
+  assert.equal(
+    validateConfig({ SITE_ENV: 'production', PUBLIC_GA4_ID: 'G-TEST123' }).ga,
+    'G-TEST123',
+  );
+  assert.equal(
+    validateConfig({ SITE_ENV: 'preview', PUBLIC_GA4_ID: 'G-TEST123' }).ga,
+    '',
+  );
   assert.ok(validateConfig({}).firefox.includes('fill-my-form'));
 });

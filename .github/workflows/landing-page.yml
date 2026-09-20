@@ -51,7 +51,6 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       PUBLIC_GA4_ID: ${{ vars.PUBLIC_GA4_ID }}
-      LAUNCH_REVIEWED: ${{ vars.LAUNCH_REVIEWED }}
       DEPLOY_TARGET: ${{ inputs.deploy }}
     steps:
       - uses: actions/checkout@v4

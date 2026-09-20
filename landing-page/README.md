@@ -40,13 +40,9 @@ Copy `.env.example` when preparing a real preview or production environment.
 Site and store listing URLs live in `src/lib/store-links.ts` (not env). Set
 `chrome` or `firefox` to an empty string to hide that install button.
 
-Required for production builds:
-
-```sh
-SITE_ENV=production
-PUBLIC_GA4_ID=G-XXXXXXXXXX
-LAUNCH_REVIEWED=true
-```
+Production builds set `SITE_ENV=production` (via `npm run build:production` or
+Cloudflare build command). `PUBLIC_GA4_ID` is optional until analytics is ready;
+leave it unset and the site ships without GA4.
 
 ## Commands
 

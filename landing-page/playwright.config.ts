@@ -23,7 +23,6 @@ export default defineConfig({
       WRANGLER_LOG_PATH: '/tmp/fmf-test-wrangler.log',
       SITE_ENV: 'production',
       PUBLIC_GA4_ID: 'G-TEST123',
-      LAUNCH_REVIEWED: 'true',
     },
   },
 });

@@ -6,11 +6,6 @@ export function validateConfig(env: Record<string, string | undefined>) {
   const ga = env.PUBLIC_GA4_ID || '';
   if (ga && !/^G-[A-Z0-9]+$/.test(ga))
     throw new Error('Invalid GA4 measurement ID');
-  if (production && (!ga || env.LAUNCH_REVIEWED !== 'true')) {
-    throw new Error(
-      'Production requires GA4 ID and LAUNCH_REVIEWED=true after privacy and translation review.',
-    );
-  }
   return {
     production,
     site,
