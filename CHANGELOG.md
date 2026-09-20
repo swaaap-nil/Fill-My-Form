@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.5.0](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.4.1...v1.5.0) (2026-09-20)
+
+
+### Features
+
+* add google site verification file ([7a93543](https://github.com/swaaap-nil/Fill-My-Form/commit/7a93543dace27a817b760d303193b74476d2279e))
+* add google site verification file ([b5b5013](https://github.com/swaaap-nil/Fill-My-Form/commit/b5b50132ac037131090df32f2e91e78fbb939d31))
+
+
+### Bug Fixes
+
+* **fill:** show i18n message when scan finds no fields ([f3cad53](https://github.com/swaaap-nil/Fill-My-Form/commit/f3cad5305e199313f6a8a19864c87b37044c2caa))
+
 ## [1.4.1](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.4.0...v1.4.1) (2026-09-20)
 
 
