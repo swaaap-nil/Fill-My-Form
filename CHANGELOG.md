@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.4.0...v1.4.1) (2026-09-20)
+
+
+### Bug Fixes
+
+* **landing-page:** allow production builds without GA4 ([3f465d9](https://github.com/swaaap-nil/Fill-My-Form/commit/3f465d90e00f1f2a6339a8b01a4356bf623b9fbb))
+
 ## [1.4.0](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.3.1...v1.4.0) (2026-09-20)
 
 
