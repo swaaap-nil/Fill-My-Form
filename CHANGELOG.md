@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.3.0...v1.3.1) (2026-09-20)
+
+
+### Bug Fixes
+
+* release logic ([7dfdd00](https://github.com/swaaap-nil/Fill-My-Form/commit/7dfdd00d07c0192911d00c4c97a9540197ff9498))
+
 ## [1.3.0](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.2.0...v1.3.0) (2026-09-20)
 
 
