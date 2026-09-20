@@ -57,8 +57,13 @@ add field values or URLs to the page overlay.
 | `showFormDetectionNudge` | background → content | `{ knownFieldCount, answerCount }` |
 | `openFillUiFromTab` | content → background | opens fill UI from banner click (user gesture) |
 
-Session storage may hold `pendingFillTabId` and last detection counts for panel
-deep-link; no personal data in those keys.
+Session storage may hold `pendingFillTabId` for deep-linking the side panel to a
+tab, and `tab-fill-snapshot:{tabId}` for per-tab fill UI (proposals, scan
+toolbar state, fill status) with the same **10-minute TTL** as pending fill
+decisions. **My information** memory stays global in IndexedDB; only the panel
+view is keyed by tab. Snapshots store proposal shapes and counts, not new cloud
+data. When a snapshot exists, opening from a notification hydrates the panel
+without a manual rescan; otherwise the panel falls back to auto-scan.
 
 ## Alternatives
 

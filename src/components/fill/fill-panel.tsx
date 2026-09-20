@@ -41,6 +41,14 @@ import {
   siteAccess,
   toOriginPattern,
 } from "~/lib/site-access";
+import {
+  clearTabFillSnapshot,
+  loadTabFillSnapshot,
+  panelStateFromSnapshot,
+  saveTabFillSnapshot,
+  snapshotFromPanelState,
+  type TabFillPanelState,
+} from "~/lib/tab-fill-snapshot";
 import { cn } from "~/lib/utils";
 import { PreparationSuccessSupport } from "../files/preparation-success-support";
 import { PreparedFileHandoff } from "../files/prepared-file-handoff";
@@ -843,15 +851,60 @@ export const FillPanel = () => {
 
   const scanRef = useRef<() => Promise<void>>(async () => {});
 
+  const resetPanelForTabWithoutSnapshot = useCallback(() => {
+    setScanState({ kind: "idle" });
+    setScanUiState("idle");
+    setLastScannedAt(undefined);
+    setFillStatus({ kind: "ready" });
+    setProposalView("summary");
+    setProposalViewTransition("none");
+    setConfirmedIds(new Set());
+    setScanAccessHint(undefined);
+  }, []);
+
+  const hydrateFromTabSnapshot = useCallback((panel: TabFillPanelState) => {
+    setScanState(panel.scanState);
+    setScanUiState(panel.scanUiState);
+    setFillStatus(panel.fillStatus);
+    setLastScannedAt(panel.lastScannedAt);
+    setConfirmedIds(new Set(panel.confirmedIds));
+    setScanVersion(panel.scanVersion);
+    setProposalView("summary");
+    setProposalViewTransition("none");
+    setScanAccessHint(undefined);
+  }, []);
+
   useEffect(() => {
     if (activeTabId === undefined) return;
     void (async () => {
       const pending = await peekPendingFillTabId();
-      if (pending !== activeTabId) return;
-      await consumePendingFillTabId();
-      await scanRef.current();
+      const isPendingTarget = pending === activeTabId;
+      const snapshot = await loadTabFillSnapshot(activeTabId, {
+        currentUrl: activeTabUrl,
+      });
+
+      if (isPendingTarget) {
+        await consumePendingFillTabId();
+        if (snapshot) {
+          hydrateFromTabSnapshot(panelStateFromSnapshot(snapshot));
+          return;
+        }
+        await scanRef.current();
+        return;
+      }
+
+      if (snapshot) {
+        hydrateFromTabSnapshot(panelStateFromSnapshot(snapshot));
+      } else {
+        resetPanelForTabWithoutSnapshot();
+      }
     })();
-  }, [activeTabId]);
+  }, [
+    activeTabId,
+    activeTabUrl,
+    hydrateFromTabSnapshot,
+    resetPanelForTabWithoutSnapshot,
+  ]);
 
   useEffect(() => {
     if (!lastScannedAt) return undefined;
@@ -943,14 +996,32 @@ export const FillPanel = () => {
       setConfirmedIds(new Set());
       setProposalView("summary");
       setProposalViewTransition("none");
-      setScanVersion((version) => version + 1);
+      const scannedAt = new Date();
+      const nextScanVersion = scanVersion + 1;
+      setScanVersion(nextScanVersion);
       setScanState({
         kind: "proposals",
         proposals: fillResult.proposals,
         uploadIntents: fillResult.uploadIntents,
       });
-      setLastScannedAt(new Date());
+      setLastScannedAt(scannedAt);
       setScanUiState("results");
+      await saveTabFillSnapshot(
+        snapshotFromPanelState({
+          tabId: activeTabId,
+          scanState: {
+            kind: "proposals",
+            proposals: fillResult.proposals,
+            uploadIntents: fillResult.uploadIntents,
+          },
+          scanUiState: "results",
+          fillStatus: { kind: "ready" },
+          lastScannedAt: scannedAt,
+          confirmedIds: new Set(),
+          scanVersion: nextScanVersion,
+          pageUrl: activeTabUrl,
+        }),
+      );
       sound.stopLoop("scan-page");
       sound.play("scanSucceeded");
     } catch {
@@ -976,6 +1047,9 @@ export const FillPanel = () => {
       setFillStatus({ kind: "ready" });
       setScanUiState("idle");
       setLastScannedAt(undefined);
+      if (activeTabId !== undefined) {
+        await clearTabFillSnapshot(activeTabId);
+      }
       await refreshAccessState();
       sound.play("accessRevoked");
     } catch {
@@ -991,34 +1065,57 @@ export const FillPanel = () => {
     setFillStatus({ kind: "filling", attemptedCount: decisionIds.length });
     sound.startLoop("confirm-fill", "fillStarted");
     let outcome: "fillSucceeded" | "fillFailed" = "fillFailed";
+    let nextConfirmedIds = confirmedIds;
+    let nextFillStatus: FillStatus = { kind: "ready" };
+    let nextScanUiState: ScanUiState = scanUiState;
     try {
       const { results } = await sendMessage("confirmFill", {
         decisionIds,
         tabId: activeTabId,
       });
       const ok = new Set(results.filter((r) => r.ok).map((r) => r.decisionId));
-      setConfirmedIds((prev) => new Set([...prev, ...ok]));
+      nextConfirmedIds = new Set([...confirmedIds, ...ok]);
+      setConfirmedIds(nextConfirmedIds);
       if (ok.size === decisionIds.length) {
-        setFillStatus({ kind: "filled", filledCount: ok.size });
-        setScanUiState("filled");
+        nextFillStatus = { kind: "filled", filledCount: ok.size };
+        nextScanUiState = "filled";
+        setFillStatus(nextFillStatus);
+        setScanUiState(nextScanUiState);
         outcome = "fillSucceeded";
       } else if (ok.size > 0) {
-        setFillStatus({
+        nextFillStatus = {
           kind: "partial",
           attemptedCount: decisionIds.length,
           filledCount: ok.size,
-        });
+        };
+        setFillStatus(nextFillStatus);
       } else {
-        setFillStatus({
+        nextFillStatus = {
           kind: "failed",
           attemptedCount: decisionIds.length,
-        });
+        };
+        setFillStatus(nextFillStatus);
       }
     } catch {
-      setFillStatus({ kind: "failed", attemptedCount: decisionIds.length });
+      nextFillStatus = { kind: "failed", attemptedCount: decisionIds.length };
+      setFillStatus(nextFillStatus);
       outcome = "fillFailed";
     } finally {
       sound.stopLoop("confirm-fill");
+    }
+    if (scanState.kind === "proposals") {
+      await saveTabFillSnapshot(
+        snapshotFromPanelState({
+          tabId: activeTabId,
+          scanState: scanState,
+          scanUiState: nextScanUiState,
+          fillStatus: nextFillStatus,
+          lastScannedAt,
+          confirmedIds: nextConfirmedIds,
+          scanVersion,
+          pageUrl: activeTabUrl,
+        }),
+      );
     }
     sound.play(outcome);
   };

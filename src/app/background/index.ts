@@ -54,6 +54,7 @@ import {
 } from "~/lib/indexeddb-local-data";
 import { onMessage, type RunView, sendMessage } from "~/lib/messaging";
 import { siteAccess } from "~/lib/site-access";
+import { clearTabFillSnapshot } from "~/lib/tab-fill-snapshot";
 import {
   type SidePanelBrowser,
   wireToolbarIconBehavior,
@@ -353,6 +354,10 @@ const main = () => {
   wireProactiveDetection({
     getLocalDataStore,
     iconUrl: browser.runtime.getURL("/icons/48.png"),
+  });
+
+  browser.tabs.onRemoved.addListener((tabId) => {
+    void clearTabFillSnapshot(tabId);
   });
 
   onMessage("runFill", async ({ data }) => {

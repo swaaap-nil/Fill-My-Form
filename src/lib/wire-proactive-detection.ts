@@ -1,7 +1,7 @@
 import { browser as extensionBrowser } from "wxt/browser";
 import { planFill } from "~/core/fill/driver";
 import type { PendingDecision } from "~/core/fill/types";
-import type { FormField } from "~/core/form/types";
+import type { Form } from "~/core/form/types";
 import { DEFAULT_PROFILE_ID } from "~/core/memory/types";
 import { ontology } from "~/core/ontology";
 import { defaultPolicy } from "~/core/policy/default";
@@ -16,6 +16,10 @@ import {
   shouldNotifyForDetection,
 } from "~/lib/proactive-detection";
 import { siteAccess } from "~/lib/site-access";
+import {
+  buildDetectionTabFillSnapshot,
+  saveTabFillSnapshot,
+} from "~/lib/tab-fill-snapshot";
 
 const detectionDedupeByTab = new Map<number, DetectionDedupeState>();
 
@@ -51,7 +55,7 @@ export const wireProactiveDetection = (deps: {
       return { ack: true };
     }
 
-    let extracted: { forms: readonly { fields: readonly FormField[] }[] };
+    let extracted: { forms: readonly Form[] };
     try {
       extracted = await sendMessage("extractFullForm", undefined, tabId);
     } catch {
@@ -59,6 +63,9 @@ export const wireProactiveDetection = (deps: {
     }
 
     const fields = extracted.forms.flatMap((form) => form.fields);
+    const uploadIntents = extracted.forms.flatMap(
+      (form) => form.uploadIntents ?? [],
+    );
     const { proposals, decisions } = await planFill(
       fields,
       ontology,
@@ -76,6 +83,19 @@ export const wireProactiveDetection = (deps: {
 
     const counts = countActionableProposals(proposals);
     const nowMs = Date.now();
+
+    if (counts.knownFieldCount > 0) {
+      await saveTabFillSnapshot(
+        buildDetectionTabFillSnapshot({
+          tabId,
+          pageUrl: data.url,
+          proposals,
+          uploadIntents,
+          savedAtMs: nowMs,
+        }),
+      );
+    }
+
     const previous = detectionDedupeByTab.get(tabId);
     if (
       !shouldNotifyForDetection(previous, { url: data.url, ...counts }, nowMs)

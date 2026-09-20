@@ -18,9 +18,10 @@ export interface OpenFillUiBrowser {
 }
 
 /**
- * Focuses the tab and opens the fill surface. Firefox may reject
- * `sidebarAction.open()` without a gesture after awaits — callers should
- * set pending tab + badge when open fails.
+ * Focuses the tab, records it as the fill target, and opens the fill surface.
+ * `pendingFillTabId` lets the side panel auto-run fill for that tab (notification
+ * / banner deep link) without a manual scan click. Firefox may still reject
+ * `sidebarAction.open()` without a gesture — badge remains as fallback.
  */
 export const focusTabAndOpenFillUi = async (
   browserApi: OpenFillUiBrowser,
@@ -28,6 +29,7 @@ export const focusTabAndOpenFillUi = async (
   windowId: number,
 ): Promise<{ opened: boolean }> => {
   await browserApi.tabs.update(tabId, { active: true });
+  await setPendingFillTabId(tabId);
 
   if (browserApi.sidePanel) {
     await browserApi.sidePanel.open({ windowId, tabId });
@@ -39,12 +41,10 @@ export const focusTabAndOpenFillUi = async (
       await browserApi.sidebarAction.open();
       return { opened: true };
     } catch {
-      await setPendingFillTabId(tabId);
       await browserApi.action?.setBadgeText({ text: "1" });
       return { opened: false };
     }
   }
 
-  await setPendingFillTabId(tabId);
   return { opened: false };
 };
