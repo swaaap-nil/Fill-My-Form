@@ -1,4 +1,4 @@
-import { FileImage, FileText, UserRound } from "lucide-react";
+import { ChevronLeft, FileImage, UserRound } from "lucide-react";
 import React, { useState } from "react";
 import ReactDOM from "react-dom/client";
 import { FilePreparationTool } from "~/components/files/file-preparation-tool";
@@ -57,8 +57,8 @@ const SidePanel = () => {
         className="font-normal"
         onClick={() => selectView(View.FILL)}
       >
-        <FileText className="size-4" />
-        Current page
+        <ChevronLeft className="size-4" />
+        Back to home
       </Button>
     ) : (
       <Button
@@ -68,8 +68,8 @@ const SidePanel = () => {
         className="font-normal"
         onClick={() => selectView(View.FILL)}
       >
-        <FileText className="size-4" />
-        Current page
+        <ChevronLeft className="size-4" />
+        Back to home
       </Button>
     );
 
