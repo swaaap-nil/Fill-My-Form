@@ -51,7 +51,7 @@ Owner checklist before choosing a domain:
 - Re-check the candidates in Instant Domain Search on the purchase date.
 - Check trademark risk separately.
 - Prefer the exact brand if affordable.
-- Configure the chosen domain in `PUBLIC_SITE_URL` and Cloudflare custom-domain DNS.
+- Configure the chosen domain in `src/lib/store-links.ts` and Cloudflare custom-domain DNS.
 
 ## Sources Rechecked
 

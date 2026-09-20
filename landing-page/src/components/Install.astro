@@ -1,7 +1,7 @@
 ---
 import { siteConfig } from '../lib/config';
 import { content } from '../lib/content';
-import { firefoxStoreUrl, localizedPath, type Locale } from '../lib/locales';
+import { localizedPath, type Locale } from '../lib/locales';
 interface Props {
   locale: Locale;
   placement: 'nav' | 'hero' | 'closing' | 'help';
@@ -18,7 +18,7 @@ const options = [
   },
   siteConfig.firefox && {
     browser: 'firefox',
-    href: firefoxStoreUrl(locale),
+    href: siteConfig.firefox,
     label: 'Firefox',
     current: false,
   },

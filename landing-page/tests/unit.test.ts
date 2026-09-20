@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   localeKeys,
-  firefoxStoreUrl,
   matchLocale,
   fromHeader,
   localizedPath,
 } from '../src/lib/locales.ts';
 import { validateConfig } from '../src/lib/config.ts';
+import { validateStoreLinks } from '../src/lib/store-links.ts';
 
 test('language matching respects order, regions, scripts and English fallback', () => {
   assert.equal(matchLocale(['fr-CA', 'en']), 'fr');
@@ -20,14 +20,6 @@ test('language matching respects order, regions, scripts and English fallback', 
   assert.equal(fromHeader('ar;q=bogus,hi-IN;q=0.9'), 'hi');
   assert.equal(fromHeader('en;q=0.1,de;q=0.9'), 'de');
   assert.equal(localizedPath('ar', 'privacy'), '/ar/privacy/');
-  assert.equal(
-    firefoxStoreUrl('en'),
-    'https://addons.mozilla.org/en-US/fill-my-form',
-  );
-  assert.equal(
-    firefoxStoreUrl('pt-br'),
-    'https://addons.mozilla.org/pt-BR/fill-my-form',
-  );
 });
 function structure(value: unknown): unknown {
   if (typeof value === 'string') {
@@ -57,28 +49,49 @@ test('all ten dictionaries have the same complete shape and no old branding', ()
     assert.doesNotMatch(raw, /AI Form Agent|Fill my Form/);
   }
 });
+test('store link validation rejects unsafe URLs', () => {
+  assert.throws(() =>
+    validateStoreLinks({
+      site: 'https://example.com/?token=x',
+      chrome: '',
+      firefox: '',
+    }),
+  );
+  assert.throws(() =>
+    validateStoreLinks({
+      site: 'https://getfillmyform.store',
+      chrome: 'https://evil.example/detail/test',
+      firefox: '',
+    }),
+  );
+  assert.throws(() =>
+    validateStoreLinks({
+      site: 'https://getfillmyform.store',
+      chrome: '',
+      firefox: 'https://evil.example/firefox/addon/test',
+    }),
+  );
+  const firefox =
+    'https://addons.mozilla.org/en-US/firefox/addon/fill-my-form/';
+  assert.equal(
+    validateStoreLinks({
+      site: 'https://getfillmyform.store',
+      chrome: '',
+      firefox,
+    }).firefox,
+    firefox,
+  );
+});
 test('production launch rejects missing or unsafe configuration', () => {
   assert.equal(validateConfig({}).ga, '');
   assert.throws(() => validateConfig({ SITE_ENV: 'production' }));
-  assert.throws(() =>
-    validateConfig({ PUBLIC_SITE_URL: 'https://example.com/?token=x' }),
-  );
-  assert.throws(() =>
-    validateConfig({
-      PUBLIC_CHROME_STORE_URL: 'https://evil.example/detail/test',
-    }),
-  );
   assert.throws(() => validateConfig({ PUBLIC_GA4_ID: 'bad' }));
   const valid = {
     SITE_ENV: 'production',
-    PUBLIC_SITE_URL: 'https://example.com',
-    PUBLIC_CHROME_STORE_URL:
-      'https://chromewebstore.google.com/detail/test/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
     PUBLIC_GA4_ID: 'G-TEST123',
     LAUNCH_REVIEWED: 'true',
   };
   assert.equal(validateConfig(valid).ga, 'G-TEST123');
   assert.equal(validateConfig({ ...valid, SITE_ENV: 'preview' }).ga, '');
-  assert.equal(validateConfig({}).firefox, false);
-  assert.equal(validateConfig({ FIREFOX_VERIFIED: 'true' }).firefox, true);
+  assert.ok(validateConfig({}).firefox.includes('fill-my-form'));
 });

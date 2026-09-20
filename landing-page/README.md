@@ -37,30 +37,15 @@ The Astro Docs MCP server is configured in the root `.codex/config.toml` as `htt
 
 Copy `.env.example` when preparing a real preview or production environment.
 
-Required for local preview-like builds:
-
-```sh
-PUBLIC_SITE_URL=https://preview.example.com
-PUBLIC_CHROME_STORE_URL=https://chromewebstore.google.com/detail/your-listing/extensionid
-PUBLIC_GA4_ID=G-XXXXXXXXXX
-```
+Site and store listing URLs live in `src/lib/store-links.ts` (not env). Set
+`chrome` or `firefox` to an empty string to hide that install button.
 
 Required for production builds:
 
 ```sh
 SITE_ENV=production
-PUBLIC_SITE_URL=https://your-production-domain.example
-PUBLIC_CHROME_STORE_URL=https://chromewebstore.google.com/detail/your-listing/extensionid
 PUBLIC_GA4_ID=G-XXXXXXXXXX
 LAUNCH_REVIEWED=true
-```
-
-Optional Firefox CTA support stays hidden unless verified. The public Firefox
-store URL is generated per locale with the `fill-my-form` slug, such as
-`https://addons.mozilla.org/en-US/fill-my-form`.
-
-```sh
-FIREFOX_VERIFIED=true
 ```
 
 ## Commands

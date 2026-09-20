@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { localeKeys, locales } from '../src/lib/locales';
+import { storeLinks } from '../src/lib/store-links';
 
 // Vendor requests are intercepted: tests never send analytics or visit store listings.
 test.beforeEach(async ({ page }) => {
@@ -52,25 +53,29 @@ for (const locale of localeKeys) {
     await expect(
       page.locator('[data-install-options][data-placement="hero"]'),
     ).toBeVisible();
-    await expect(
-      page.locator(
-        '[data-install][data-placement="hero"][data-install="chrome"]',
-      ),
-    ).toBeVisible();
-    await expect(
-      page.locator(
-        '[data-install][data-placement="hero"][data-install="firefox"]',
-      ),
-    ).toBeVisible();
     const heroOptions = page.locator(
       '[data-install-options][data-placement="hero"]',
     );
-    await expect(
-      heroOptions.locator('[data-browser-icon="chrome"]'),
-    ).toBeVisible();
-    await expect(
-      heroOptions.locator('[data-browser-icon="firefox"]'),
-    ).toBeVisible();
+    if (storeLinks.chrome) {
+      await expect(
+        page.locator(
+          '[data-install][data-placement="hero"][data-install="chrome"]',
+        ),
+      ).toBeVisible();
+      await expect(
+        heroOptions.locator('[data-browser-icon="chrome"]'),
+      ).toBeVisible();
+    }
+    if (storeLinks.firefox) {
+      await expect(
+        page.locator(
+          '[data-install][data-placement="hero"][data-install="firefox"]',
+        ),
+      ).toBeVisible();
+      await expect(
+        heroOptions.locator('[data-browser-icon="firefox"]'),
+      ).toBeVisible();
+    }
     await page.locator('[data-fill]').click();
     await expect(page.locator('[data-demo]')).toHaveClass(/is-filled/);
     await expect(page.locator('[data-demo-value]').first()).toHaveCSS(
@@ -191,23 +196,22 @@ test('Firefox visitors get the Firefox install option emphasized', async ({
   const heroOptions = page.locator(
     '[data-install-options][data-placement="hero"]',
   );
-  const chrome = heroOptions.locator('[data-install="chrome"]');
   const firefox = heroOptions.locator('[data-install="firefox"]');
-  await expect(chrome).toBeVisible();
   await expect(firefox).toBeVisible();
   await expect(firefox).toHaveAttribute('data-current-browser', 'true');
-  await expect(chrome).not.toHaveAttribute('data-current-browser', 'true');
-  await expect(heroOptions.locator('[data-browser-icon="chrome"]')).toHaveCount(
-    1,
-  );
   await expect(
     heroOptions.locator('[data-browser-icon="firefox"]'),
   ).toHaveCount(1);
-  const [chromeBox, firefoxBox] = await Promise.all([
-    chrome.boundingBox(),
-    firefox.boundingBox(),
-  ]);
-  expect(firefoxBox?.width || 0).toBeGreaterThan(chromeBox?.width || 0);
+  if (storeLinks.chrome) {
+    const chrome = heroOptions.locator('[data-install="chrome"]');
+    await expect(chrome).toBeVisible();
+    await expect(chrome).not.toHaveAttribute('data-current-browser', 'true');
+    const [chromeBox, firefoxBox] = await Promise.all([
+      chrome.boundingBox(),
+      firefox.boundingBox(),
+    ]);
+    expect(firefoxBox?.width || 0).toBeGreaterThan(chromeBox?.width || 0);
+  }
   await context.close();
 });
 test('keyboard, reduced motion and localized 404', async ({ page }) => {
