@@ -168,18 +168,6 @@ outcome for those; suppressing is not.
 see there is one you introduced. Keep it that way; the value of this rule comes entirely from
 the output staying empty.
 
-**`bun run build` is not silent**, and the exception is recorded here rather than suppressed,
-which is what the rule above asks of you:
-
-- `` `esbuild` option was specified by "vite:react-babel" plugin … use `oxc` instead ``
-- `` `optimizeDeps.rollupOptions` … is deprecated. Use `optimizeDeps.rolldownOptions` ``
-- `` `[vite:react-babel] We recommend switching to @vitejs/plugin-react-oxc` ``
-
-These come from `@vitejs/plugin-react` inside WXT's Vite pipeline (`@wxt-dev/module-react`
-1.1.3; Vite is transitive via `wxt`). Our own config sets `optimizeDeps.entries` and never
-touches `esbuild`, so neither is ours to fix without upgrading or patching upstream. Treat these
-three lines as the known baseline: if `bun run build` grows a *fourth* warning, it is yours.
-
 ## Testing policy
 
 **Your brief tells you what to test.** Each deliverable in a phase brief carries an explicit
