@@ -117,6 +117,10 @@ jobs:
   #   name: Submit Chrome
   #   runs-on: ubuntu-latest
   #   needs: [build]
+  #   # GitHub's default success() is false if any ancestor was skipped, so
+  #   # without always() this would skip when Tests is skipped (CI already
+  #   # passed). Build already ran under that condition; follow it here.
+  #   if: always() && needs.build.result == 'success'
   #   environment: Production
   #   steps:
   #     - name: Checkout code
@@ -155,6 +159,10 @@ jobs:
     name: Submit Firefox
     runs-on: ubuntu-latest
     needs: [build]
+    # GitHub's default success() is false if any ancestor was skipped, so
+    # without always() this would skip when Tests is skipped (CI already
+    # passed). Build already ran under that condition; follow it here.
+    if: always() && needs.build.result == 'success'
     environment: Production
     steps:
       - name: Checkout code
