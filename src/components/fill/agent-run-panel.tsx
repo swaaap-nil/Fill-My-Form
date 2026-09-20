@@ -21,7 +21,10 @@ import { cn } from "~/lib/utils";
  * later phase decides which one the product actually ships.
  *
  * Nests inside the caller's own card shell (no border/heading of its own)
- * so it can sit inside the "known fields" summary card in `FillPanel`.
+ * so it can sit in either summary card in `FillPanel` — known fields when
+ * some answers are missing, or the answers card when every matched field
+ * already has a value. The loop has to stay reachable in that second case:
+ * confirming stored answers is the whole point of a seeded run.
  */
 
 interface AgentRunPanelProps {

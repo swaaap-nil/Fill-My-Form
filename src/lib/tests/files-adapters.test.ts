@@ -101,4 +101,25 @@ describe("PDF preparation adapter", () => {
     expect(prepared.getPage(0).getWidth()).toBe(612);
     expect(prepared.getPage(0).getHeight()).toBe(792);
   });
+
+  it("passes through a PDF that already satisfies the upload constraints without re-encoding it", async () => {
+    const store = await createIndexedDbFileReferenceStore(new IDBFactory());
+    const bytes = "%PDF-1.4\n% uneditable-but-acceptable\n";
+    const original = new File([bytes], "resume.pdf", {
+      type: "application/pdf",
+    });
+    const originalRef = await store.save(original);
+    const adapter = new PdfPreparationAdapter(store);
+
+    const result = await adapter.prepareForConstraints(originalRef, [
+      { kind: "accept", value: [".pdf", "application/pdf"] },
+    ]);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.artifact.transformed).toBe(false);
+    expect(result.artifact.name).toBe("resume.pdf");
+    expect(await result.artifact.blob.text()).toBe(bytes);
+    expect(await (await store.get(originalRef.id))?.blob.text()).toBe(bytes);
+  });
 });

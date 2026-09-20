@@ -199,7 +199,13 @@ export const createBrowserFileComplianceAdapter = (
     if (!record) return null;
     const registry = createBrowserFilePreparationRegistry(store);
     const adapter = registry.adapterFor({
-      kind: "image",
+      kind:
+        ref.mimeType === "application/pdf" ||
+        ref.name.toLowerCase().endsWith(".pdf")
+          ? "pdf"
+          : ref.mimeType.startsWith("image/")
+            ? "image"
+            : "unsupported",
       name: ref.name,
       mimeType: ref.mimeType,
       sizeBytes: ref.sizeBytes,
@@ -214,7 +220,10 @@ export const createBrowserFileComplianceAdapter = (
       mimeType: prepared.artifact.mimeType,
       transformed: prepared.artifact.transformed,
       originalSizeBytes: ref.sizeBytes,
-      temporaryRef: prepared.artifact.derived,
+      // Passthrough reuses the original; deleting it would wipe the saved file.
+      temporaryRef: prepared.artifact.transformed
+        ? prepared.artifact.derived
+        : undefined,
     };
   };
 

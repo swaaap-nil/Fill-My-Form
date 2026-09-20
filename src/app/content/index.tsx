@@ -37,37 +37,6 @@ const announceFillFeedback = (filledCount: number) => {
   );
 };
 
-const readStagedUpload = async (
-  uploadId: string,
-): Promise<{
-  readonly name: string;
-  readonly mimeType: string;
-  readonly bytes: readonly number[];
-} | null> => {
-  const key = `file-upload:${uploadId}`;
-  const record = (await browser.storage.session.get(key))[key];
-  await browser.storage.session.remove(key);
-  if (!record || typeof record !== "object") return null;
-  const upload = record as {
-    readonly name?: unknown;
-    readonly mimeType?: unknown;
-    readonly bytes?: unknown;
-  };
-  if (
-    typeof upload.name !== "string" ||
-    typeof upload.mimeType !== "string" ||
-    !Array.isArray(upload.bytes) ||
-    !upload.bytes.every((byte) => typeof byte === "number")
-  ) {
-    return null;
-  }
-  return {
-    name: upload.name,
-    mimeType: upload.mimeType,
-    bytes: upload.bytes,
-  };
-};
-
 const registerFillHandlers = () => {
   onMessage("extractFullForm", () => {
     const { forms, elements } = extractFullWithElements(document);
@@ -86,10 +55,8 @@ const registerFillHandlers = () => {
     return { ok: writeFieldValue(target, value) };
   });
 
-  onMessage("uploadFile", async ({ data }) => {
-    const { fieldId, uploadId } = assertValidUploadInstruction(data);
-    const upload = await readStagedUpload(uploadId);
-    if (!upload) return { ok: false };
+  onMessage("uploadFile", ({ data }) => {
+    const { fieldId, upload } = assertValidUploadInstruction(data);
     const target = lastElementsById.get(fieldId);
     if (!target) return { ok: false };
 

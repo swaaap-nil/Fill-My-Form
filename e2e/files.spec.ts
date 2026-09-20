@@ -109,8 +109,10 @@ const advanceAgentToFileQuestion = async (panelPage: Page) => {
   await panelPage.getByRole("button", { name: "Scan this page" }).click();
   await panelPage.getByRole("button", { name: "Answer now" }).click();
 
+  const filePrompt = panelPage.getByText("Browse or drag a file here");
+
   for (let i = 0; i < 20; i++) {
-    if (await panelPage.getByText("Browse or drag a file here").isVisible()) {
+    if (await filePrompt.isVisible().catch(() => false)) {
       return;
     }
 
@@ -126,15 +128,20 @@ const advanceAgentToFileQuestion = async (panelPage: Page) => {
       name: "Answer",
       exact: true,
     });
-    if (await answerButton.isVisible().catch(() => false)) {
+    const answerInput = panelPage.getByPlaceholder("Your answer");
+    if (
+      (await answerButton.isVisible().catch(() => false)) &&
+      (await answerInput.isVisible().catch(() => false))
+    ) {
       const question =
         (await panelPage
           .getByText(/^What should go in/)
           .first()
-          .textContent()) ?? "";
-      await panelPage
-        .getByPlaceholder("Your answer")
-        .fill(answerForQuestion(question));
+          .textContent()
+          .catch(() => "")) ?? "";
+      await answerInput
+        .fill(answerForQuestion(question), { timeout: 3000 })
+        .catch(() => {});
       await answerButton.click({ timeout: 3000 }).catch(() => {});
       continue;
     }
@@ -178,10 +185,13 @@ test("files: a saved resume PDF uploads on simple.html", async ({
     .first()
     .click();
 
-  const selectedName = await formPage
-    .locator("#resume")
-    .evaluate((el) => (el as HTMLInputElement).files?.[0]?.name);
-  expect(selectedName).toBe("resume.pdf");
+  await expect
+    .poll(async () =>
+      formPage
+        .locator("#resume")
+        .evaluate((el) => (el as HTMLInputElement).files?.[0]?.name),
+    )
+    .toBe("resume.pdf");
 });
 
 test("files: agent asks for browsing or drag-and-drop when a needed file is missing", async ({
@@ -206,14 +216,21 @@ test("files: agent asks for browsing or drag-and-drop when a needed file is miss
   await expect(panelPage.getByText("Browse or drag a file here")).toBeVisible();
   await expect(panelPage.getByPlaceholder("Your answer")).toHaveCount(0);
 
-  await panelPage.locator('input[type="file"]').setInputFiles(pdfPath);
+  await panelPage
+    .getByText("Browse or drag a file here")
+    .locator("xpath=ancestor::form")
+    .locator('input[type="file"]')
+    .setInputFiles(pdfPath);
   await expect(panelPage.getByText("resume-from-question.pdf")).toBeVisible();
   await panelPage.getByRole("button", { name: "Answer", exact: true }).click();
 
-  const selectedName = await formPage
-    .locator("#resume")
-    .evaluate((el) => (el as HTMLInputElement).files?.[0]?.name);
-  expect(selectedName).toBe("resume-from-question.pdf");
+  await expect
+    .poll(async () =>
+      formPage
+        .locator("#resume")
+        .evaluate((el) => (el as HTMLInputElement).files?.[0]?.name),
+    )
+    .toBe("resume-from-question.pdf");
 });
 
 test("files: an oversized photo is transformed before upload", async ({
@@ -236,14 +253,29 @@ test("files: an oversized photo is transformed before upload", async ({
   await expect(panelPage.getByText("documents.photo")).toBeVisible();
   await panelPage.getByRole("button", { name: "Confirm", exact: true }).click();
 
+  await expect
+    .poll(async () => {
+      const uploaded = await formPage.locator("#photo").evaluate((el) => {
+        const file = (el as HTMLInputElement).files?.[0];
+        return file
+          ? { name: file.name, type: file.type, size: file.size }
+          : undefined;
+      });
+      return uploaded;
+    })
+    .toEqual(
+      expect.objectContaining({
+        name: "photo.jpg",
+        type: "image/jpeg",
+      }),
+    );
+
   const uploaded = await formPage.locator("#photo").evaluate((el) => {
     const file = (el as HTMLInputElement).files?.[0];
     return file
       ? { name: file.name, type: file.type, size: file.size }
       : undefined;
   });
-  expect(uploaded?.name).toBe("photo.jpg");
-  expect(uploaded?.type).toBe("image/jpeg");
   expect(uploaded?.size).toBeLessThanOrEqual(8000);
 });
 
@@ -262,9 +294,11 @@ test("files: standalone preparation tool creates a temporary image copy", async 
   await panelPage
     .getByRole("button", { name: "Prepare temporary copy" })
     .click();
-  await expect(panelPage.getByText("Ready to upload")).toBeVisible();
+  await expect(panelPage.getByText("Drag and drop the file")).toBeVisible();
   await expect(
-    panelPage.getByText("Drag this file to your form"),
+    panelPage.getByRole("group", {
+      name: "Drag prepared file to your form upload box",
+    }),
   ).toBeVisible();
   await expect(
     panelPage.getByTestId("prepared-file-drag-surface"),
@@ -294,12 +328,16 @@ test("files: standalone preparation tool can use a saved onboarding document", a
     .getByRole("option", { name: /Photograph.*saved-photo\.png/ })
     .click();
   await panelPage.getByRole("button", { name: "Use this" }).click();
-  await expect(panelPage.getByText("saved-photo.png")).toBeVisible();
+  await expect(panelPage.getByRole("button", { name: "Replace" })).toBeVisible();
+  await expect(panelPage.getByText("Your file", { exact: true })).toBeVisible();
+  await expect(
+    panelPage.getByText("saved-photo.png", { exact: true }),
+  ).toBeVisible();
 
   await panelPage
     .getByRole("button", { name: "Prepare temporary copy" })
     .click();
-  await expect(panelPage.getByText("Ready to upload")).toBeVisible();
+  await expect(panelPage.getByText("Drag and drop the file")).toBeVisible();
   await expect(
     panelPage.getByTestId("prepared-file-drag-surface"),
   ).toHaveAttribute("draggable", "true");
@@ -345,7 +383,9 @@ test("files: physical units and a size limit in MB reach the prepared copy", asy
   // A preset states its requirement in the unit the paperwork uses. The
   // conversion to pixels is the thing worth pinning: it only works because a
   // DPI is carried alongside the millimetres.
-  await panelPage.getByRole("combobox", { name: "Preset" }).click();
+  await panelPage
+    .getByRole("combobox", { name: "Common requirements" })
+    .click();
   await panelPage.getByRole("option", { name: "Passport / ID photo" }).click();
   await expect(
     panelPage.getByText("35 × 45 mm at 300 DPI = 413 × 531 px"),
@@ -353,17 +393,19 @@ test("files: physical units and a size limit in MB reach the prepared copy", asy
 
   // The limit is expressible in MB, which the old KB-only field could not do.
   await panelPage.getByLabel("Max file size").fill("2");
-  await panelPage.getByRole("combobox").nth(3).click();
+  await panelPage.locator("#prepare-max-size-unit").click();
   await panelPage.getByRole("option", { name: "MB", exact: true }).click();
 
   await panelPage
     .getByRole("button", { name: "Prepare temporary copy" })
     .click();
-  await expect(panelPage.getByText("Ready to upload")).toBeVisible();
+  await expect(panelPage.getByText("Drag and drop the file")).toBeVisible();
   await expect(
-    panelPage.getByText("Drag this passport / id photo to your form"),
+    panelPage.getByRole("group", {
+      name: "Drag prepared passport / id photo to your form upload box",
+    }),
   ).toBeVisible();
-  await expect(panelPage.getByText("413 × 531px")).toBeVisible();
+  await expect(panelPage.getByText("413 x 531 px")).toBeVisible();
 });
 
 test("files: the aspect lock derives the other dimension", async ({
@@ -378,15 +420,25 @@ test("files: the aspect lock derives the other dimension", async ({
   await panelPage.locator('input[type="file"]').setInputFiles(photoPath);
   await expect(panelPage.getByText("lock-photo.png")).toBeVisible();
 
-  await panelPage.getByRole("checkbox", { name: "Lock aspect ratio" }).click();
-  await panelPage.getByRole("textbox", { name: "Aspect ratio" }).fill("4:5");
-  await panelPage.getByLabel("Width", { exact: true }).fill("400");
+  // Crop ratio lives in the editor. A 4:5 lock there is what keeps a later
+  // width-only resize from stretching the source's own 4:3 shape.
+  await panelPage.getByRole("button", { name: "Edit image" }).click();
+  const editorPage = await waitForEditorPage(context);
+  await editorPage.waitForLoadState("domcontentloaded");
+  await expect(editorPage.getByTestId("editor-root")).toBeVisible();
+  await editorPage.getByRole("combobox", { name: "Crop ratio" }).click();
+  await editorPage.getByRole("option", { name: "4:5 portrait" }).click();
+  await editorPage.getByRole("button", { name: "Apply crop" }).click();
+  await expect(panelPage.getByText("Using cropped image")).toBeVisible();
 
-  // Typing one side fills the other. Without the lock the export would keep
-  // the source's own height and silently stretch the image.
-  await expect(panelPage.getByLabel("Height", { exact: true })).toHaveValue(
-    "500",
-  );
+  await panelPage.getByLabel("Width", { exact: true }).fill("400");
+  await panelPage
+    .getByRole("button", { name: "Prepare temporary copy" })
+    .click();
+
+  // The height field stays empty on purpose: export derives 500 from the
+  // locked 4:5 ratio rather than keeping the source height.
+  await expect(panelPage.getByText("400 x 500 px")).toBeVisible();
 });
 
 test("files: the editor window opens and its crop cannot leave the image", async ({
