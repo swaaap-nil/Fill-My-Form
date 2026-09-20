@@ -56,8 +56,26 @@ export interface SiteAccessBrowser {
 }
 
 const CONTENT_SCRIPT_ID = "form-agent-content";
+const GLOBAL_CONTENT_SCRIPT_ID = "form-agent-content:all_sites";
+const GLOBAL_HTTPS_SCRIPT_ID = "form-agent-content:all_sites:https";
+const GLOBAL_HTTP_SCRIPT_ID = "form-agent-content:all_sites:http";
+
+const GLOBAL_SCRIPT_IDS = [
+  GLOBAL_CONTENT_SCRIPT_ID,
+  GLOBAL_HTTPS_SCRIPT_ID,
+  GLOBAL_HTTP_SCRIPT_ID,
+] as const;
 const CONTENT_SCRIPT_JS = ["content-scripts/content.js"];
 const CONTENT_SCRIPT_CSS = ["content-scripts/content.css"];
+
+/** Runtime grant for passive detection on arbitrary http(s) pages. */
+export const ALL_SITE_ORIGINS = ["https://*/*", "http://*/*"] as const;
+
+export const isAllSiteOriginPattern = (pattern: string): boolean =>
+  (ALL_SITE_ORIGINS as readonly string[]).includes(pattern);
+
+const isAllSiteGrant = (origins: readonly string[]): boolean =>
+  ALL_SITE_ORIGINS.every((pattern) => origins.includes(pattern));
 
 /** `https://example.com/path?q=1` -> `https://example.com/*` */
 export const toOriginPattern = (url: string): string =>
@@ -70,7 +88,7 @@ export const toOriginPattern = (url: string): string =>
  * in some browsers and log an "Invalid scheme" console error in others —
  * treat them as never having site access rather than querying for one.
  */
-const isPermissibleUrl = (url: string): boolean => {
+export const isPermissibleUrl = (url: string): boolean => {
   try {
     return /^https?:$/.test(new URL(url).protocol);
   } catch {
@@ -104,6 +122,7 @@ const requestOriginsFromGesture = (
 };
 
 export interface SiteAccess {
+  hasAllSiteAccess(): Promise<boolean>;
   hasSiteAccess(url: string): Promise<boolean>;
   /**
    * Must be called from a user gesture — Chrome rejects `permissions.request`
@@ -117,19 +136,36 @@ export interface SiteAccess {
    * user sees nothing until they reload the very tab they just granted.
    */
   requestSiteAccess(url: string, activeTabId?: number): Promise<boolean>;
+  /**
+   * Requests read access to all http(s) sites. Must run from a user gesture
+   * (first-run gate or settings). Registers one content script for both
+   * wildcard patterns.
+   */
+  requestAllSiteAccess(activeTabId?: number): Promise<boolean>;
   revokeSiteAccess(url: string): Promise<void>;
+  revokeAllSiteAccess(): Promise<void>;
   /**
    * Re-registers scripts for every origin the user has already granted.
    * Call on startup: runtime registrations do not survive a browser
    * restart, but the permission grants do.
    */
   restoreGrantedSites(): Promise<number>;
+  /**
+   * Re-registers and injects content scripts when permission is already
+   * granted but runtime registration was lost (no permission prompt).
+   */
+  syncScriptsForGrantedAccess(url: string, activeTabId?: number): Promise<void>;
   /** Every origin-pattern the user has granted. Powers the panel's "revoke" list. */
   listGrantedOrigins(): Promise<readonly string[]>;
 }
 
 export const createSiteAccess = (browser: SiteAccessBrowser): SiteAccess => {
   const registerForOrigin = async (origin: string): Promise<void> => {
+    if (isAllSiteOriginPattern(origin)) {
+      await registerGlobalContentScript();
+      return;
+    }
+
     const id = scriptIdFor(origin);
 
     const existing = await browser.scripting.getRegisteredContentScripts({
@@ -148,11 +184,77 @@ export const createSiteAccess = (browser: SiteAccessBrowser): SiteAccess => {
     ]);
   };
 
+  const registerOneContentScript = async (
+    id: string,
+    matches: string[],
+  ): Promise<void> => {
+    const existing = await browser.scripting.getRegisteredContentScripts({
+      ids: [id],
+    });
+    if (existing.length > 0) return;
+
+    await browser.scripting.registerContentScripts([
+      {
+        id,
+        matches,
+        js: CONTENT_SCRIPT_JS,
+        css: CONTENT_SCRIPT_CSS,
+        runAt: "document_idle",
+      },
+    ]);
+  };
+
+  const registerGlobalContentScript = async (): Promise<void> => {
+    const existing = await browser.scripting.getRegisteredContentScripts({
+      ids: [...GLOBAL_SCRIPT_IDS],
+    });
+    if (existing.length > 0) return;
+
+    try {
+      await registerOneContentScript(GLOBAL_CONTENT_SCRIPT_ID, [
+        ...ALL_SITE_ORIGINS,
+      ]);
+    } catch {
+      // Some builds reject two wildcards in one registration — register separately.
+      await registerOneContentScript(GLOBAL_HTTPS_SCRIPT_ID, [
+        "https://*/*",
+      ]).catch(() => undefined);
+      await registerOneContentScript(GLOBAL_HTTP_SCRIPT_ID, [
+        "http://*/*",
+      ]).catch(() => undefined);
+    }
+  };
+
+  /**
+   * Best-effort injection into the tab that was active when the user granted
+   * access. That tab is often not injectable (chrome://, Web Store, PDF, etc.)
+   * even after a successful permission grant — registration still covers future
+   * navigations, so a failure here must not reject the grant.
+   */
+  const injectContentScript = async (activeTabId: number): Promise<void> => {
+    try {
+      await browser.scripting.executeScript({
+        target: { tabId: activeTabId },
+        files: CONTENT_SCRIPT_JS,
+      });
+    } catch {
+      // Non-fatal — see comment above.
+    }
+  };
+
   return {
-    hasSiteAccess: (url) =>
-      isPermissibleUrl(url)
-        ? browser.permissions.contains({ origins: [toOriginPattern(url)] })
-        : Promise.resolve(false),
+    hasAllSiteAccess: () =>
+      browser.permissions.contains({ origins: [...ALL_SITE_ORIGINS] }),
+
+    hasSiteAccess: async (url) => {
+      if (!isPermissibleUrl(url)) return false;
+      if (
+        await browser.permissions.contains({ origins: [...ALL_SITE_ORIGINS] })
+      ) {
+        return true;
+      }
+      return browser.permissions.contains({ origins: [toOriginPattern(url)] });
+    },
 
     async requestSiteAccess(url, activeTabId) {
       const origin = toOriginPattern(url);
@@ -163,19 +265,41 @@ export const createSiteAccess = (browser: SiteAccessBrowser): SiteAccess => {
       await registerForOrigin(origin);
 
       if (activeTabId !== undefined) {
-        // Covers the tab that is open right now; registration above covers
-        // every navigation after this one.
-        await browser.scripting.executeScript({
-          target: { tabId: activeTabId },
-          files: CONTENT_SCRIPT_JS,
-        });
+        await injectContentScript(activeTabId);
+      }
+
+      return true;
+    },
+
+    async requestAllSiteAccess(activeTabId) {
+      const granted = await requestOriginsFromGesture(browser, [
+        ...ALL_SITE_ORIGINS,
+      ]);
+      if (!granted) return false;
+
+      try {
+        await registerGlobalContentScript();
+
+        if (activeTabId !== undefined) {
+          await injectContentScript(activeTabId);
+        }
+      } catch {
+        // Grant succeeded; runtime registration/inject is best-effort.
       }
 
       return true;
     },
 
     async revokeSiteAccess(url) {
-      const origin = toOriginPattern(url);
+      const origin = isAllSiteOriginPattern(url) ? url : toOriginPattern(url);
+
+      if (isAllSiteOriginPattern(origin)) {
+        await browser.scripting
+          .unregisterContentScripts({ ids: [...GLOBAL_SCRIPT_IDS] })
+          .catch(() => {});
+        await browser.permissions.remove({ origins: [...ALL_SITE_ORIGINS] });
+        return;
+      }
 
       await browser.scripting
         .unregisterContentScripts({ ids: [scriptIdFor(origin)] })
@@ -185,8 +309,40 @@ export const createSiteAccess = (browser: SiteAccessBrowser): SiteAccess => {
       await browser.permissions.remove({ origins: [origin] });
     },
 
+    async revokeAllSiteAccess() {
+      await browser.scripting
+        .unregisterContentScripts({ ids: [...GLOBAL_SCRIPT_IDS] })
+        .catch(() => {});
+      await browser.permissions.remove({ origins: [...ALL_SITE_ORIGINS] });
+    },
+
+    async syncScriptsForGrantedAccess(url, activeTabId) {
+      if (!isPermissibleUrl(url)) return;
+      const hasGlobal = await browser.permissions.contains({
+        origins: [...ALL_SITE_ORIGINS],
+      });
+      const hasOrigin = await browser.permissions.contains({
+        origins: [toOriginPattern(url)],
+      });
+      if (!hasGlobal && !hasOrigin) return;
+
+      if (hasGlobal) {
+        await registerGlobalContentScript();
+      } else {
+        await registerForOrigin(toOriginPattern(url));
+      }
+
+      if (activeTabId !== undefined) {
+        await injectContentScript(activeTabId);
+      }
+    },
+
     async restoreGrantedSites() {
       const { origins = [] } = await browser.permissions.getAll();
+      if (isAllSiteGrant(origins)) {
+        await registerGlobalContentScript();
+        return origins.length;
+      }
       await Promise.all(origins.map(registerForOrigin));
       return origins.length;
     },

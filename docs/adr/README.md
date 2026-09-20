@@ -14,6 +14,7 @@ ones we do not like.
 | [006](./006-value-freshness-and-expiry.md) | Every value has a freshness horizon; expiry asks rather than deletes |
 | [007](./007-shared-site-knowledge.md) | Site knowledge is contributed anonymously, corroborated across devices, and received only as a hint |
 | [008](./008-image-metadata-writing.md) | Image density headers are read and written by hand, in-repo — container metadata, not document content |
+| [009](./009-proactive-form-detection.md) | Optional all-sites grant on first panel open; passive detection and notifications; no auto-fill |
 
 Records for typed tools, progressive context disclosure and verification will be
 written when those modules are built. The intended designs live in

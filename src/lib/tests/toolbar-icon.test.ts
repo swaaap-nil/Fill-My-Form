@@ -19,7 +19,10 @@ const createChromeBrowser = () => {
         state.panelBehavior = opts;
       },
     },
-    action: { onClicked: { addListener() {} } },
+    action: {
+      onClicked: { addListener() {} },
+      async setBadgeText() {},
+    },
   };
 
   return { browser, state };
@@ -43,6 +46,7 @@ const createFirefoxBrowser = (withSidebarAction = true) => {
           listener = fn;
         },
       },
+      async setBadgeText() {},
     },
   };
 

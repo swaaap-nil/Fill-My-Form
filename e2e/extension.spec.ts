@@ -26,6 +26,7 @@ test("the manifest grants no site access at install time", async ({
   expect(manifest.content_scripts).toHaveLength(0);
   expect(manifest.permissions).not.toContain("<all_urls>");
   expect(manifest.optional_host_permissions).toContain("https://*/*");
+  expect(manifest.permissions).toContain("notifications");
 });
 
 test("the content security policy forbids eval and remote script", async ({

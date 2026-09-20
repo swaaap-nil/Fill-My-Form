@@ -137,10 +137,28 @@ interface Messages {
   fillField(data: FillFieldPayload): { ok: boolean };
   uploadFile(data: UploadFilePayload): { ok: boolean };
   showFillFeedback(data: { filledCount: number }): { ok: boolean };
+  showFormDetectionNudge(data: {
+    knownFieldCount: number;
+    answerCount: number;
+  }): { ok: boolean };
   verifyField(data: {
     fieldId: FieldId;
     expectedValue: string;
   }): VerificationResult;
+
+  /** Content script → background: generic form heuristic fired (no field values). */
+  formPageDetected(data: { url: string; reason: string; generation: string }): {
+    ack: boolean;
+  };
+
+  /** Content script → background: may this page run passive detection? */
+  getPageAccessForUrl(data: { url: string }): { mayDetect: boolean };
+
+  /** Background → content script: ack so detection can fire again after navigation. */
+  ackFormPageDetected(data: { generation: string }): { ok: boolean };
+
+  /** Content script → background: open fill UI from in-page detection banner (user gesture). */
+  openFillUiFromTab(): { opened: boolean };
 }
 
 export const { sendMessage, onMessage } = defineExtensionMessaging<Messages>();

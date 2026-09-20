@@ -58,6 +58,10 @@ import {
   type SidePanelBrowser,
   wireToolbarIconBehavior,
 } from "~/lib/toolbar-icon";
+import {
+  pendingDecisionsProxy,
+  wireProactiveDetection,
+} from "~/lib/wire-proactive-detection";
 
 /**
  * The composition root.
@@ -341,6 +345,15 @@ const main = () => {
     .restoreGrantedSites()
     .then((count: number) => logger.info("restored granted sites", { count }))
     .catch(() => logger.warn("could not restore granted sites"));
+
+  pendingDecisionsProxy.remember = (decisionId, tabId, decision) => {
+    pendingDecisions.remember(decisionId, tabId, decision);
+  };
+
+  wireProactiveDetection({
+    getLocalDataStore,
+    iconUrl: browser.runtime.getURL("/icons/48.png"),
+  });
 
   onMessage("runFill", async ({ data }) => {
     const memoryStore = await getLocalDataStore();
