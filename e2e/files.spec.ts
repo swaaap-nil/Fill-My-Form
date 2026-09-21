@@ -4,10 +4,14 @@ import { deflateSync } from "node:zlib";
 import type { BrowserContext, Page } from "@playwright/test";
 import { expect, test } from "./fill-fixtures";
 import {
+  agentAnswerButton,
+  agentConfirmButton,
+  agentStartButton,
   clickScan,
   grantAccess,
   openPanel,
   openProposalDetails,
+  proposalConfirmButtons,
   seedFile,
 } from "./fill-helpers";
 
@@ -107,9 +111,7 @@ const waitForEditorPage = async (context: BrowserContext): Promise<Page> => {
 };
 
 const advanceAgentToFileQuestion = async (panelPage: Page) => {
-  const answerNow = panelPage.getByRole("button", {
-    name: "Answer now and never again",
-  });
+  const answerNow = agentStartButton(panelPage);
   if (!(await answerNow.isVisible({ timeout: 1000 }).catch(() => false))) {
     await clickScan(panelPage);
   }
@@ -122,18 +124,13 @@ const advanceAgentToFileQuestion = async (panelPage: Page) => {
       return;
     }
 
-    const confirmButton = panelPage
-      .getByRole("button", { name: "Confirm", exact: true })
-      .first();
+    const confirmButton = agentConfirmButton(panelPage).first();
     if (await confirmButton.isVisible().catch(() => false)) {
       await confirmButton.click({ timeout: 3000 }).catch(() => {});
       continue;
     }
 
-    const answerButton = panelPage.getByRole("button", {
-      name: "Answer",
-      exact: true,
-    });
+    const answerButton = agentAnswerButton(panelPage);
     const answerInput = panelPage.getByPlaceholder("Your answer");
     if (
       (await answerButton.isVisible().catch(() => false)) &&
@@ -152,7 +149,10 @@ const advanceAgentToFileQuestion = async (panelPage: Page) => {
       continue;
     }
 
-    await panelPage.waitForTimeout(250);
+    // Nothing actionable yet: yield a frame for the panel to re-render.
+    await panelPage.evaluate(
+      () => new Promise((resolve) => requestAnimationFrame(resolve)),
+    );
   }
 
   throw new Error("Agent did not reach a file question.");
@@ -186,10 +186,7 @@ test("files: a saved resume PDF uploads on simple.html", async ({
   await clickScan(panelPage);
   await openProposalDetails(panelPage);
   await expect(panelPage.getByText("documents.resume")).toBeVisible();
-  await panelPage
-    .getByRole("button", { name: "Confirm", exact: true })
-    .first()
-    .click();
+  await proposalConfirmButtons(panelPage).first().click();
 
   await expect
     .poll(async () =>
@@ -228,7 +225,7 @@ test("files: agent asks for browsing or drag-and-drop when a needed file is miss
     .locator('input[type="file"]')
     .setInputFiles(pdfPath);
   await expect(panelPage.getByText("resume-from-question.pdf")).toBeVisible();
-  await panelPage.getByRole("button", { name: "Answer", exact: true }).click();
+  await agentAnswerButton(panelPage).click();
 
   await expect
     .poll(async () =>
@@ -257,7 +254,7 @@ test("files: an oversized photo is transformed before upload", async ({
   await clickScan(panelPage);
   await openProposalDetails(panelPage);
   await expect(panelPage.getByText("documents.photo")).toBeVisible();
-  await panelPage.getByRole("button", { name: "Confirm", exact: true }).click();
+  await proposalConfirmButtons(panelPage).click();
 
   await expect
     .poll(async () => {

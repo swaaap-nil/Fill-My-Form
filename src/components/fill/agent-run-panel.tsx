@@ -214,6 +214,7 @@ export const AgentRunPanel = ({ tabId }: AgentRunPanelProps) => {
           size="sm"
           disabled={busy}
           onClick={start}
+          data-testid="agent-start"
         >
           Answer now and never again
         </Button>
@@ -234,6 +235,7 @@ export const AgentRunPanel = ({ tabId }: AgentRunPanelProps) => {
               size="sm"
               disabled={busy}
               onClick={() => respondToReview(true)}
+              data-testid="agent-confirm"
             >
               Confirm
             </Button>
@@ -243,6 +245,7 @@ export const AgentRunPanel = ({ tabId }: AgentRunPanelProps) => {
               variant="outline"
               disabled={busy}
               onClick={() => respondToReview(false)}
+              data-testid="agent-skip"
             >
               Skip
             </Button>
@@ -350,6 +353,7 @@ export const AgentRunPanel = ({ tabId }: AgentRunPanelProps) => {
                 type="submit"
                 size="sm"
                 disabled={busy || selectedFile === null}
+                data-testid="agent-answer"
               >
                 Answer
               </Button>
@@ -370,7 +374,12 @@ export const AgentRunPanel = ({ tabId }: AgentRunPanelProps) => {
                 onChange={(e) => setAnswer(e.target.value)}
                 placeholder="Your answer"
               />
-              <Button type="submit" size="sm" disabled={busy || !answer.trim()}>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={busy || !answer.trim()}
+                data-testid="agent-answer"
+              >
                 Answer
               </Button>
             </form>

@@ -15,7 +15,7 @@ Vitest here.
 
 `src/core` imports no React, no browser APIs and no network clients — enforced by
 lint. So the domain layer runs in plain Bun with no DOM, no extension host and no
-mocking of either. The whole suite is well under a second.
+mocking of either. The unit suite runs in well under a second.
 
 Keeping it that way is a design constraint, not a happy accident. If a domain
 test starts needing a DOM, the logic is in the wrong layer.
@@ -90,8 +90,8 @@ the maintenance. A test that pins a decision is.
 
 ## End-to-end tests
 
-`e2e/` holds ten smoke tests. They run headless in about twelve seconds and
-guard one thing unit tests structurally cannot: that the **built artefact**
+`e2e/` holds the browser-level specs (about seventy). They run headless in a
+couple of minutes and guard one thing unit tests structurally cannot: that the **built artefact**
 actually works. A manifest, a service worker and a bundled entrypoint are never
 touched by `bun test`.
 
@@ -177,52 +177,42 @@ is proven the same indirect way, via `~/lib/tests/toolbar-icon.test.ts`.
 Whether a real click reaches it in either browser stays a manual verification
 step.
 
-### Known flakiness: resource-starved hangs, not code bugs
+### Timeouts waiting on a button
 
-Four specs — `e2e/resume.spec.ts` (both tests), `e2e/dynamic-form.spec.ts`'s
-"fields revealed by a step transition" test, and intermittently `e2e/fill
-.spec.ts`'s pre-existing "grant" test — can hang for 30–90+ seconds and fail
-with something like:
+The most common e2e failure looks like this:
 
 ```
 Test timeout of Nms exceeded.
 Error: locator.click: Target page, context or browser has been closed
 Call log:
-  - waiting for getByRole('button', { name: 'Scan this page' })
+  - waiting for getByRole('button', { name: '...' })
 ```
 
-(or waiting on "Confirm" instead). **Before treating this
-as a regression, check the host's load first** (`uptime`, and on macOS `top
--l 1` for free memory) — this exact failure was chased at length during Phase
-2 and traced to the *host machine* being memory- and CPU-starved (another
-`bun dev` session and other agent processes competing for the same box), not
-the extension. The evidence, so nobody has to redo this:
+**Assume a stale locator before assuming a slow machine.** The panel renders
+different controls depending on what a scan finds, and a locator that no
+longer matches the state the test reaches is indistinguishable from a hang.
+This exact failure hid a real break for a while: the summary-card redesign
+stopped rendering "Answer now and never again" when every detected field
+already had a stored answer (the answers card offers a one-shot "Fill My
+Form" instead), and the specs that waited for the old button timed out.
 
-- Standalone Playwright scripts (bypassing the `test` runner entirely —
-  `chromium.launchPersistentContext` + the same click sequence) reproduced
-  the exact same interactions and completed in under a second, every time.
-- The background service worker's own debug log, captured mid-"hang" via
-  `worker.evaluate(() => chrome.storage.session.get(null))`, showed the run
-  had already reached `phase: done, status: completed` — the extension's
-  logic was never actually stuck; the *page* just never got to render or
-  respond to the click.
-- The same test passed in isolation (`npx playwright test e2e/resume.spec.ts`)
-  and under `DEBUG=pw:api`, then failed again minutes later as part of the
-  full suite with no code change in between.
+Check, in order:
 
-If you land here: rerun the specific failing spec alone, ideally when nothing
-else heavy is running, before spending time in the extension's own code. Only
-treat it as a real regression if it fails *consistently* on an otherwise-idle
-machine, or if the error is something other than a timeout waiting on a
-button/locator that plainly exists in the component tree.
+1. Open the failure screenshot / `error-context.md` under `test-results/`.
+   Is the control the test waits for actually on screen?
+2. Flow-driving controls are located by test id (`scan-button`,
+   `agent-start`, `agent-confirm`, `agent-answer`, `proposal-confirm`,
+   `fill-answers`; helpers in `e2e/fill-helpers.ts`), not by visible copy.
+   If you add a control a test drives, give it a test id.
+3. Only then consider load (`uptime`, free memory). A test that passes alone
+   and fails only in the full run on a busy host is a resource problem; one
+   that fails consistently is not.
 
-Two *real* bugs were found and fixed while chasing this (so don't rediscover
-them as "maybe this is it"): `~/core/agent/loop`'s `performFill` used to read
-the tool-execution envelope's `ok` instead of the fill's actual `{ ok: false
-}` payload (a control `writeFieldValue` can't write, like `controlled.html`'s
-combobox, looked like a clean write), and the per-field verification retry
-cap used to read `AgentState.attempt`, which the reducer resets on every
-`planned` event — so it could never actually reach its cap. Both are fixed;
+Two real bugs found earlier while chasing timeouts, so they are not
+rediscovered as "maybe this is it": `~/core/agent/loop`'s `performFill` used
+to read the tool-execution envelope's `ok` instead of the fill's actual
+`{ ok: false }` payload, and the per-field verification retry cap used to read
+`AgentState.attempt`, which the reducer resets on every `planned` event.
 `RunSnapshot.cursorAttempts` is the field-level counter now.
 
 ## Not yet built

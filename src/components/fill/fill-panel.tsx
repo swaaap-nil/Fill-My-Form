@@ -408,6 +408,7 @@ const ScanToolbar = ({
             size="sm"
             className="motion-safe:active:scale-[0.99]"
             onClick={onScan}
+            data-testid="scan-button"
           >
             {scanLabel}
           </Button>
@@ -417,6 +418,7 @@ const ScanToolbar = ({
           type="button"
           disabled={scanning}
           onClick={onScan}
+          data-testid="scan-button"
           className={cn(
             "relative w-full overflow-hidden transition-all duration-300 ease-out motion-safe:active:scale-[0.99] motion-reduce:transition-none",
             scanning &&

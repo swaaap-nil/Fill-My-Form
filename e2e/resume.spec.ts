@@ -1,17 +1,22 @@
 import type { BrowserContext } from "@playwright/test";
 import { expect, test } from "./fill-fixtures";
-import { clickScan, grantAccess, openPanel } from "./fill-helpers";
+import {
+  agentAnswerButton,
+  agentStartButton,
+  clickScan,
+  grantAccess,
+  openPanel,
+} from "./fill-helpers";
 
 /**
  * Deliverable 3 (resumability) and deliverable 6 (the `ask_user` round
  * trip), combined — this is the realistic failure the brief calls out:
  * neither alone catches "the worker died while a question was pending".
  *
- * **If both tests in this file are hanging/timing out waiting on a button
- * click** ("Scan this page", "Answer"), this is very likely
- * host resource starvation, not a bug here — see "Known flakiness" in
- * docs/testing.md before debugging the extension itself. Check `uptime`
- * and free memory first, and retry this file in isolation.
+ * **If both tests in this file time out waiting on a button**, first check that
+ * the control still renders in the state the test reaches (a stale locator
+ * looks exactly like a hang) — see "Timeouts waiting on a button" in
+ * docs/testing.md.
  *
  * ## The worker-kill technique — and why this uses the documented fallback
  *
@@ -81,12 +86,8 @@ test("resume: a run waiting on ask_user is persisted to session storage, not hel
   // No onboarding answers seeded: the first known-concept field with no
   // stored value produces an `ask_user` pause.
   await clickScan(panelPage);
-  await panelPage
-    .getByRole("button", { name: "Answer now and never again" })
-    .click();
-  await expect(
-    panelPage.getByRole("button", { name: "Answer", exact: true }),
-  ).toBeVisible();
+  await agentStartButton(panelPage).click();
+  await expect(agentAnswerButton(panelPage)).toBeVisible();
 
   const keysWhileWaiting = await readStoredRunKeys(context);
   expect(keysWhileWaiting.length).toBe(1);
@@ -104,17 +105,12 @@ test("resume: answering a question backed only by session storage writes the fie
 
   await formPage.bringToFront();
   await clickScan(panelPage);
-  await panelPage
-    .getByRole("button", { name: "Answer now and never again" })
-    .click();
+  await agentStartButton(panelPage).click();
 
   // "First name" is the first control on `simple.html` and the first field
   // `PLAN` ever considers, with nothing seeded for it — the run's very
   // first pause is always this question.
-  const answerButton = panelPage.getByRole("button", {
-    name: "Answer",
-    exact: true,
-  });
+  const answerButton = agentAnswerButton(panelPage);
   await expect(answerButton).toBeVisible();
 
   // The pause survives purely in `chrome.storage.session` at this point —

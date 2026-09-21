@@ -13,10 +13,27 @@ import { expect } from "./fill-fixtures";
  * grant path these specs already cover.
  */
 
+// Flow-driving controls are located by test id, not visible copy: a copy
+// change silently turned these into timeouts once already. Assert on text only
+// where the copy itself is the behaviour under test.
 const fillScanButton = (panelPage: Page) =>
-  panelPage.getByRole("button", {
-    name: /^(Scan this page|Rescan page|Scan again)$/,
-  });
+  panelPage.getByTestId("scan-button");
+
+/** Starts the agent loop ("Answer now and never again"). */
+export const agentStartButton = (panelPage: Page) =>
+  panelPage.getByTestId("agent-start");
+
+/** Confirms the agent's current review pause. */
+export const agentConfirmButton = (panelPage: Page) =>
+  panelPage.getByTestId("agent-confirm");
+
+/** Submits the agent's pending text or file question. */
+export const agentAnswerButton = (panelPage: Page) =>
+  panelPage.getByTestId("agent-answer");
+
+/** The per-proposal Confirm buttons in the details view. */
+export const proposalConfirmButtons = (panelPage: Page) =>
+  panelPage.getByTestId("proposal-confirm");
 
 /**
  * Playwright cannot click Chrome's native all-sites permission bubble, so
@@ -172,9 +189,7 @@ export const driveAgentToCompletion = async (
   panelPage: Page,
   maxClicks = 15,
 ) => {
-  const answerNow = panelPage.getByRole("button", {
-    name: "Answer now and never again",
-  });
+  const answerNow = agentStartButton(panelPage);
   const fillAnswers = panelPage.getByTestId("fill-answers");
   const entryPoint = answerNow.or(fillAnswers);
   if (!(await entryPoint.isVisible({ timeout: 1000 }).catch(() => false))) {
@@ -197,12 +212,7 @@ export const driveAgentToCompletion = async (
   await answerNow.click();
 
   for (let i = 0; i < maxClicks; i++) {
-    const confirmButton = panelPage
-      .getByRole("button", {
-        name: "Confirm",
-        exact: true,
-      })
-      .first();
+    const confirmButton = agentConfirmButton(panelPage).first();
     const done = panelPage.getByText("Run complete.");
 
     if (await done.isVisible()) return;

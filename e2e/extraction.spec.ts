@@ -164,7 +164,9 @@ test("the 600ms injected referral field appears only in a re-observation", async
   const labelsBefore = first.forms[0]?.fields.map((f) => f.label) ?? [];
   expect(labelsBefore).not.toContain("How did you hear about us?");
 
-  await page.waitForTimeout(700);
+  // The fixture's own 600ms timer injects this field; wait on the DOM, not a
+  // fixed sleep.
+  await page.locator("#referral").waitFor({ state: "attached" });
 
   const second = await observe(page);
   const labelsAfter = second.forms[0]?.fields.map((f) => f.label) ?? [];

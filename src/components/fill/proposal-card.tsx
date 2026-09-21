@@ -215,6 +215,7 @@ const PendingProposal = ({
       variant={restricted ? "destructive" : "default"}
       disabled={confirmed}
       onClick={() => onConfirm(proposal.decisionId)}
+      data-testid="proposal-confirm"
     >
       {confirmed ? "Filled" : "Confirm"}
     </Button>

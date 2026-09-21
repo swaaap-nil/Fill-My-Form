@@ -1,10 +1,12 @@
 import type { BrowserContext } from "@playwright/test";
 import { expect, test } from "./fill-fixtures";
 import {
+  agentStartButton,
   clickScan,
   grantAccess,
   openPanel,
   openProposalDetails,
+  proposalConfirmButtons,
   seedAnswer,
   seedAnswers,
 } from "./fill-helpers";
@@ -187,9 +189,7 @@ test("empty scan: shows localized message instead of Answer now and never again"
   await expect(panelPage.getByTestId("scan-no-fields-found")).toContainText(
     "No fillable fields on this page.",
   );
-  await expect(
-    panelPage.getByRole("button", { name: "Answer now and never again" }),
-  ).toBeHidden();
+  await expect(agentStartButton(panelPage)).toBeHidden();
 });
 
 test("summary cards: hides answers summary when no answers are detected", async ({
@@ -306,9 +306,7 @@ test("summary cards: card surface opens details without stealing fill clicks", a
   await clickScan(panelPage);
   await expect(panelPage.getByText("1 answer detected")).toBeVisible();
   await expect(
-    panelPage
-      .getByTestId("answers-summary-card")
-      .getByRole("button", { name: "Answer now and never again" }),
+    panelPage.getByTestId("answers-summary-card").getByTestId("agent-start"),
   ).toHaveCount(0);
 
   await panelPage
@@ -394,10 +392,7 @@ test("confirm: confirming a proposal writes the value into the page", async ({
   await clickScan(panelPage);
   await openProposalDetails(panelPage);
 
-  await panelPage
-    .getByRole("button", { name: "Confirm", exact: true })
-    .first()
-    .click();
+  await proposalConfirmButtons(panelPage).first().click();
 
   await expect(formPage.getByLabel("Email address")).toHaveValue(
     "ananya@example.com",
@@ -426,9 +421,7 @@ test("closed-vocabulary fields: a stored value resolves to the field's own optio
   await formPage.bringToFront();
   await clickScan(panelPage);
   await openProposalDetails(panelPage);
-  for (const confirmButton of await panelPage
-    .getByRole("button", { name: "Confirm", exact: true })
-    .all()) {
+  for (const confirmButton of await proposalConfirmButtons(panelPage).all()) {
     await confirmButton.click();
   }
 
