@@ -7,7 +7,38 @@ import { expect } from "./fill-fixtures";
  * `e2e/fill.spec.ts`, now reused by `verify.spec.ts`, `dynamic-form.spec.ts`
  * and `resume.spec.ts`, all of which need the same grant-then-drive setup
  * against the same pre-authorised build.
+ *
+ * Opening the panel declines the first-run all-sites gate. Playwright cannot
+ * click Chrome's native permission bubble, so tests stay on the one-origin
+ * grant path these specs already cover.
  */
+
+const fillScanButton = (panelPage: Page) =>
+  panelPage.getByRole("button", {
+    name: /^(Scan this page|Rescan page|Scan again)$/,
+  });
+
+/**
+ * Playwright cannot click Chrome's native all-sites permission bubble, so
+ * tests decline the first-run gate and keep using the one-origin grant path
+ * (`grantAccess` / Scan this page).
+ */
+export const dismissFirstRunAccessGate = async (panelPage: Page) => {
+  const gate = panelPage.getByTestId("first-run-access-gate");
+  const scanButton = fillScanButton(panelPage);
+
+  await Promise.race([
+    gate.waitFor({ state: "visible" }),
+    scanButton.waitFor({ state: "visible" }),
+  ]);
+
+  if (await gate.isVisible()) {
+    await gate.getByRole("button", { name: "Not now" }).click();
+    await expect(gate).toBeHidden();
+  }
+
+  await expect(scanButton).toBeVisible();
+};
 
 export const openPanel = async (
   context: BrowserContext,
@@ -15,6 +46,7 @@ export const openPanel = async (
 ) => {
   const panelPage = await context.newPage();
   await panelPage.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await dismissFirstRunAccessGate(panelPage);
   return panelPage;
 };
 
@@ -78,17 +110,23 @@ export const seedFile = async (
  * needs the direct `executeScript` injection `requestSiteAccess` performs
  * for whichever tab is currently active — hence `formPage.bringToFront()`
  * first.
+ *
+ * Opening the panel makes *that* tab active, so wait for the form tab's
+ * grant chrome after focusing it. Per-site access now reads "This site
+ * only:" rather than "Access is on for". Do not click Scan here — that
+ * would fill the page and leave later tests looking for an idle scan
+ * button.
  */
 export const grantAccess = async (formPage: Page, panelPage: Page) => {
   await formPage.bringToFront();
-  const scanButton = panelPage.getByRole("button", { name: "Scan this page" });
-  const grantedAccess = panelPage.getByText("Access is on for");
+  await expect(
+    panelPage.getByText(/This site only:|Access is on for/),
+  ).toBeVisible({ timeout: 10_000 });
+  await formPage.reload({ waitUntil: "domcontentloaded" });
+};
 
-  if (await grantedAccess.isVisible({ timeout: 1000 }).catch(() => false)) {
-    await formPage.reload({ waitUntil: "domcontentloaded" });
-  } else if (await scanButton.isVisible({ timeout: 1000 }).catch(() => false)) {
-    await scanButton.click();
-  }
+export const clickScan = async (panelPage: Page) => {
+  await fillScanButton(panelPage).click();
 };
 
 export const openProposalDetails = async (panelPage: Page) => {
@@ -107,20 +145,20 @@ export const openProposalDetails = async (panelPage: Page) => {
  * the *test's* timeout, which reads as a hang rather than what it is: the
  * run already finished. A short click timeout, swallowed, lets the next
  * loop iteration's check for "Run complete." see what actually happened.
+ *
+ * A per-tab scan snapshot (or a scan that already ran) can leave "Answer
+ * now" on screen. Clicking Rescan in that state races the next assertion,
+ * so start the loop from the proposals that are already there.
  */
 export const driveAgentToCompletion = async (
   panelPage: Page,
   maxClicks = 15,
 ) => {
-  // After a completed scan the toolbar relabels to "Rescan page" / "Scan
-  // again". A second run (step-2 fields, a fresh observation) has to click
-  // that, not the idle "Scan this page" label that is no longer there.
-  await panelPage
-    .getByRole("button", {
-      name: /^(Scan this page|Rescan page|Scan again)$/,
-    })
-    .click();
-  await panelPage.getByRole("button", { name: "Answer now" }).click();
+  const answerNow = panelPage.getByRole("button", { name: "Answer now" });
+  if (!(await answerNow.isVisible({ timeout: 1000 }).catch(() => false))) {
+    await clickScan(panelPage);
+  }
+  await answerNow.click();
 
   for (let i = 0; i < maxClicks; i++) {
     const confirmButton = panelPage
