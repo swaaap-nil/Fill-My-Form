@@ -28,6 +28,32 @@ import "~/assets/styles/globals.css";
  */
 let lastElementsById: ReadonlyMap<string, FieldElements> = new Map();
 const fillFeedbackEvent = "form-agent-fill-feedback";
+
+/** Per-document: register + inject can both evaluate this file on one page. */
+const handlersRegisteredAttr = "data-fill-my-form-handlers";
+const passiveDetectionAttr = "data-fill-my-form-passive-detection";
+
+const ensureHandlersRegistered = (): void => {
+  const root = document.documentElement;
+  if (root.hasAttribute(handlersRegisteredAttr)) return;
+  root.setAttribute(handlersRegisteredAttr, "");
+  registerFillHandlers();
+};
+
+const ensurePassiveDetectionStarted = (): void => {
+  const root = document.documentElement;
+  if (root.hasAttribute(passiveDetectionAttr)) return;
+  root.setAttribute(passiveDetectionAttr, "");
+  startPassiveDetection();
+};
+
+/**
+ * Deliberately DOM-only, not a sticky flag: WXT invalidates an older script
+ * instance (and removes its UI) when a newer one starts, so a flag set by the
+ * older instance would leave the page with no UI at all.
+ */
+const shouldSkipUiMount = (): boolean =>
+  document.querySelector("form-agent-ui") !== null;
 const detectionNudgeEvent = "form-agent-detection-nudge";
 
 interface FillFeedbackDetail {
@@ -231,6 +257,7 @@ const ContentScriptUI = () => {
         <div
           className="pointer-events-none fixed inset-x-4 top-6 z-[2147483647] flex justify-center motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-4 motion-safe:zoom-in-95 motion-safe:duration-300 motion-reduce:animate-none"
           aria-live="polite"
+          data-testid="fill-feedback-banner"
         >
           <div className="relative min-w-64 max-w-[min(28rem,calc(100vw-2rem))] overflow-hidden rounded-lg border border-emerald-400/40 bg-background/95 px-4 py-3 text-foreground shadow-2xl shadow-black/25 ring-1 ring-border backdrop-blur">
             <div className="absolute inset-x-0 top-0 h-1 bg-emerald-500/20">
@@ -278,8 +305,10 @@ export default defineContentScript({
   cssInjectionMode: "ui",
 
   async main(ctx) {
-    registerFillHandlers();
-    startPassiveDetection();
+    ensureHandlersRegistered();
+    ensurePassiveDetectionStarted();
+
+    if (shouldSkipUiMount()) return;
 
     const ui = await createShadowRootUi(ctx, {
       name: "form-agent-ui",

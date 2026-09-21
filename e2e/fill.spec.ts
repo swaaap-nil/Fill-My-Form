@@ -271,7 +271,7 @@ test("untouched: the csrf field and the terms checkbox are never filled", async 
   await clickScan(panelPage);
   await expect(panelPage.getByText("1 answer detected")).toBeVisible();
   await panelPage.getByRole("button", { name: "Fill My Form 😡" }).click();
-  await expect(formPage.getByText("1 field updated")).toBeVisible();
+  await expect(formPage.getByText("1 field updated").first()).toBeVisible();
   await expect(panelPage.getByText("1 answer filled")).toBeVisible();
   await expect(panelPage.getByText("Filled from last scan")).toBeVisible();
   await expect(
