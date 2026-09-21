@@ -9,6 +9,7 @@ import {
   type Page,
 } from "@playwright/test";
 import { z } from "zod";
+import { isLocalE2eUrl } from "./local-url";
 
 /**
  * Loads a built extension into a real Chromium.
@@ -52,6 +53,15 @@ export const createExtensionFixtures = (extensionPath: string) =>
           `--load-extension=${extensionPath}`,
         ],
       });
+
+      // Copied fixtures still reference live CDNs. Waiting for those in CI
+      // hangs `load` until Playwright closes the browser. Local-only is
+      // enough, and it is the rule in docs/testing.md.
+      await context.route("**/*", (route) =>
+        isLocalE2eUrl(route.request().url())
+          ? route.continue()
+          : route.abort("blockedbyclient"),
+      );
 
       await use(context);
 

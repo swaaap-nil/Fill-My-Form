@@ -286,7 +286,7 @@ test("ibps-like.html labels the file field from the upload prompt, not picker ch
 test("aai-copied.html recognises copied photo and signature upload fields", async ({
   page,
 }) => {
-  await page.goto("/aai-copied.html");
+  await page.goto("/aai-copied.html", { waitUntil: "domcontentloaded" });
   await injectExtractor(page);
 
   const full = await observeFull(page);
@@ -314,7 +314,7 @@ test("aai-copied.html recognises copied photo and signature upload fields", asyn
 });
 
 test("aai-more.html has no upload fields to recognise", async ({ page }) => {
-  await page.goto("/aai-more.html");
+  await page.goto("/aai-more.html", { waitUntil: "domcontentloaded" });
   await injectExtractor(page);
 
   const full = await observeFull(page);
@@ -328,7 +328,7 @@ test("aai-more.html has no upload fields to recognise", async ({ page }) => {
 test("aai-more.html recognises common personal, address and bank fields", async ({
   page,
 }) => {
-  await page.goto("/aai-more.html");
+  await page.goto("/aai-more.html", { waitUntil: "domcontentloaded" });
   await injectExtractor(page);
 
   const full = await observeFull(page);
