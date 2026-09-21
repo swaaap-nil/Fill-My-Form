@@ -1,76 +1,20 @@
 import { describe, expect, it } from "bun:test";
 import {
   ALL_SITE_ORIGINS,
+  contentScriptIdFor,
   createSiteAccess,
-  type SiteAccessBrowser,
+  GLOBAL_HTTP_SCRIPT_ID,
+  GLOBAL_HTTPS_SCRIPT_ID,
   toOriginPattern,
+  wireSiteAccessPermissionEvents,
 } from "~/lib/site-access";
-
-/**
- * A hand-written fake, not a mocking library: this is the mechanism the
- * entire privacy claim rests on, so the test should read as plainly as the
- * production code does. State lives in plain objects so a test can inspect
- * it directly rather than asserting on call-spy internals.
- */
-const createFakeBrowser = (
-  overrides: Partial<{
-    grantResult: boolean;
-    registered: Set<string>;
-    grantedOrigins: Set<string>;
-    executedScripts: { tabId: number; files: string[] }[];
-    chromePermissions: SiteAccessBrowser["chromePermissions"];
-    chromeRuntime: SiteAccessBrowser["chromeRuntime"];
-  }> = {},
-): SiteAccessBrowser & {
-  registered: Set<string>;
-  grantedOrigins: Set<string>;
-  executedScripts: { tabId: number; files: string[] }[];
-} => {
-  const registered = overrides.registered ?? new Set<string>();
-  const grantedOrigins = overrides.grantedOrigins ?? new Set<string>();
-  const executedScripts = overrides.executedScripts ?? [];
-  const grantResult = overrides.grantResult ?? true;
-
-  return {
-    registered,
-    grantedOrigins,
-    executedScripts,
-    chromePermissions: overrides.chromePermissions,
-    chromeRuntime: overrides.chromeRuntime,
-    permissions: {
-      async contains({ origins }) {
-        return origins.every((o) => grantedOrigins.has(o));
-      },
-      async request({ origins }) {
-        if (!grantResult) return false;
-        for (const o of origins) grantedOrigins.add(o);
-        return true;
-      },
-      async remove({ origins }) {
-        for (const o of origins) grantedOrigins.delete(o);
-        return true;
-      },
-      async getAll() {
-        return { origins: Array.from(grantedOrigins) };
-      },
-    },
-    scripting: {
-      async registerContentScripts(scripts) {
-        for (const script of scripts) registered.add(script.id);
-      },
-      async unregisterContentScripts({ ids }) {
-        for (const id of ids) registered.delete(id);
-      },
-      async getRegisteredContentScripts({ ids }) {
-        return ids.filter((id) => registered.has(id));
-      },
-      async executeScript({ target, files }) {
-        executedScripts.push({ tabId: target.tabId, files: [...files] });
-        return undefined;
-      },
-    },
-  };
-};
+import {
+  createChromeFakeBrowser,
+  createFakeBrowser,
+  createFirefoxFakeBrowser,
+  GESTURE_BROWSERS,
+  GESTURE_ERROR,
+} from "./fake-site-access-browser";
 
 describe("toOriginPattern", () => {
   it("strips the path and query string, keeping only the origin", () => {
@@ -86,64 +30,348 @@ describe("toOriginPattern", () => {
   });
 });
 
-describe("requestSiteAccess", () => {
-  it("registers a content script and returns true on grant", async () => {
-    const fake = createFakeBrowser();
-    const siteAccess = createSiteAccess(fake);
-
-    const granted = await siteAccess.requestSiteAccess(
-      "https://example.com/apply",
+describe("contentScriptIdFor", () => {
+  it("does not collide for hostnames that squash to the same alphanumeric id", () => {
+    expect(contentScriptIdFor("https://foo.bar.com/*")).not.toBe(
+      contentScriptIdFor("https://foo-bar.com/*"),
     );
-
-    expect(granted).toBe(true);
-    expect(fake.grantedOrigins.has("https://example.com/*")).toBe(true);
-    expect(fake.registered.size).toBe(1);
   });
+});
 
-  it("degrades without retrying when the user declines: a normal outcome", async () => {
-    const fake = createFakeBrowser({ grantResult: false });
-    const siteAccess = createSiteAccess(fake);
+for (const [browserName, createBrowser] of GESTURE_BROWSERS) {
+  describe(`${browserName} requestSiteAccess`, () => {
+    it("registers a content script and returns true on grant", async () => {
+      const fake = createBrowser();
+      const siteAccess = createSiteAccess(fake);
 
-    const granted = await siteAccess.requestSiteAccess(
-      "https://example.com/apply",
-    );
+      const granted = await siteAccess.requestSiteAccess(
+        "https://example.com/apply",
+      );
 
-    expect(granted).toBe(false);
-    expect(fake.grantedOrigins.size).toBe(0);
-    expect(fake.registered.size).toBe(0);
-  });
-
-  it("injects into the active tab immediately when a tabId is given (spike 2's fix)", async () => {
-    const fake = createFakeBrowser();
-    const siteAccess = createSiteAccess(fake);
-
-    await siteAccess.requestSiteAccess("https://example.com/apply", 42);
-
-    expect(fake.executedScripts).toEqual([
-      { tabId: 42, files: ["content-scripts/content.js"] },
-    ]);
-  });
-
-  it("does not inject anywhere when no tabId is given", async () => {
-    const fake = createFakeBrowser();
-    const siteAccess = createSiteAccess(fake);
-
-    await siteAccess.requestSiteAccess("https://example.com/apply");
-
-    expect(fake.executedScripts).toEqual([]);
-  });
-
-  it("uses Chrome's callback API directly when available", async () => {
-    const requestedOrigins: string[][] = [];
-    const fake = createFakeBrowser({
-      chromeRuntime: {},
-      chromePermissions: {
-        request(query, callback) {
-          requestedOrigins.push([...query.origins]);
-          callback(true);
-        },
-      },
+      expect(granted).toBe(true);
+      expect(fake.grantedOrigins.has("https://example.com/*")).toBe(true);
+      expect(
+        fake.registered.has(contentScriptIdFor("https://example.com/*")),
+      ).toBe(true);
     });
+
+    it("degrades without retrying when the user declines: a normal outcome", async () => {
+      const fake = createBrowser({ grantResult: false });
+      const siteAccess = createSiteAccess(fake);
+
+      const granted = await siteAccess.requestSiteAccess(
+        "https://example.com/apply",
+      );
+
+      expect(granted).toBe(false);
+      expect(fake.grantedOrigins.size).toBe(0);
+      expect(fake.registered.size).toBe(0);
+    });
+
+    it("injects into the active tab immediately when a tabId is given (spike 2's fix)", async () => {
+      const fake = createBrowser();
+      const siteAccess = createSiteAccess(fake);
+
+      await siteAccess.requestSiteAccess("https://example.com/apply", 42);
+
+      expect(fake.executedScripts).toEqual([
+        { tabId: 42, files: ["content-scripts/content.js"] },
+      ]);
+    });
+
+    it("does not inject anywhere when no tabId is given", async () => {
+      const fake = createBrowser();
+      const siteAccess = createSiteAccess(fake);
+
+      await siteAccess.requestSiteAccess("https://example.com/apply");
+
+      expect(fake.executedScripts).toEqual([]);
+    });
+
+    it("does not call the permission API for chrome:// or other non-http(s) URLs", async () => {
+      const fake = createBrowser();
+      const siteAccess = createSiteAccess(fake);
+
+      expect(await siteAccess.requestSiteAccess("chrome://extensions")).toBe(
+        false,
+      );
+      expect(await siteAccess.requestSiteAccess("about:addons")).toBe(false);
+      expect(fake.requestCalls).toEqual([]);
+    });
+
+    it("does not re-prompt when the origin is already granted", async () => {
+      const fake = createBrowser({
+        grantedOrigins: new Set(["https://example.com/*"]),
+      });
+      const siteAccess = createSiteAccess(fake);
+
+      const granted = await siteAccess.requestSiteAccess(
+        "https://example.com/apply",
+        3,
+      );
+
+      expect(granted).toBe(true);
+      expect(fake.promptedOrigins).toEqual([]);
+      expect(
+        fake.registered.has(contentScriptIdFor("https://example.com/*")),
+      ).toBe(true);
+    });
+  });
+
+  describe(`${browserName} hasSiteAccess / revoke / restore`, () => {
+    it("reflects the current grant state", async () => {
+      const fake = createBrowser();
+      const siteAccess = createSiteAccess(fake);
+
+      expect(fake.grantedOrigins.size).toBe(0);
+      await siteAccess.requestSiteAccess("https://example.com/apply");
+      expect(await siteAccess.hasSiteAccess("https://example.com/apply")).toBe(
+        true,
+      );
+    });
+
+    it("treats an https wildcard as covering any https origin", async () => {
+      const fake = createBrowser({
+        grantedOrigins: new Set(["https://*/*"]),
+      });
+      const siteAccess = createSiteAccess(fake);
+
+      expect(await siteAccess.hasSiteAccess("https://any.example/form")).toBe(
+        true,
+      );
+      expect(await siteAccess.hasAllSiteAccess()).toBe(false);
+    });
+
+    it("removes the permission and unregisters the content script", async () => {
+      const fake = createBrowser();
+      const siteAccess = createSiteAccess(fake);
+      await siteAccess.requestSiteAccess("https://example.com/apply");
+
+      await siteAccess.revokeSiteAccess("https://example.com/apply");
+
+      expect(fake.grantedOrigins.size).toBe(0);
+      expect(fake.registered.size).toBe(0);
+    });
+
+    it("is idempotent: revoking an origin that was never granted does not throw", async () => {
+      const fake = createBrowser();
+      const siteAccess = createSiteAccess(fake);
+
+      await expect(
+        siteAccess.revokeSiteAccess("https://never-granted.example.com"),
+      ).resolves.toBeUndefined();
+    });
+
+    it("re-registers a content script for every already-granted origin", async () => {
+      const fake = createBrowser({
+        grantedOrigins: new Set([
+          "https://a.example.com/*",
+          "https://b.example.com/*",
+        ]),
+      });
+      const siteAccess = createSiteAccess(fake);
+
+      const count = await siteAccess.restoreGrantedSites();
+
+      expect(count).toBe(2);
+      expect(fake.registered.size).toBe(2);
+    });
+
+    it("does not re-register a script that is already registered", async () => {
+      const fake = createBrowser({
+        grantedOrigins: new Set(["https://a.example.com/*"]),
+      });
+      const siteAccess = createSiteAccess(fake);
+
+      await siteAccess.restoreGrantedSites();
+      const registerCallsBefore = fake.registered.size;
+      await siteAccess.restoreGrantedSites();
+
+      expect(fake.registered.size).toBe(registerCallsBefore);
+    });
+
+    it("continues restore when one origin fails to register", async () => {
+      const fake = createBrowser({
+        grantedOrigins: new Set([
+          "https://ok.example/*",
+          "https://bad.example/*",
+        ]),
+      });
+      fake.registerShouldThrow = (id) =>
+        id === contentScriptIdFor("https://bad.example/*");
+      const siteAccess = createSiteAccess(fake);
+
+      await expect(siteAccess.restoreGrantedSites()).resolves.toBe(2);
+      expect(
+        fake.registered.has(contentScriptIdFor("https://ok.example/*")),
+      ).toBe(true);
+      expect(
+        fake.registered.has(contentScriptIdFor("https://bad.example/*")),
+      ).toBe(false);
+    });
+
+    it("registers distinct scripts for origins that would collide under alphanumeric squash", async () => {
+      const fake = createBrowser();
+      const siteAccess = createSiteAccess(fake);
+
+      await siteAccess.requestSiteAccess("https://foo.bar.com/a");
+      await siteAccess.requestSiteAccess("https://foo-bar.com/a");
+
+      expect(fake.registered.size).toBe(2);
+      await siteAccess.revokeSiteAccess("https://foo.bar.com/a");
+      expect(
+        fake.registered.has(contentScriptIdFor("https://foo-bar.com/*")),
+      ).toBe(true);
+    });
+  });
+
+  describe(`${browserName} listGrantedOrigins`, () => {
+    it("lists every currently granted origin pattern", async () => {
+      const fake = createBrowser();
+      const siteAccess = createSiteAccess(fake);
+      await siteAccess.requestSiteAccess("https://example.com/apply");
+      await siteAccess.requestSiteAccess("https://forms.gov.example/x");
+
+      const origins = (await siteAccess.listGrantedOrigins()).slice().sort();
+      expect(origins).toEqual(
+        ["https://example.com/*", "https://forms.gov.example/*"].sort(),
+      );
+    });
+
+    it("reflects a revocation", async () => {
+      const fake = createBrowser();
+      const siteAccess = createSiteAccess(fake);
+      await siteAccess.requestSiteAccess("https://example.com/apply");
+      await siteAccess.revokeSiteAccess("https://example.com/apply");
+
+      expect(await siteAccess.listGrantedOrigins()).toEqual([]);
+    });
+  });
+
+  describe(`${browserName} requestAllSiteAccess`, () => {
+    it("registers a global content script for both wildcard patterns", async () => {
+      const fake = createBrowser();
+      const siteAccess = createSiteAccess(fake);
+
+      const granted = await siteAccess.requestAllSiteAccess(7);
+
+      expect(granted).toBe(true);
+      for (const pattern of ALL_SITE_ORIGINS) {
+        expect(fake.grantedOrigins.has(pattern)).toBe(true);
+      }
+      expect(fake.registered.has("form-agent-content:all_sites")).toBe(true);
+      expect(fake.executedScripts).toEqual([
+        { tabId: 7, files: ["content-scripts/content.js"] },
+      ]);
+    });
+
+    it("restoreGrantedSites registers global scripts when wildcards are granted", async () => {
+      const fake = createBrowser({
+        grantedOrigins: new Set([...ALL_SITE_ORIGINS]),
+      });
+      const siteAccess = createSiteAccess(fake);
+
+      await expect(siteAccess.restoreGrantedSites()).resolves.toBe(2);
+      expect(fake.registered.has(GLOBAL_HTTPS_SCRIPT_ID)).toBe(true);
+      expect(fake.registered.has(GLOBAL_HTTP_SCRIPT_ID)).toBe(true);
+    });
+
+    it("syncScriptsForGrantedAccess registers scripts without calling request", async () => {
+      const fake = createBrowser({
+        grantedOrigins: new Set(["https://example.com/*"]),
+      });
+      const siteAccess = createSiteAccess(fake);
+
+      await siteAccess.syncScriptsForGrantedAccess(
+        "https://example.com/form",
+        12,
+      );
+
+      expect(fake.requestCalls).toEqual([]);
+      expect(fake.registered.size).toBe(1);
+      expect(fake.executedScripts).toEqual([
+        { tabId: 12, files: ["content-scripts/content.js"] },
+      ]);
+    });
+
+    it("still returns true when global script registration throws after a grant", async () => {
+      const fake = createBrowser();
+      fake.registerShouldThrow = () => true;
+      const siteAccess = createSiteAccess(fake);
+
+      await expect(siteAccess.requestAllSiteAccess()).resolves.toBe(true);
+      expect(fake.grantedOrigins.has("https://*/*")).toBe(true);
+    });
+
+    it("still returns true when immediate injection fails after a grant", async () => {
+      const fake = createBrowser();
+      fake.scripting.executeScript = async () => {
+        throw new Error("Cannot access a chrome:// URL");
+      };
+      const siteAccess = createSiteAccess(fake);
+
+      await expect(siteAccess.requestAllSiteAccess(99)).resolves.toBe(true);
+      expect(fake.grantedOrigins.has("https://*/*")).toBe(true);
+    });
+
+    it("hasSiteAccess is true for any https origin when all sites are granted", async () => {
+      const fake = createBrowser({
+        grantedOrigins: new Set([...ALL_SITE_ORIGINS]),
+      });
+      const siteAccess = createSiteAccess(fake);
+
+      expect(await siteAccess.hasSiteAccess("https://any.example/form")).toBe(
+        true,
+      );
+    });
+
+    it("registers the remaining wildcard when only one global script id exists", async () => {
+      const fake = createBrowser({
+        registered: new Set([GLOBAL_HTTPS_SCRIPT_ID]),
+        grantedOrigins: new Set([...ALL_SITE_ORIGINS]),
+      });
+      fake.registerShouldThrow = (id) => id === "form-agent-content:all_sites";
+      const siteAccess = createSiteAccess(fake);
+
+      await siteAccess.restoreGrantedSites();
+
+      expect(fake.registered.has(GLOBAL_HTTPS_SCRIPT_ID)).toBe(true);
+      expect(fake.registered.has(GLOBAL_HTTP_SCRIPT_ID)).toBe(true);
+    });
+  });
+
+  describe(`${browserName} permissions.onAdded / onRemoved`, () => {
+    it("registers scripts when the browser grants origins outside the panel", async () => {
+      const fake = createBrowser();
+      const siteAccess = createSiteAccess(fake);
+      wireSiteAccessPermissionEvents(fake, siteAccess);
+
+      fake.emitAdded(["https://settings.example/*"]);
+      await Promise.resolve();
+
+      expect(
+        fake.registered.has(contentScriptIdFor("https://settings.example/*")),
+      ).toBe(true);
+    });
+
+    it("unregisters scripts when the browser revokes origins outside the panel", async () => {
+      const fake = createBrowser();
+      const siteAccess = createSiteAccess(fake);
+      wireSiteAccessPermissionEvents(fake, siteAccess);
+      await siteAccess.requestSiteAccess("https://settings.example/form");
+
+      fake.emitRemoved(["https://settings.example/*"]);
+      await Promise.resolve();
+
+      expect(fake.registered.size).toBe(0);
+      expect(fake.grantedOrigins.size).toBe(0);
+    });
+  });
+}
+
+describe("Chrome callback API", () => {
+  it("uses Chrome's callback API directly when available", async () => {
+    const fake = createChromeFakeBrowser();
     const siteAccess = createSiteAccess(fake);
 
     const granted = await siteAccess.requestSiteAccess(
@@ -152,7 +380,8 @@ describe("requestSiteAccess", () => {
     );
 
     expect(granted).toBe(true);
-    expect(requestedOrigins).toEqual([["https://example.com/*"]]);
+    expect(fake.requestCalls).toEqual([["https://example.com/*"]]);
+    expect(fake.grantedOrigins.has("https://example.com/*")).toBe(true);
     expect(fake.registered.size).toBe(1);
     expect(fake.executedScripts).toEqual([
       { tabId: 42, files: ["content-scripts/content.js"] },
@@ -160,228 +389,52 @@ describe("requestSiteAccess", () => {
   });
 });
 
-describe("hasSiteAccess", () => {
-  it("reflects the current grant state", async () => {
-    const fake = createFakeBrowser();
+describe("Firefox gesture policy", () => {
+  it("fails permissions.request after contains() has yielded", async () => {
+    const fake = createFirefoxFakeBrowser();
     const siteAccess = createSiteAccess(fake);
 
-    expect(await siteAccess.hasSiteAccess("https://example.com/apply")).toBe(
-      false,
-    );
-    await siteAccess.requestSiteAccess("https://example.com/apply");
-    expect(await siteAccess.hasSiteAccess("https://example.com/apply")).toBe(
-      true,
-    );
-  });
-});
-
-describe("revokeSiteAccess", () => {
-  it("removes the permission and unregisters the content script", async () => {
-    const fake = createFakeBrowser();
-    const siteAccess = createSiteAccess(fake);
-    await siteAccess.requestSiteAccess("https://example.com/apply");
-
-    await siteAccess.revokeSiteAccess("https://example.com/apply");
-
-    expect(fake.grantedOrigins.size).toBe(0);
-    expect(fake.registered.size).toBe(0);
-  });
-
-  it("is idempotent: revoking an origin that was never granted does not throw", async () => {
-    const fake = createFakeBrowser();
-    const siteAccess = createSiteAccess(fake);
+    await siteAccess.hasSiteAccess("https://example.com/apply");
 
     await expect(
-      siteAccess.revokeSiteAccess("https://never-granted.example.com"),
-    ).resolves.toBeUndefined();
+      siteAccess.requestSiteAccess("https://example.com/apply"),
+    ).rejects.toThrow(GESTURE_ERROR);
+    expect(fake.grantedOrigins.size).toBe(0);
   });
-});
 
-describe("restoreGrantedSites", () => {
-  it("re-registers a content script for every already-granted origin", async () => {
-    const fake = createFakeBrowser({
-      grantedOrigins: new Set([
-        "https://a.example.com/*",
-        "https://b.example.com/*",
-      ]),
-    });
+  it("succeeds when request() is the first await", async () => {
+    const fake = createFirefoxFakeBrowser();
     const siteAccess = createSiteAccess(fake);
 
-    const count = await siteAccess.restoreGrantedSites();
-
-    expect(count).toBe(2);
-    expect(fake.registered.size).toBe(2);
-  });
-
-  it("does not re-register a script that is already registered", async () => {
-    const fake = createFakeBrowser({
-      grantedOrigins: new Set(["https://a.example.com/*"]),
-    });
-    const siteAccess = createSiteAccess(fake);
-
-    await siteAccess.restoreGrantedSites();
-    const registerCallsBefore = fake.registered.size;
-    await siteAccess.restoreGrantedSites();
-
-    expect(fake.registered.size).toBe(registerCallsBefore);
-  });
-});
-
-describe("listGrantedOrigins", () => {
-  it("lists every currently granted origin pattern", async () => {
-    const fake = createFakeBrowser();
-    const siteAccess = createSiteAccess(fake);
-    await siteAccess.requestSiteAccess("https://example.com/apply");
-    await siteAccess.requestSiteAccess("https://forms.gov.example/x");
-
-    const origins = (await siteAccess.listGrantedOrigins()).slice().sort();
-    expect(origins).toEqual(
-      ["https://example.com/*", "https://forms.gov.example/*"].sort(),
-    );
-  });
-
-  it("reflects a revocation", async () => {
-    const fake = createFakeBrowser();
-    const siteAccess = createSiteAccess(fake);
-    await siteAccess.requestSiteAccess("https://example.com/apply");
-    await siteAccess.revokeSiteAccess("https://example.com/apply");
-
-    expect(await siteAccess.listGrantedOrigins()).toEqual([]);
-  });
-});
-
-describe("requestAllSiteAccess", () => {
-  it("registers one global content script for both wildcard patterns", async () => {
-    const fake = createFakeBrowser();
-    const siteAccess = createSiteAccess(fake);
-
-    const granted = await siteAccess.requestAllSiteAccess(7);
-
-    expect(granted).toBe(true);
-    for (const pattern of ALL_SITE_ORIGINS) {
-      expect(fake.grantedOrigins.has(pattern)).toBe(true);
-    }
-    expect(fake.registered.has("form-agent-content:all_sites")).toBe(true);
-    expect(fake.executedScripts).toEqual([
-      { tabId: 7, files: ["content-scripts/content.js"] },
-    ]);
-  });
-
-  it("restoreGrantedSites registers global script when both wildcards are granted", async () => {
-    const fake = createFakeBrowser({
-      grantedOrigins: new Set([...ALL_SITE_ORIGINS]),
-    });
-    const siteAccess = createSiteAccess(fake);
-
-    await expect(siteAccess.restoreGrantedSites()).resolves.toBe(2);
-    expect(fake.registered.has("form-agent-content:all_sites")).toBe(true);
-    expect(fake.registered.size).toBe(1);
-  });
-
-  it("syncScriptsForGrantedAccess registers scripts without calling request", async () => {
-    const fake = createFakeBrowser({
-      grantedOrigins: new Set(["https://example.com/*"]),
-    });
-    const siteAccess = createSiteAccess(fake);
-    let requestCalls = 0;
-    fake.permissions.request = async () => {
-      requestCalls += 1;
-      return true;
-    };
-
-    await siteAccess.syncScriptsForGrantedAccess(
-      "https://example.com/form",
-      12,
-    );
-
-    expect(requestCalls).toBe(0);
-    expect(fake.registered.size).toBe(1);
-    expect(fake.executedScripts).toEqual([
-      { tabId: 12, files: ["content-scripts/content.js"] },
-    ]);
-  });
-
-  it("still returns true when global script registration throws after a grant", async () => {
-    const fake = createFakeBrowser();
-    const failingRegister: SiteAccessBrowser = {
-      ...fake,
-      scripting: {
-        ...fake.scripting,
-        async registerContentScripts() {
-          throw new Error("registration failed");
-        },
-      },
-    };
-    const siteAccess = createSiteAccess(failingRegister);
-
-    await expect(siteAccess.requestAllSiteAccess()).resolves.toBe(true);
-    expect(fake.grantedOrigins.has("https://*/*")).toBe(true);
-  });
-
-  it("still returns true when immediate injection fails after a grant", async () => {
-    const fake = createFakeBrowser();
-    const failingInject: SiteAccessBrowser = {
-      ...fake,
-      scripting: {
-        ...fake.scripting,
-        async executeScript() {
-          throw new Error("Cannot access a chrome:// URL");
-        },
-      },
-    };
-    const siteAccess = createSiteAccess(failingInject);
-
-    await expect(siteAccess.requestAllSiteAccess(99)).resolves.toBe(true);
-    expect(fake.grantedOrigins.has("https://*/*")).toBe(true);
-    expect(fake.registered.has("form-agent-content:all_sites")).toBe(true);
-  });
-
-  it("hasSiteAccess is true for any https origin when all sites are granted", async () => {
-    const fake = createFakeBrowser({
-      grantedOrigins: new Set([...ALL_SITE_ORIGINS]),
-    });
-    const siteAccess = createSiteAccess(fake);
-
-    expect(await siteAccess.hasSiteAccess("https://any.example/form")).toBe(
-      true,
-    );
-  });
-});
-
-describe("Firefox MV3-shaped browser", () => {
-  it("uses the same optional-origin grant and scripting registration path", async () => {
-    const fake = createFakeBrowser();
-    const siteAccess = createSiteAccess(fake);
-
-    const granted = await siteAccess.requestSiteAccess(
-      "https://firefox.example/apply",
-      109,
-    );
-
-    expect(granted).toBe(true);
+    expect(
+      await siteAccess.requestSiteAccess("https://firefox.example/apply", 109),
+    ).toBe(true);
     expect(fake.grantedOrigins.has("https://firefox.example/*")).toBe(true);
     expect(
-      fake.registered.has("form-agent-content:https___firefox_example__"),
+      fake.registered.has(contentScriptIdFor("https://firefox.example/*")),
     ).toBe(true);
-    expect(fake.executedScripts).toEqual([
-      { tabId: 109, files: ["content-scripts/content.js"] },
-    ]);
   });
+});
 
-  it("restores and revokes Firefox MV3 runtime registrations by origin id", async () => {
-    const fake = createFakeBrowser({
-      grantedOrigins: new Set(["https://firefox.example/*"]),
-    });
+describe("Chrome gesture policy", () => {
+  it("still grants after contains() because Chrome keeps user activation", async () => {
+    const fake = createChromeFakeBrowser();
     const siteAccess = createSiteAccess(fake);
 
-    await expect(siteAccess.restoreGrantedSites()).resolves.toBe(1);
+    await siteAccess.hasSiteAccess("https://example.com/apply");
     expect(
-      fake.registered.has("form-agent-content:https___firefox_example__"),
+      await siteAccess.requestSiteAccess("https://example.com/apply"),
     ).toBe(true);
+  });
+});
 
-    await siteAccess.revokeSiteAccess("https://firefox.example/apply");
+describe("plain promise fake (default)", () => {
+  it("still supports grant without a Chrome callback object", async () => {
+    const fake = createFakeBrowser();
+    const siteAccess = createSiteAccess(fake);
 
-    expect(fake.grantedOrigins.size).toBe(0);
-    expect(fake.registered.size).toBe(0);
+    expect(await siteAccess.requestSiteAccess("https://example.com/x")).toBe(
+      true,
+    );
   });
 });

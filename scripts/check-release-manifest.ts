@@ -231,6 +231,17 @@ export const evaluateTargetManifest = (
         "Chrome side_panel.default_path must point at sidepanel.html.",
       );
     }
+
+    if (
+      !includesAll(manifest.optional_host_permissions, [
+        "https://*/*",
+        "http://*/*",
+      ])
+    ) {
+      findings.push(
+        "Chrome optional_host_permissions must include https://*/* and http://*/*.",
+      );
+    }
   }
 
   return findings;

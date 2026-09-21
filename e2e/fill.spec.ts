@@ -66,8 +66,15 @@ test("first run: Not now dismisses the all-sites gate and shows the fill panel",
     panelPage.getByRole("heading", { name: "Detect forms automatically" }),
   ).toBeVisible();
   await expect(
-    panelPage.getByRole("button", { name: "Continue" }),
+    panelPage.getByRole("button", { name: "Allow on all websites" }),
   ).toBeVisible();
+
+  await panelPage.getByRole("button", { name: "My information" }).click();
+  await expect(
+    panelPage.getByRole("button", { name: "Back to home" }),
+  ).toBeVisible();
+  await panelPage.getByRole("button", { name: "Back to home" }).click();
+  await expect(gate).toBeVisible();
 
   await gate.getByRole("button", { name: "Not now" }).click();
   await expect(gate).toBeHidden();
@@ -93,7 +100,43 @@ test("grant: clicking the panel's grant button registers the content script", as
   await grantAccess(formPage, panelPage);
 
   const ids = await getRegisteredScriptIds(context);
-  expect(ids.some((id) => id.includes("localhost_4173"))).toBe(true);
+  expect(
+    ids.some(
+      (id) => id.startsWith("form-agent-content:") && !id.includes("all_sites"),
+    ),
+  ).toBe(true);
+});
+
+test("Turn off unregisters the origin content script", async ({
+  context,
+  extensionId,
+}) => {
+  const formPage = await context.newPage();
+  await formPage.goto("/simple.html");
+
+  const panelPage = await openPanel(context, extensionId);
+  await grantAccess(formPage, panelPage);
+
+  await expect(
+    panelPage.getByRole("button", { name: "Turn off" }),
+  ).toBeVisible();
+  await panelPage.getByRole("button", { name: "Turn off" }).click();
+
+  // WXT_E2E pre-grants localhost as a required host_permission, which
+  // Chrome cannot remove. Unregistering still stops future injection;
+  // ungranted 127.0.0.1 covers "no grant, no run" below.
+  await expect
+    .poll(async () => {
+      const ids = await getRegisteredScriptIds(context);
+      return ids.some(
+        (id) =>
+          id.startsWith("form-agent-content:") && !id.includes("all_sites"),
+      );
+    })
+    .toBe(false);
+
+  await formPage.reload({ waitUntil: "domcontentloaded" });
+  await expect(formPage.locator("form-agent-ui")).toHaveCount(0);
 });
 
 test("propose: scanning shows every field's proposal and fills nothing", async ({

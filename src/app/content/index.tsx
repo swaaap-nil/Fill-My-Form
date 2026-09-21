@@ -5,6 +5,7 @@ import {
   DETECTION_NUDGE_AUTO_HIDE_MS,
   DetectionNudgeBanner,
 } from "~/components/fill/detection-nudge-banner";
+import { failed, VerificationIssueCode } from "~/core/verification/types";
 import type { FieldElements } from "~/lib/form/extract";
 import { extractFullWithElements } from "~/lib/form/extract";
 import { uploadFieldFile, writeFieldValue } from "~/lib/form/fill";
@@ -16,6 +17,7 @@ import {
   onMessage,
   sendMessage,
 } from "~/lib/messaging";
+import { createPageAccessSession } from "~/lib/page-access-session";
 
 import "~/assets/styles/globals.css";
 
@@ -28,6 +30,8 @@ import "~/assets/styles/globals.css";
  */
 let lastElementsById: ReadonlyMap<string, FieldElements> = new Map();
 const fillFeedbackEvent = "form-agent-fill-feedback";
+const pageAccess = createPageAccessSession(document.documentElement);
+let shadowUi: { remove: () => void } | undefined;
 
 /** Per-document: register + inject can both evaluate this file on one page. */
 const handlersRegisteredAttr = "data-fill-my-form-handlers";
@@ -86,12 +90,14 @@ const announceDetectionNudge = (
 
 const registerFillHandlers = () => {
   onMessage("extractFullForm", () => {
+    if (pageAccess.isRevoked()) return { forms: [] };
     const { forms, elements } = extractFullWithElements(document);
     lastElementsById = elements;
     return { forms };
   });
 
   onMessage("fillField", ({ data }) => {
+    if (pageAccess.isRevoked()) return { ok: false };
     // Throws — fills nothing — without a `decisionId`. See
     // ~/core/messaging/fill-instruction for why this must stay here.
     const { fieldId, value } = assertValidFillInstruction(data);
@@ -103,6 +109,7 @@ const registerFillHandlers = () => {
   });
 
   onMessage("uploadFile", ({ data }) => {
+    if (pageAccess.isRevoked()) return { ok: false };
     const { fieldId, upload } = assertValidUploadInstruction(data);
     const target = lastElementsById.get(fieldId);
     if (!target) return { ok: false };
@@ -116,11 +123,21 @@ const registerFillHandlers = () => {
   });
 
   onMessage("showFormDetectionNudge", ({ data }) => {
+    if (pageAccess.isRevoked()) return { ok: false };
     announceDetectionNudge(data.knownFieldCount, data.answerCount);
     return { ok: true };
   });
 
   onMessage("verifyField", ({ data }) => {
+    if (pageAccess.isRevoked()) {
+      return failed([
+        {
+          code: VerificationIssueCode.FIELD_MISSING,
+          fieldId: data.fieldId,
+          message: "Site access was revoked.",
+        },
+      ]);
+    }
     // Same cache `fillField` reads: a verify must check the same element the
     // fill wrote to, from the same extraction pass a `FieldId` came from.
     return compareFieldValue(
@@ -131,6 +148,14 @@ const registerFillHandlers = () => {
 
   onMessage("ackFormPageDetected", ({ data }) => {
     ackedGeneration = data.generation;
+    return { ok: true };
+  });
+
+  onMessage("disablePageAccess", () => {
+    pageAccess.revoke();
+    lastElementsById = new Map();
+    shadowUi?.remove();
+    shadowUi = undefined;
     return { ok: true };
   });
 };
@@ -150,6 +175,7 @@ const schedulePassiveDetection = () => {
 };
 
 const runPassiveDetection = async () => {
+  if (pageAccess.isRevoked()) return;
   const url = location.href;
   const generation = url;
   if (generation === ackedGeneration) return;
@@ -305,6 +331,7 @@ export default defineContentScript({
   cssInjectionMode: "ui",
 
   async main(ctx) {
+    pageAccess.restore();
     ensureHandlersRegistered();
     ensurePassiveDetectionStarted();
 
@@ -327,6 +354,7 @@ export default defineContentScript({
       },
     });
 
+    shadowUi = ui;
     ui.mount();
   },
 });

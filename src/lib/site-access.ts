@@ -17,6 +17,10 @@ import { browser as realBrowser } from "wxt/browser";
  * at the real call site, a hand-written fake in tests.
  */
 
+export interface PermissionOriginsChange {
+  readonly origins?: readonly string[];
+}
+
 /** The slice of the WebExtension `browser` API this module needs. Nothing more. */
 export interface SiteAccessBrowser {
   readonly chromePermissions?: {
@@ -33,6 +37,18 @@ export interface SiteAccessBrowser {
     request(query: { origins: string[] }): Promise<boolean>;
     remove(query: { origins: string[] }): Promise<boolean>;
     getAll(): Promise<{ origins?: string[] }>;
+    readonly onAdded?: {
+      addListener(callback: (change: PermissionOriginsChange) => void): void;
+      removeListener?(
+        callback: (change: PermissionOriginsChange) => void,
+      ): void;
+    };
+    readonly onRemoved?: {
+      addListener(callback: (change: PermissionOriginsChange) => void): void;
+      removeListener?(
+        callback: (change: PermissionOriginsChange) => void,
+      ): void;
+    };
   };
   readonly scripting: {
     registerContentScripts(
@@ -57,8 +73,8 @@ export interface SiteAccessBrowser {
 
 const CONTENT_SCRIPT_ID = "form-agent-content";
 const GLOBAL_CONTENT_SCRIPT_ID = "form-agent-content:all_sites";
-const GLOBAL_HTTPS_SCRIPT_ID = "form-agent-content:all_sites:https";
-const GLOBAL_HTTP_SCRIPT_ID = "form-agent-content:all_sites:http";
+export const GLOBAL_HTTPS_SCRIPT_ID = "form-agent-content:all_sites:https";
+export const GLOBAL_HTTP_SCRIPT_ID = "form-agent-content:all_sites:http";
 
 const GLOBAL_SCRIPT_IDS = [
   GLOBAL_CONTENT_SCRIPT_ID,
@@ -73,9 +89,6 @@ export const ALL_SITE_ORIGINS = ["https://*/*", "http://*/*"] as const;
 
 export const isAllSiteOriginPattern = (pattern: string): boolean =>
   (ALL_SITE_ORIGINS as readonly string[]).includes(pattern);
-
-const isAllSiteGrant = (origins: readonly string[]): boolean =>
-  ALL_SITE_ORIGINS.every((pattern) => origins.includes(pattern));
 
 /** `https://example.com/path?q=1` -> `https://example.com/*` */
 export const toOriginPattern = (url: string): string =>
@@ -96,8 +109,20 @@ export const isPermissibleUrl = (url: string): boolean => {
   }
 };
 
-const scriptIdFor = (origin: string) =>
-  `${CONTENT_SCRIPT_ID}:${origin.replace(/[^a-zA-Z0-9]/g, "_")}`;
+/**
+ * Reversible, collision-free content-script id for one origin pattern.
+ * `https://foo.bar.com/*` and `https://foo-bar.com/*` must not share an id.
+ */
+export const contentScriptIdFor = (origin: string): string => {
+  const bytes = new TextEncoder().encode(origin);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  const encoded = btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+  return `${CONTENT_SCRIPT_ID}:${encoded}`;
+};
 
 const requestOriginsFromGesture = (
   browser: SiteAccessBrowser,
@@ -138,7 +163,7 @@ export interface SiteAccess {
   requestSiteAccess(url: string, activeTabId?: number): Promise<boolean>;
   /**
    * Requests read access to all http(s) sites. Must run from a user gesture
-   * (first-run gate or settings). Registers one content script for both
+   * (first-run gate or settings). Registers content scripts for both
    * wildcard patterns.
    */
   requestAllSiteAccess(activeTabId?: number): Promise<boolean>;
@@ -157,33 +182,13 @@ export interface SiteAccess {
   syncScriptsForGrantedAccess(url: string, activeTabId?: number): Promise<void>;
   /** Every origin-pattern the user has granted. Powers the panel's "revoke" list. */
   listGrantedOrigins(): Promise<readonly string[]>;
+  /** Browser UI or another context granted origins — register without prompting. */
+  handleOriginsAdded(origins: readonly string[]): Promise<void>;
+  /** Browser UI revoked origins — unregister scripts; permission is already gone. */
+  handleOriginsRemoved(origins: readonly string[]): Promise<void>;
 }
 
 export const createSiteAccess = (browser: SiteAccessBrowser): SiteAccess => {
-  const registerForOrigin = async (origin: string): Promise<void> => {
-    if (isAllSiteOriginPattern(origin)) {
-      await registerGlobalContentScript();
-      return;
-    }
-
-    const id = scriptIdFor(origin);
-
-    const existing = await browser.scripting.getRegisteredContentScripts({
-      ids: [id],
-    });
-    if (existing.length > 0) return;
-
-    await browser.scripting.registerContentScripts([
-      {
-        id,
-        matches: [origin],
-        js: CONTENT_SCRIPT_JS,
-        css: CONTENT_SCRIPT_CSS,
-        runAt: "document_idle",
-      },
-    ]);
-  };
-
   const registerOneContentScript = async (
     id: string,
     matches: string[],
@@ -204,25 +209,60 @@ export const createSiteAccess = (browser: SiteAccessBrowser): SiteAccess => {
     ]);
   };
 
-  const registerGlobalContentScript = async (): Promise<void> => {
-    const existing = await browser.scripting.getRegisteredContentScripts({
-      ids: [...GLOBAL_SCRIPT_IDS],
-    });
-    if (existing.length > 0) return;
+  const registerGlobalContentScript = async (
+    patterns: readonly string[] = ALL_SITE_ORIGINS,
+  ): Promise<void> => {
+    const wantsHttps = patterns.includes("https://*/*");
+    const wantsHttp = patterns.includes("http://*/*");
 
-    try {
-      await registerOneContentScript(GLOBAL_CONTENT_SCRIPT_ID, [
-        ...ALL_SITE_ORIGINS,
-      ]);
-    } catch {
-      // Some builds reject two wildcards in one registration — register separately.
-      await registerOneContentScript(GLOBAL_HTTPS_SCRIPT_ID, [
-        "https://*/*",
-      ]).catch(() => undefined);
-      await registerOneContentScript(GLOBAL_HTTP_SCRIPT_ID, [
-        "http://*/*",
-      ]).catch(() => undefined);
+    if (wantsHttps && wantsHttp) {
+      try {
+        await registerOneContentScript(GLOBAL_CONTENT_SCRIPT_ID, [
+          ...ALL_SITE_ORIGINS,
+        ]);
+        return;
+      } catch {
+        // Some builds reject two wildcards in one registration — register separately.
+      }
     }
+
+    if (wantsHttps) {
+      await registerOneContentScript(GLOBAL_HTTPS_SCRIPT_ID, ["https://*/*"]);
+    }
+    if (wantsHttp) {
+      await registerOneContentScript(GLOBAL_HTTP_SCRIPT_ID, ["http://*/*"]);
+    }
+  };
+
+  const unregisterForOrigin = async (origin: string): Promise<void> => {
+    if (origin === "https://*/*") {
+      await browser.scripting
+        .unregisterContentScripts({
+          ids: [GLOBAL_CONTENT_SCRIPT_ID, GLOBAL_HTTPS_SCRIPT_ID],
+        })
+        .catch(() => {});
+      return;
+    }
+    if (origin === "http://*/*") {
+      await browser.scripting
+        .unregisterContentScripts({
+          ids: [GLOBAL_CONTENT_SCRIPT_ID, GLOBAL_HTTP_SCRIPT_ID],
+        })
+        .catch(() => {});
+      return;
+    }
+    await browser.scripting
+      .unregisterContentScripts({ ids: [contentScriptIdFor(origin)] })
+      .catch(() => {});
+  };
+
+  const registerForOrigin = async (origin: string): Promise<void> => {
+    if (isAllSiteOriginPattern(origin)) {
+      await registerGlobalContentScript([origin]);
+      return;
+    }
+
+    await registerOneContentScript(contentScriptIdFor(origin), [origin]);
   };
 
   /**
@@ -248,15 +288,13 @@ export const createSiteAccess = (browser: SiteAccessBrowser): SiteAccess => {
 
     hasSiteAccess: async (url) => {
       if (!isPermissibleUrl(url)) return false;
-      if (
-        await browser.permissions.contains({ origins: [...ALL_SITE_ORIGINS] })
-      ) {
-        return true;
-      }
-      return browser.permissions.contains({ origins: [toOriginPattern(url)] });
+      return browser.permissions.contains({
+        origins: [toOriginPattern(url)],
+      });
     },
 
     async requestSiteAccess(url, activeTabId) {
+      if (!isPermissibleUrl(url)) return false;
       const origin = toOriginPattern(url);
 
       const granted = await requestOriginsFromGesture(browser, [origin]);
@@ -301,11 +339,7 @@ export const createSiteAccess = (browser: SiteAccessBrowser): SiteAccess => {
         return;
       }
 
-      await browser.scripting
-        .unregisterContentScripts({ ids: [scriptIdFor(origin)] })
-        .catch(() => {
-          // Not registered. Revoking is idempotent by design.
-        });
+      await unregisterForOrigin(origin);
       await browser.permissions.remove({ origins: [origin] });
     },
 
@@ -318,18 +352,26 @@ export const createSiteAccess = (browser: SiteAccessBrowser): SiteAccess => {
 
     async syncScriptsForGrantedAccess(url, activeTabId) {
       if (!isPermissibleUrl(url)) return;
-      const hasGlobal = await browser.permissions.contains({
-        origins: [...ALL_SITE_ORIGINS],
-      });
+      const origin = toOriginPattern(url);
       const hasOrigin = await browser.permissions.contains({
-        origins: [toOriginPattern(url)],
+        origins: [origin],
       });
-      if (!hasGlobal && !hasOrigin) return;
+      if (!hasOrigin) return;
 
-      if (hasGlobal) {
-        await registerGlobalContentScript();
+      const protocol = new URL(url).protocol;
+      const hasHttpsAll = await browser.permissions.contains({
+        origins: ["https://*/*"],
+      });
+      const hasHttpAll = await browser.permissions.contains({
+        origins: ["http://*/*"],
+      });
+
+      if (protocol === "https:" && hasHttpsAll) {
+        await registerGlobalContentScript(["https://*/*"]);
+      } else if (protocol === "http:" && hasHttpAll) {
+        await registerGlobalContentScript(["http://*/*"]);
       } else {
-        await registerForOrigin(toOriginPattern(url));
+        await registerForOrigin(origin);
       }
 
       if (activeTabId !== undefined) {
@@ -339,11 +381,7 @@ export const createSiteAccess = (browser: SiteAccessBrowser): SiteAccess => {
 
     async restoreGrantedSites() {
       const { origins = [] } = await browser.permissions.getAll();
-      if (isAllSiteGrant(origins)) {
-        await registerGlobalContentScript();
-        return origins.length;
-      }
-      await Promise.all(origins.map(registerForOrigin));
+      await Promise.allSettled(origins.map(registerForOrigin));
       return origins.length;
     },
 
@@ -351,7 +389,27 @@ export const createSiteAccess = (browser: SiteAccessBrowser): SiteAccess => {
       const { origins = [] } = await browser.permissions.getAll();
       return origins;
     },
+
+    async handleOriginsAdded(origins) {
+      await Promise.allSettled(origins.map(registerForOrigin));
+    },
+
+    async handleOriginsRemoved(origins) {
+      await Promise.allSettled(origins.map(unregisterForOrigin));
+    },
   };
+};
+
+export const wireSiteAccessPermissionEvents = (
+  browser: SiteAccessBrowser,
+  access: SiteAccess,
+): void => {
+  browser.permissions.onAdded?.addListener((change) => {
+    void access.handleOriginsAdded(change.origins ?? []);
+  });
+  browser.permissions.onRemoved?.addListener((change) => {
+    void access.handleOriginsRemoved(change.origins ?? []);
+  });
 };
 
 /** The real, wired-up instance. Use this everywhere except tests. */

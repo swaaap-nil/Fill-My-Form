@@ -51,4 +51,16 @@ describe("PendingDecisionRegistry", () => {
 
     expect(registry.size(200)).toBe(0);
   });
+
+  it("clears only the decisions bound to one tab", () => {
+    const registry = new PendingDecisionRegistry(1000);
+    const pending = decision();
+
+    registry.remember("decision-1", 7, pending, 100);
+    registry.remember("decision-2", 8, pending, 100);
+    registry.clearTab(7);
+
+    expect(registry.take("decision-1", 7, 200)).toBeNull();
+    expect(registry.take("decision-2", 8, 200)).toBe(pending);
+  });
 });

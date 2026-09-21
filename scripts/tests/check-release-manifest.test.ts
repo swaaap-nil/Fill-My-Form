@@ -174,6 +174,17 @@ describe("evaluateTargetManifest", () => {
     expect(findings.some((f) => f.includes("tabs"))).toBe(true);
   });
 
+  it("fails when Chrome optional host permissions are missing", () => {
+    const findings = evaluateTargetManifest("chrome", {
+      ...CLEAN_CHROME_MANIFEST,
+      optional_host_permissions: ["https://*/*"],
+    });
+
+    expect(findings.some((f) => f.includes("optional_host_permissions"))).toBe(
+      true,
+    );
+  });
+
   it("fails when Firefox has no Gecko id", () => {
     const findings = evaluateTargetManifest("firefox", {
       ...CLEAN_FIREFOX_MANIFEST,

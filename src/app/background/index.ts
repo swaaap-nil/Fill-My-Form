@@ -53,7 +53,7 @@ import {
   type PersistentLocalDataStore,
 } from "~/lib/indexeddb-local-data";
 import { onMessage, type RunView, sendMessage } from "~/lib/messaging";
-import { siteAccess } from "~/lib/site-access";
+import { siteAccess, wireSiteAccessPermissionEvents } from "~/lib/site-access";
 import { clearTabFillSnapshot } from "~/lib/tab-fill-snapshot";
 import {
   type SidePanelBrowser,
@@ -158,6 +158,15 @@ const uploadPayloadOf = async (file: {
   bytes: await bytesOf(file.blob),
 });
 
+const tabHasSiteAccess = async (tabId: number): Promise<boolean> => {
+  try {
+    const tab = await browser.tabs.get(tabId);
+    return Boolean(tab.url && (await siteAccess.hasSiteAccess(tab.url)));
+  } catch {
+    return false;
+  }
+};
+
 /**
  * decisionId -> what `planFill` decided about one field, scoped to the tab
  * whose DOM was extracted. Cleared per id once acted on, and pruned by age,
@@ -198,8 +207,9 @@ const buildLoopPorts = async (tabId: number): Promise<LoopPorts> => {
     input: z.object({ fieldId: z.string(), value: z.string() }),
     output: z.object({ ok: z.boolean() }),
     risk: ActionRisk.MEDIUM,
-    execute: (input) =>
-      sendMessage(
+    execute: async (input) => {
+      if (!(await tabHasSiteAccess(tabId))) return { ok: false };
+      return sendMessage(
         "fillField",
         {
           decisionId: crypto.randomUUID(),
@@ -207,7 +217,8 @@ const buildLoopPorts = async (tabId: number): Promise<LoopPorts> => {
           value: input.value,
         },
         tabId,
-      ),
+      );
+    },
   });
 
   tools.register({
@@ -230,6 +241,7 @@ const buildLoopPorts = async (tabId: number): Promise<LoopPorts> => {
     output: z.object({ ok: z.boolean() }),
     risk: ActionRisk.MEDIUM,
     execute: async (input) => {
+      if (!(await tabHasSiteAccess(tabId))) return { ok: false };
       const prepared = await files.prepareLocalFile(
         input.ref,
         input.constraints as Parameters<typeof files.prepareLocalFile>[1],
@@ -347,6 +359,11 @@ const main = () => {
     .then((count: number) => logger.info("restored granted sites", { count }))
     .catch(() => logger.warn("could not restore granted sites"));
 
+  wireSiteAccessPermissionEvents(
+    browser as unknown as Parameters<typeof wireSiteAccessPermissionEvents>[0],
+    siteAccess,
+  );
+
   pendingDecisionsProxy.remember = (decisionId, tabId, decision) => {
     pendingDecisions.remember(decisionId, tabId, decision);
   };
@@ -432,6 +449,15 @@ const main = () => {
     const files = createBrowserFileComplianceAdapter(await getFileStore());
     const tabId = data.tabId;
 
+    if (!(await tabHasSiteAccess(tabId))) {
+      return {
+        results: data.decisionIds.map((decisionId) => ({
+          decisionId,
+          ok: false,
+        })),
+      };
+    }
+
     const results = await Promise.all(
       data.decisionIds.map(async (decisionId) => {
         const decision = pendingDecisions.take(decisionId, tabId);
@@ -439,6 +465,7 @@ const main = () => {
 
         const outcome = confirmDecision(decision, defaultPolicy);
         if (!outcome.ok) return { decisionId, ok: false };
+        if (!(await tabHasSiteAccess(tabId))) return { decisionId, ok: false };
 
         let ok = false;
         if (outcome.payload.kind === "file") {
@@ -582,6 +609,16 @@ const main = () => {
     await (await getFileStore()).clear();
     await clearAllRunSnapshots();
     pendingDecisions.clear();
+    return { ok: true };
+  });
+
+  onMessage("siteAccessRevoked", async ({ data }) => {
+    pendingDecisions.clearTab(data.tabId);
+    await sendMessage("disablePageAccess", undefined, data.tabId).catch(() =>
+      logger.warn("could not disable page access on tab", {
+        errorCode: LogErrorCode.EXTENSION_API,
+      }),
+    );
     return { ok: true };
   });
 

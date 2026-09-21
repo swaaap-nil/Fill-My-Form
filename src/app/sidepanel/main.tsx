@@ -91,7 +91,7 @@ const SidePanel = () => {
   return (
     <Layout headerAction={headerAction}>
       <div className="flex w-full flex-col gap-4">
-        {showAccessGate ? (
+        {view === View.FILL && showAccessGate ? (
           <FirstRunAccessGate onComplete={() => setShowAccessGate(false)} />
         ) : view === View.FILL ? (
           <FillPanel />

@@ -95,7 +95,7 @@ export const FirstRunAccessGate = ({ onComplete }: FirstRunAccessGateProps) => {
           disabled={busy}
           onClick={() => void handleContinue()}
         >
-          {busy ? "Waiting for permission…" : "Continue"}
+          {busy ? "Waiting for permission…" : "Allow on all websites"}
         </Button>
       </div>
       <p className="text-muted-foreground text-xs">

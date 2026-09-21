@@ -56,6 +56,12 @@ export class PendingDecisionRegistry {
     this.#decisions.clear();
   }
 
+  clearTab(tabId: number): void {
+    for (const [decisionId, pending] of this.#decisions) {
+      if (pending.tabId === tabId) this.#decisions.delete(decisionId);
+    }
+  }
+
   size(now: number = Date.now()): number {
     this.pruneExpired(now);
     return this.#decisions.size;

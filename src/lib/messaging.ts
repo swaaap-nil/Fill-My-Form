@@ -159,6 +159,12 @@ interface Messages {
 
   /** Content script → background: open fill UI from in-page detection banner (user gesture). */
   openFillUiFromTab(): { opened: boolean };
+
+  /** Panel → background: user turned off site access for this tab. */
+  siteAccessRevoked(data: { tabId: number }): { ok: boolean };
+
+  /** Background → content: stop extract/fill/detection in the live document. */
+  disablePageAccess(): { ok: boolean };
 }
 
 export const { sendMessage, onMessage } = defineExtensionMessaging<Messages>();

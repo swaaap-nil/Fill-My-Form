@@ -34,10 +34,13 @@ import {
   consumePendingFillTabId,
   peekPendingFillTabId,
 } from "~/lib/pending-fill-tab";
+import {
+  runAllSitesAccessRequest,
+  runScanSiteAccess,
+} from "~/lib/scan-site-access-flow";
 import { useSound } from "~/lib/sfx/react";
 import {
   isAllSiteOriginPattern,
-  isPermissibleUrl,
   siteAccess,
   toOriginPattern,
 } from "~/lib/site-access";
@@ -846,9 +849,18 @@ export const FillPanel = () => {
     };
     browser.tabs.onActivated.addListener(handleActivated);
     browser.tabs.onUpdated.addListener(handleUpdated);
+    const refreshOnPermissionChange = () => {
+      void refreshAccessState();
+    };
+    browser.permissions.onAdded?.addListener(refreshOnPermissionChange);
+    browser.permissions.onRemoved?.addListener(refreshOnPermissionChange);
     return () => {
       browser.tabs.onActivated.removeListener(handleActivated);
       browser.tabs.onUpdated.removeListener(handleUpdated);
+      browser.permissions.onAdded?.removeListener?.(refreshOnPermissionChange);
+      browser.permissions.onRemoved?.removeListener?.(
+        refreshOnPermissionChange,
+      );
     };
   }, [refreshAccessState, applyActiveTab]);
 
@@ -924,18 +936,17 @@ export const FillPanel = () => {
     setScanAccessHint(undefined);
     setFillStatus({ kind: "ready" });
     sound.startLoop("scan-page", "scanStarted");
-    // The user gesture that fires this handler is what makes
-    // `permissions.request()` (inside `siteAccess.requestSiteAccess`)
-    // valid — it must run here, synchronously reachable from the click,
-    // not be proxied through a message to the background. Firefox is
-    // stricter than Chrome about this: Chrome tolerates an `await` (e.g.
-    // `browser.tabs.query()`) ahead of the request call, but Firefox
-    // clears its "handling user input" flag as soon as control returns to
-    // the event loop, so the same `await` there makes `permissions.request`
-    // reject silently. `activeTabUrl`/`activeTabId` are cached from the
-    // last `refreshAccessState()` so this handler's first async call can be
-    // `requestSiteAccess` itself when access is missing.
-    if (activeTabId === undefined || activeTabUrl === undefined) {
+    // `permissions.request` must be the first await from this click.
+    // Firefox drops the user-gesture flag after contains()/tabs.query().
+    // Cached tab URL/id keep this handler from awaiting tabs.query first.
+    const access = await runScanSiteAccess({
+      url: activeTabUrl,
+      tabId: activeTabId,
+      requestSiteAccess: (url, tabId) =>
+        siteAccess.requestSiteAccess(url, tabId),
+    });
+
+    if (access.kind === "no_tab") {
       setScanAccessHint(
         "No active tab was found. Focus a browser tab with a form, then scan again.",
       );
@@ -946,7 +957,7 @@ export const FillPanel = () => {
       return;
     }
 
-    if (!isPermissibleUrl(activeTabUrl)) {
+    if (access.kind === "not_permissible") {
       setScanAccessHint(
         "This tab cannot be scanned (internal browser pages). Open an http or https page, then scan again.",
       );
@@ -957,28 +968,33 @@ export const FillPanel = () => {
       return;
     }
 
+    if (access.kind === "request_threw") {
+      setScanAccessHint(
+        "Could not request access from this click. Try Scan again; if no prompt appears, check site access in the browser’s extension settings.",
+      );
+      setScanState({ kind: "not_granted" });
+      setScanUiState("blocked");
+      sound.stopLoop("scan-page");
+      sound.play("scanBlocked");
+      return;
+    }
+
+    if (access.kind === "denied") {
+      setScanAccessHint(
+        "Permission was not granted. If no prompt appeared, check the extension’s site access in chrome://extensions (or use Allow on all sites from the first-run screen).",
+      );
+      setScanState({ kind: "not_granted" });
+      setScanUiState("blocked");
+      sound.stopLoop("scan-page");
+      sound.play("scanBlocked");
+      return;
+    }
+
+    if (activeTabId === undefined || activeTabUrl === undefined) return;
+
     try {
-      const alreadyGranted = await siteAccess.hasSiteAccess(activeTabUrl);
-      if (!alreadyGranted) {
-        const granted = await siteAccess.requestSiteAccess(
-          activeTabUrl,
-          activeTabId,
-        );
-        await refreshAccessState();
-        if (!granted) {
-          setScanAccessHint(
-            "Permission was not granted. If no prompt appeared, check the extension’s site access in chrome://extensions (or use Allow on all sites from the first-run screen).",
-          );
-          setScanState({ kind: "not_granted" });
-          setScanUiState("blocked");
-          sound.stopLoop("scan-page");
-          sound.play("scanBlocked");
-          return;
-        }
-      } else {
-        await siteAccess.syncScriptsForGrantedAccess(activeTabUrl, activeTabId);
-        await refreshAccessState();
-      }
+      await siteAccess.syncScriptsForGrantedAccess(activeTabUrl, activeTabId);
+      await refreshAccessState();
 
       let fillResult = await sendMessage("runFill", { tabId: activeTabId });
       if (!fillResult.granted) {
@@ -1051,6 +1067,7 @@ export const FillPanel = () => {
       setScanUiState("idle");
       setLastScannedAt(undefined);
       if (activeTabId !== undefined) {
+        await sendMessage("siteAccessRevoked", { tabId: activeTabId });
         await clearTabFillSnapshot(activeTabId);
       }
       await refreshAccessState();
@@ -1229,8 +1246,17 @@ export const FillPanel = () => {
       );
       return;
     }
-    const granted = await siteAccess.requestAllSiteAccess(activeTabId);
-    if (!granted) {
+    const outcome = await runAllSitesAccessRequest({
+      requestAllSiteAccess: (tabId) => siteAccess.requestAllSiteAccess(tabId),
+      tabId: activeTabId,
+    });
+    if (outcome.kind === "failed") {
+      setAllSitesEnableError(
+        "Could not request access from this click. Try again when the browser prompt can appear.",
+      );
+      return;
+    }
+    if (!outcome.granted) {
       setAllSitesEnableError(
         "Permission was not granted. Try again when the browser prompt appears.",
       );
