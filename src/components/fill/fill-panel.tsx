@@ -9,6 +9,7 @@ import {
   HelpCircle,
   LoaderCircle,
   PenLine,
+  SearchX,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
@@ -234,6 +235,29 @@ const formatGrantedOrigin = (origin: string) => {
     return origin;
   }
 };
+
+const ScanEmptyState = () => (
+  <div
+    className="flex min-h-48 flex-1 flex-col items-center justify-center gap-3 px-3 py-8 text-center motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-reduce:animate-none"
+    data-testid="scan-no-fields-found"
+    role="status"
+  >
+    <span
+      className="grid size-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm shadow-primary/30"
+      aria-hidden="true"
+    >
+      <SearchX className="size-7" />
+    </span>
+    <div className="flex max-w-xs flex-col gap-2">
+      <h2 className="text-balance font-semibold text-2xl text-foreground leading-tight tracking-tight">
+        {browser.i18n.getMessage("scanNoFieldsFound")}
+      </h2>
+      <p className="text-pretty text-base text-muted-foreground leading-relaxed">
+        {browser.i18n.getMessage("scanNoFieldsFoundHint")}
+      </p>
+    </div>
+  </div>
+);
 
 const formatScanTimestamp = (scannedAt: Date | undefined) => {
   if (!scannedAt) return "Last scanned";
@@ -1454,8 +1478,8 @@ export const FillPanel = () => {
   };
 
   return (
-    <div className="flex w-full grow flex-col gap-4">
-      <div className="flex flex-col gap-4">
+    <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
+      <div className="flex min-h-0 flex-1 flex-col gap-4">
         {scanState.kind === "not_granted" && (
           <p className="text-muted-foreground text-sm">
             {scanAccessHint ??
@@ -1515,6 +1539,7 @@ export const FillPanel = () => {
               className={cn(
                 "flex flex-col gap-4 motion-reduce:animate-none",
                 proposalViewMotionClass,
+                scanLiterallyEmpty && "min-h-0 flex-1",
               )}
             >
               {showAnswersSummary && (
@@ -1549,12 +1574,7 @@ export const FillPanel = () => {
               {!showAnswersSummary &&
                 knownNoAnswerProposals.length === 0 &&
                 (scanLiterallyEmpty ? (
-                  <p
-                    className="text-muted-foreground text-sm"
-                    data-testid="scan-no-fields-found"
-                  >
-                    {browser.i18n.getMessage("scanNoFieldsFound")}
-                  </p>
+                  <ScanEmptyState />
                 ) : (
                   <AgentRunPanel key={scanVersion} tabId={activeTabId} />
                 ))}

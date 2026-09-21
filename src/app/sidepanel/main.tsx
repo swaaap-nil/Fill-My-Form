@@ -83,14 +83,17 @@ const SidePanel = () => {
   if (showAccessGate === null) {
     return (
       <Layout headerAction={headerAction}>
-        <div className="flex w-full flex-col gap-4" aria-busy="true" />
+        <div
+          className="flex min-h-0 w-full flex-1 flex-col gap-4"
+          aria-busy="true"
+        />
       </Layout>
     );
   }
 
   return (
     <Layout headerAction={headerAction}>
-      <div className="flex w-full flex-col gap-4">
+      <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
         {view === View.FILL && showAccessGate ? (
           <FirstRunAccessGate onComplete={() => setShowAccessGate(false)} />
         ) : view === View.FILL ? (

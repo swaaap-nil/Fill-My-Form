@@ -179,8 +179,13 @@ test("empty scan: shows localized message instead of Answer now and never again"
   await formPage.bringToFront();
   await clickScan(panelPage);
 
-  await expect(panelPage.getByTestId("scan-no-fields-found")).toHaveText(
-    "Sorry, you're on your own on this one.",
+  await expect(
+    panelPage.getByRole("heading", {
+      name: "Sorry, you're on your own on this one.",
+    }),
+  ).toBeVisible();
+  await expect(panelPage.getByTestId("scan-no-fields-found")).toContainText(
+    "No fillable fields on this page.",
   );
   await expect(
     panelPage.getByRole("button", { name: "Answer now and never again" }),

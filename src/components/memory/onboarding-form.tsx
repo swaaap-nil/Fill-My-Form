@@ -86,9 +86,10 @@ export const OnboardingForm = () => {
       className="flex w-full flex-col gap-5"
       onSubmit={(event) => event.preventDefault()}
     >
-      <p className="rounded-lg border border-border bg-card p-3 text-muted-foreground text-sm shadow-sm shadow-black/5 dark:shadow-black/20">
-        You do not need to add everything here. Start on any form and Fill My
-        Form will ask only what it needs.
+      <p className="rounded-lg border border-primary/35 bg-primary/10 p-3.5 text-foreground text-sm leading-relaxed shadow-sm shadow-primary/10 dark:bg-primary/15 dark:shadow-black/20">
+        You can add everything here,{" "}
+        <span className="font-semibold">but you should not</span> have to. Start
+        on any form and Fill My Form will ask only what it needs.
       </p>
 
       {groupedStandard.map(([group, items]) => (

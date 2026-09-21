@@ -37,8 +37,12 @@
     "message": "Active on this page, with your permission"
   },
   "scanNoFieldsFound": {
-    "description": "Shown after a scan when no form fields or upload intents were detected on the page.",
+    "description": "Headline after a scan when no form fields or upload intents were detected on the page.",
     "message": "Sorry, you're on your own on this one."
+  },
+  "scanNoFieldsFoundHint": {
+    "description": "Supporting explanation when a scan finds no form fields or uploads.",
+    "message": "No fillable fields on this page."
   },
   "localDataExport": {
     "message": "Export"
