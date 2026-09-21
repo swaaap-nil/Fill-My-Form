@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.6.0](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.5.0...v1.6.0) (2026-09-21)
+
+
+### Features
+
+* per-tab fill snapshots in session storage ([b6e879a](https://github.com/swaaap-nil/Fill-My-Form/commit/b6e879a3e0dfbe653f30501722b78a5ad99abcb6))
+* proactive form detection with runtime all-sites grant and nudges ([3ab1233](https://github.com/swaaap-nil/Fill-My-Form/commit/3ab12336a51af4e6d92d8c279e4470765d553098))
+
+
+### Bug Fixes
+
+* broken tests ([506722a](https://github.com/swaaap-nil/Fill-My-Form/commit/506722aaec35b36bf663834a330a7c05a3f8a14c))
+* broken tests ([5d4849c](https://github.com/swaaap-nil/Fill-My-Form/commit/5d4849cf5fba234a2eb7e1f5ead4196c5aeeb89a))
+* broken tests ([2a1bc3d](https://github.com/swaaap-nil/Fill-My-Form/commit/2a1bc3dfc64e6a202a8a297189674c389c1f2217))
+* broken tests ([c2a04bd](https://github.com/swaaap-nil/Fill-My-Form/commit/c2a04bd464c6e623ea49428c38a818ef354732f7))
+
 ## [1.5.0](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.4.1...v1.5.0) (2026-09-20)
 
 
