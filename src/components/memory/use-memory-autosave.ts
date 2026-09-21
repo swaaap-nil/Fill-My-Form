@@ -3,6 +3,7 @@ import { type FileReference, isFileReference } from "~/core/memory/types";
 import { createIndexedDbFileReferenceStore } from "~/lib/files/adapters";
 import { sendMessage } from "~/lib/messaging";
 import { useSound } from "~/lib/sfx/react";
+import { overlayLocalRecords, overlaySavedKeys } from "./snapshot-merge";
 
 /**
  * Debounced memory writes shared by onboarding and known-field cards.
@@ -23,6 +24,10 @@ export const useMemoryAutosave = () => {
     Record<string, FieldStatus>
   >({});
   const loadVersion = useRef(0);
+  // Stamps each local edit so a slow snapshot cannot overwrite what the user
+  // typed while it was in flight (see `snapshot-merge.ts`).
+  const editSerial = useRef(0);
+  const keyEditSerial = useRef<Record<string, number>>({});
   const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const saveVersions = useRef<Record<string, number>>({});
 
@@ -30,9 +35,15 @@ export const useMemoryAutosave = () => {
     setFieldStatuses((prev) => ({ ...prev, [key]: status }));
   }, []);
 
+  const noteLocalEdit = useCallback((key: string) => {
+    editSerial.current += 1;
+    keyEditSerial.current[key] = editSerial.current;
+  }, []);
+
   const loadSnapshot = useCallback(() => {
     loadVersion.current += 1;
     const version = loadVersion.current;
+    const serialAtStart = editSerial.current;
     sendMessage("getMemorySnapshot", undefined)
       .then(({ items }) => {
         if (loadVersion.current !== version) return;
@@ -43,13 +54,31 @@ export const useMemoryAutosave = () => {
           if (typeof item.value === "string") loaded[item.key] = item.value;
           if (isFileReference(item.value)) loadedFiles[item.key] = item.value;
         }
-        setValues(loaded);
-        setFileRefs(loadedFiles);
-        setSavedKeys(new Set(items.map((i) => i.key)));
-        setFieldStatuses({});
+        const loadedKeys = new Set(items.map((item) => item.key));
+        const serials = keyEditSerial.current;
+        setValues((current) =>
+          overlayLocalRecords(loaded, current, serials, serialAtStart),
+        );
+        setFileRefs((current) =>
+          overlayLocalRecords(loadedFiles, current, serials, serialAtStart),
+        );
+        setSavedKeys((current) =>
+          overlaySavedKeys(loadedKeys, current, serials, serialAtStart),
+        );
+        setFieldStatuses((current) =>
+          overlayLocalRecords({}, current, serials, serialAtStart),
+        );
       })
       .catch(() => {
-        setFieldStatuses({});
+        if (loadVersion.current !== version) return;
+        setFieldStatuses((current) =>
+          overlayLocalRecords(
+            {},
+            current,
+            keyEditSerial.current,
+            serialAtStart,
+          ),
+        );
       });
   }, []);
 
@@ -151,6 +180,7 @@ export const useMemoryAutosave = () => {
 
   const updateTextField = useCallback(
     (key: string, value: string, label: string) => {
+      noteLocalEdit(key);
       sound.play("memoryTyping");
       setValues((prev) => ({
         ...prev,
@@ -158,12 +188,13 @@ export const useMemoryAutosave = () => {
       }));
       scheduleTextSave(key, value, label);
     },
-    [scheduleTextSave, sound],
+    [noteLocalEdit, scheduleTextSave, sound],
   );
 
   const updateFileField = useCallback(
     async (key: string, label: string, file: File | undefined) => {
       if (!file) return;
+      noteLocalEdit(key);
       const nextVersion = (saveVersions.current[key] ?? 0) + 1;
       saveVersions.current[key] = nextVersion;
       clearTimeout(saveTimers.current[key]);
@@ -195,7 +226,7 @@ export const useMemoryAutosave = () => {
       }
       sound.play(saved ? "memorySaveSucceeded" : "memorySaveFailed");
     },
-    [recordField, setFieldStatus, sound],
+    [noteLocalEdit, recordField, setFieldStatus, sound],
   );
 
   const getStatus = useCallback(
