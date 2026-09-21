@@ -6,7 +6,9 @@ import { expect, readManifest, test } from "./fixtures";
  * a service worker or a bundled entrypoint.
  */
 
-test("the background service worker boots", async ({ context }) => {
+test("the background service worker boots", { tag: "@smoke" }, async ({
+  context,
+}) => {
   const worker =
     context.serviceWorkers()[0] ??
     (await context.waitForEvent("serviceworker"));
@@ -14,10 +16,9 @@ test("the background service worker boots", async ({ context }) => {
   expect(worker.url()).toContain("background.js");
 });
 
-test("the manifest grants no site access at install time", async ({
-  page,
-  extensionId,
-}) => {
+test("the manifest grants no site access at install time", {
+  tag: "@smoke",
+}, async ({ page, extensionId }) => {
   const manifest = await readManifest(page, extensionId);
 
   // The privacy claim, asserted against the artefact Chrome actually loaded
@@ -29,10 +30,9 @@ test("the manifest grants no site access at install time", async ({
   expect(manifest.permissions).toContain("notifications");
 });
 
-test("the content security policy forbids eval and remote script", async ({
-  page,
-  extensionId,
-}) => {
+test("the content security policy forbids eval and remote script", {
+  tag: "@smoke",
+}, async ({ page, extensionId }) => {
   const manifest = await readManifest(page, extensionId);
 
   const csp = manifest.content_security_policy.extension_pages ?? "";
@@ -63,10 +63,9 @@ test("the toolbar icon opens the side panel rather than a popup", async ({
  * passes even when framing is broken. That gap shipped a blank side panel
  * once; this test is why it will not ship again.
  */
-test("the side panel renders when framed, as Chrome renders it", async ({
-  page,
-  extensionId,
-}) => {
+test("the side panel renders when framed, as Chrome renders it", {
+  tag: "@smoke",
+}, async ({ page, extensionId }) => {
   await page.goto(`chrome-extension://${extensionId}/options.html`);
 
   const frame = page.frameLocator("iframe#panel");

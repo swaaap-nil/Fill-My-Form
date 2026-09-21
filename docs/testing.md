@@ -4,9 +4,21 @@
 bun test          # unit tests
 bun test:watch    # iterate
 bun check         # lint + typecheck + unit tests, the full local gate
-bun test:e2e      # builds the extension, then drives a real browser
-bun test:e2e:ui   # the same, in Playwright's inspector
+bun test:e2e        # builds the extension, then drives a real browser
+bun test:e2e:fast   # skips the build; use while iterating on specs only
+bun test:e2e:smoke  # build + the handful of @smoke-tagged critical specs
+bun test:e2e:ui     # the same, in Playwright's inspector
 ```
+
+`test:e2e:fast` runs against whatever is already in `build/` and `build-e2e/`,
+so a stale build passes or fails for the wrong reasons — rebuild
+(`bun run build:e2e`) after any change under `src/`.
+
+e2e tests run in parallel (3 workers locally, 2 in CI): each test launches its
+own browser on its own temp profile, so they share nothing but the static
+fixture server. Pass `--workers=1` to debug. A test that only fails in
+parallel is telling you about a real race — the first one found this way was
+`useMemoryAutosave` letting a slow snapshot overwrite freshly typed values.
 
 `bun:test` is the runner — it is what the repo and CI already use, so there is no
 Vitest here.

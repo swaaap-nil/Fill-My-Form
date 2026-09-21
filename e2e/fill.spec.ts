@@ -377,10 +377,9 @@ test("known fields: autosaving a value from the card turns it into an answer", a
   await expect(panelPage.getByText("Ananya")).toBeVisible();
 });
 
-test("confirm: confirming a proposal writes the value into the page", async ({
-  context,
-  extensionId,
-}) => {
+test("confirm: confirming a proposal writes the value into the page", {
+  tag: "@smoke",
+}, async ({ context, extensionId }) => {
   const formPage = await context.newPage();
   await formPage.goto("/simple.html");
 
@@ -461,10 +460,9 @@ test("untouched: the csrf field and the terms checkbox are never filled", async 
   ).not.toBeChecked();
 });
 
-test("restricted: the Aadhaar field is reported as restricted and never auto-filled", async ({
-  context,
-  extensionId,
-}) => {
+test("restricted: the Aadhaar field is reported as restricted and never auto-filled", {
+  tag: "@smoke",
+}, async ({ context, extensionId }) => {
   const formPage = await context.newPage();
   await formPage.goto("/messy.html");
 
@@ -520,10 +518,9 @@ test("onboarding round trip: a value typed in onboarding appears as a proposal w
   await expect(panelPage.getByText(/source: user_provided/i)).toBeVisible();
 });
 
-test("privacy: fixture fills make no outbound network requests", async ({
-  context,
-  extensionId,
-}) => {
+test("privacy: fixture fills make no outbound network requests", {
+  tag: "@smoke",
+}, async ({ context, extensionId }) => {
   const formPage = await context.newPage();
   await formPage.goto("/simple.html");
 

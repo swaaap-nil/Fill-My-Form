@@ -16,9 +16,8 @@ import { isLocalE2eUrl } from "./local-url";
  *
  * Extensions require a persistent context — there is no way to load one into
  * the ordinary `browser` fixture — so each test gets its own profile
- * directory and its own browser. That is why `workers: 1` and
- * `fullyParallel: false` in the config: these tests are not cheap, and there
- * are deliberately few of them.
+ * directory and its own browser, which is also what makes them safe to run in
+ * parallel. They are not cheap, so keep the count deliberate.
  *
  * `channel: "chromium"` selects the full browser rather than the headless
  * shell; the shell does not support extensions.

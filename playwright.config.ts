@@ -21,10 +21,13 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./e2e",
   outputDir: "./test-results",
-  fullyParallel: false, // Each test launches its own browser with the extension.
+  // Every test launches its own browser on its own temp profile directory
+  // (see e2e/fixtures.ts), so tests share nothing but the static fixture
+  // server and can run in parallel. Override with `--workers=1` to debug.
+  fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  workers: 1,
+  workers: process.env.CI ? 2 : 3,
   reporter: process.env.CI ? [["github"], ["list"]] : "list",
 
   use: {
