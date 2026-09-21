@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.7.0](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.6.0...v1.7.0) (2026-09-21)
+
+### Features
+
+* show a full empty state when a tab cannot be scanned ([91207e3](https://github.com/swaaap-nil/Fill-My-Form/commit/91207e33dc93988ddf5355b0e19a418374194e67))
+* name upload cards from ontology keys ([e4d6982](https://github.com/swaaap-nil/Fill-My-Form/commit/e4d6982660d8f884a8190109ecc01d8e5d3db818))
+* make empty-scan and onboarding hints easier to notice ([d641dd1](https://github.com/swaaap-nil/Fill-My-Form/commit/d641dd1911844483324c961dc4ae69fbeedc7604))
+* answer known fields and prepare uploads from the fill panel ([ef9c999](https://github.com/swaaap-nil/Fill-My-Form/commit/ef9c999774c1bed2cf9fba35bad6074d2ec17172))
+
+### Bug Fixes
+
+* **e2e:** stop copied fixtures hanging on third-party load in CI ([fae3500](https://github.com/swaaap-nil/Fill-My-Form/commit/fae350077a2d561f6a695c0e791927f57c4af048))
+* keep first Scan grant when script registration races ([18c7b69](https://github.com/swaaap-nil/Fill-My-Form/commit/18c7b69bac1b9e30e54eca0f08ff9819086250c2))
+* request site access before any other await on Scan ([8967015](https://github.com/swaaap-nil/Fill-My-Form/commit/896701540852dfb6e967f68b34d3924ee8b3001e))
+
 ## [1.6.0](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.5.0...v1.6.0) (2026-09-21)
 
 
