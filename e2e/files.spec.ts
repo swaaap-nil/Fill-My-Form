@@ -285,6 +285,45 @@ test("files: an oversized photo is transformed before upload", async ({
   expect(uploaded?.size).toBeLessThanOrEqual(8000);
 });
 
+test("files: detected upload cards autosave into memory after a file is chosen", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const pdfPath = testInfo.outputPath("detected-resume.pdf");
+  await writeFixture(
+    pdfPath,
+    new TextEncoder().encode("%PDF-1.4\n% detected-upload-card\n"),
+  );
+
+  const formPage = await context.newPage();
+  await formPage.goto("/simple.html");
+
+  const panelPage = await openPanel(context, extensionId);
+  await grantAccess(formPage, panelPage);
+
+  await formPage.bringToFront();
+  await clickScan(panelPage);
+
+  await panelPage
+    .getByRole("button", { name: "Upload Files and forget about them" })
+    .click();
+  const uploadItem = panelPage.getByTestId("upload-intent-item");
+  await uploadItem.locator('input[type="file"]').setInputFiles(pdfPath);
+
+  await expect(panelPage.getByRole("button", { name: "Save" })).toHaveCount(0);
+  await expect(panelPage.getByText("Drag and drop the file")).toHaveCount(0);
+  await expect(
+    panelPage.getByTestId("autosave-status-documents.resume"),
+  ).toHaveAttribute("aria-label", "Saved");
+  await expect(uploadItem.getByText(/detected-resume\.pdf/)).toBeVisible();
+
+  await panelPage.getByRole("button", { name: "Back" }).click();
+  await expect(panelPage.getByText("1 answer detected")).toBeVisible();
+
+  await panelPage.getByRole("button", { name: "My information" }).click();
+  await expect(panelPage.getByText("detected-resume.pdf")).toBeVisible();
+});
+
 test("files: standalone preparation tool creates a temporary image copy", async ({
   context,
   extensionId,
@@ -369,7 +408,63 @@ test("files: unsupported saved onboarding documents are shown but disabled", asy
     }),
   ).toBeDisabled();
   await expect(
-    panelPage.getByText("Images and PDFs can be prepared here."),
+    panelPage.getByText("Images can be prepared here. PDFs coming soon."),
+  ).toBeVisible();
+  await expect(
+    panelPage.getByRole("button", { name: "Use this" }),
+  ).toBeDisabled();
+});
+
+test("files: standalone preparation tool says PDFs are coming soon", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const pdfPath = testInfo.outputPath("coming-soon.pdf");
+  await writeFixture(
+    pdfPath,
+    new TextEncoder().encode("%PDF-1.4\n% prepare-tool-coming-soon\n"),
+  );
+
+  const panelPage = await openPanel(context, extensionId);
+  await panelPage.getByRole("button", { name: "Prepare file" }).click();
+  await expect(
+    panelPage.getByText("JPEG, PNG, or WebP. PDFs coming soon."),
+  ).toBeVisible();
+  await panelPage.locator('input[type="file"]').setInputFiles(pdfPath);
+  await expect(
+    panelPage.getByText("PDFs coming soon.", { exact: true }),
+  ).toBeVisible();
+  await expect(panelPage.getByText("Your file", { exact: true })).toHaveCount(
+    0,
+  );
+});
+
+test("files: saved PDFs are disabled in the standalone preparation tool", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const pdfPath = testInfo.outputPath("saved-resume.pdf");
+  await writeFixture(
+    pdfPath,
+    new TextEncoder().encode("%PDF-1.4\n% saved-pdf-coming-soon\n"),
+  );
+
+  const panelPage = await openPanel(context, extensionId);
+  await seedFile(
+    panelPage,
+    "Resume",
+    pdfPath,
+    "autosave-status-documents.resume",
+  );
+  await panelPage.getByRole("button", { name: "Prepare file" }).click();
+  await panelPage.getByRole("combobox", { name: "Pick a saved file" }).click();
+  await expect(
+    panelPage.getByRole("option", {
+      name: /Resume.*saved-resume\.pdf.*PDFs coming soon/,
+    }),
+  ).toBeDisabled();
+  await expect(
+    panelPage.getByText("Images can be prepared here. PDFs coming soon."),
   ).toBeVisible();
   await expect(
     panelPage.getByRole("button", { name: "Use this" }),

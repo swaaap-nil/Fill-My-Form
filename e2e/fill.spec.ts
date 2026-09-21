@@ -242,13 +242,12 @@ test("summary cards: upload requirements stay collapsed until opened", async ({
   await uploadCard.click({ position: { x: 8, y: 8 } });
   await expect(
     panelPage.getByText(
-      "We know this is documents.resume, but you haven't prepared a copy for it yet — choose a file below.",
+      "We know this is documents.resume, but you haven't saved a file for it yet — choose a file below.",
     ),
   ).toBeVisible();
-  await expect(
-    panelPage.getByText("Upload resume PDF, max 2 MB"),
-  ).toBeVisible();
+  await expect(panelPage.getByText("PDF", { exact: true })).toBeVisible();
   await expect(panelPage.getByText("Browse or drag a file here")).toBeVisible();
+  await expect(panelPage.getByRole("button", { name: "Save" })).toHaveCount(0);
   await expect(panelPage.getByRole("button", { name: "Back" })).toBeVisible();
   await expect(uploadCard).toBeHidden();
 
@@ -268,6 +267,30 @@ test("summary cards: upload requirements stay collapsed until opened", async ({
   ).toBeVisible();
 });
 
+test("summary cards: generic upload widgets are not remembered as concepts", async ({
+  context,
+  extensionId,
+}) => {
+  const formPage = await context.newPage();
+  await formPage.goto("/generic-upload.html");
+
+  const panelPage = await openPanel(context, extensionId);
+  await grantAccess(formPage, panelPage);
+
+  await formPage.bringToFront();
+  await clickScan(panelPage);
+
+  await expect(
+    panelPage.getByTestId("known-fields-summary-card"),
+  ).toBeVisible();
+  await expect(
+    panelPage.getByTestId("upload-requirements-summary-card"),
+  ).toBeHidden();
+  await expect(panelPage.getByText("We know this is a document")).toHaveCount(
+    0,
+  );
+});
+
 test("summary cards: card surface opens details without stealing fill clicks", async ({
   context,
   extensionId,
@@ -282,6 +305,11 @@ test("summary cards: card surface opens details without stealing fill clicks", a
   await formPage.bringToFront();
   await clickScan(panelPage);
   await expect(panelPage.getByText("1 answer detected")).toBeVisible();
+  await expect(
+    panelPage
+      .getByTestId("answers-summary-card")
+      .getByRole("button", { name: "Answer now and never again" }),
+  ).toHaveCount(0);
 
   await panelPage
     .getByTestId("answers-summary-card")

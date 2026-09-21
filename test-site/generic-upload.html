@@ -1,0 +1,25 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Generic file upload without a known document type</title>
+<style>
+  body { font: 16px/1.6 system-ui, sans-serif; max-width: 40rem; margin: 3rem auto; padding: 0 1rem; }
+  label { display: block; margin-top: 1rem; font-weight: 600; }
+  input { width: 100%; padding: .5rem; font: inherit; }
+</style>
+
+<h1>Generic uploads</h1>
+<p>
+  File pickers that only say “upload file”. They are not a resume, photo, or
+  signature — the panel must not treat them as remembered document concepts.
+</p>
+
+<form id="generic-uploads" method="post" action="/submit">
+  <label for="full-name">Full name</label>
+  <input id="full-name" name="full_name" type="text" autocomplete="name" />
+
+  <label for="attachment-a">Upload file</label>
+  <input id="attachment-a" name="attachment_a" type="file" />
+
+  <label for="attachment-b">Choose file</label>
+  <input id="attachment-b" name="attachment_b" type="file" />
+</form>

@@ -76,8 +76,16 @@ const fileConceptLabels = new Map(
     .map((concept) => [concept.key, concept.label]),
 );
 
+const PDF_COMING_SOON = "PDFs coming soon.";
+
+const isPdf = (name: string, mimeType: string): boolean =>
+  mimeType === "application/pdf" || name.toLowerCase().endsWith(".pdf");
+
 const canPrepareSavedDocument = (ref: FileReference): boolean =>
-  ref.mimeType.startsWith("image/") || ref.mimeType === "application/pdf";
+  ref.mimeType.startsWith("image/") && !isPdf(ref.name, ref.mimeType);
+
+const savedDocumentDisabledReason = (ref: FileReference): string =>
+  isPdf(ref.name, ref.mimeType) ? "PDFs coming soon" : "unsupported";
 
 const SAVED_DOCUMENT_PLACEHOLDER = "saved-document-placeholder";
 type SourceMode = "saved" | "upload";
@@ -164,7 +172,9 @@ export const FilePreparationTool = () => {
         ...savedDocuments.map((document) => [
           document.key,
           `${document.label} - ${document.ref.name}${
-            document.supported ? "" : " (unsupported)"
+            document.supported
+              ? ""
+              : ` (${savedDocumentDisabledReason(document.ref)})`
           }`,
         ]),
       ]),
@@ -407,6 +417,11 @@ export const FilePreparationTool = () => {
 
   const selectFile = async (file: File | undefined) => {
     if (!file) return;
+    if (isPdf(file.name, file.type)) {
+      setError(PDF_COMING_SOON);
+      sound.play("filePrepareFailed");
+      return;
+    }
     setError(undefined);
     setPrepared(undefined);
     setEditorCrop(undefined);
@@ -686,7 +701,7 @@ export const FilePreparationTool = () => {
                                 </span>
                                 {!document.supported && (
                                   <span className="text-muted-foreground">
-                                    unsupported
+                                    {savedDocumentDisabledReason(document.ref)}
                                   </span>
                                 )}
                               </SelectItem>
@@ -714,7 +729,7 @@ export const FilePreparationTool = () => {
                               : "files"
                           } ready`}
                       {savedDocuments.some((document) => !document.supported)
-                        ? ". Images and PDFs can be prepared here."
+                        ? ". Images can be prepared here. PDFs coming soon."
                         : ""}
                     </p>
                   </>
@@ -734,12 +749,12 @@ export const FilePreparationTool = () => {
                   Choose or drop a new file
                 </span>
                 <span className="text-muted-foreground text-xs">
-                  JPEG, PNG, WebP, or PDF
+                  JPEG, PNG, or WebP. PDFs coming soon.
                 </span>
                 <input
                   className="sr-only"
                   type="file"
-                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  accept="image/jpeg,image/png,image/webp"
                   onChange={(event) =>
                     void selectFile(event.currentTarget.files?.[0])
                   }

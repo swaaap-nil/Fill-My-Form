@@ -12,16 +12,23 @@ import {
   PenLine,
   SearchX,
   ShieldOff,
-  X,
 } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { Browser } from "wxt/browser";
 import { browser } from "wxt/browser";
+import { AutosaveStatusIcon } from "~/components/memory/autosave-text-field";
+import {
+  type FieldStatus,
+  useMemoryAutosave,
+} from "~/components/memory/use-memory-autosave";
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
-import type { PreparedArtifact } from "~/core/files/preparation";
 import type { UploadIntent } from "~/core/form/types";
-import { nameForUploadIntent } from "~/core/matching/upload-intent-name";
+import {
+  type RecognizedUploadRequirement,
+  recognizedUploadRequirements,
+} from "~/core/matching/upload-intent-name";
+import type { FileReference } from "~/core/memory/types";
 import { ontology } from "~/core/ontology";
 import { getActiveBrowserTab } from "~/lib/active-browser-tab";
 import {
@@ -34,11 +41,6 @@ import {
   shouldShowAllSitesUpgradeStrip,
   snoozeAllSitesUpgrade,
 } from "~/lib/all-sites-upgrade-prompt";
-import {
-  createIndexedDbFileReferenceStore,
-  type FileReferenceStore,
-} from "~/lib/files/adapters";
-import { createBrowserFilePreparationRegistry } from "~/lib/files/preparation-registry";
 import type { DecisionId, FieldProposal } from "~/lib/messaging";
 import { sendMessage } from "~/lib/messaging";
 import {
@@ -65,9 +67,6 @@ import {
   type TabFillPanelState,
 } from "~/lib/tab-fill-snapshot";
 import { cn } from "~/lib/utils";
-import { PreparationSuccessSupport } from "../files/preparation-success-support";
-import { PreparedFileHandoff } from "../files/prepared-file-handoff";
-import { useObjectUrl } from "../files/use-object-url";
 import { AgentRunPanel } from "./agent-run-panel";
 import { KnownFieldsDetails, ProposalCard } from "./proposal-card";
 
@@ -158,34 +157,25 @@ const pluralizeKnownField = (count: number) =>
 const pluralizeUploadRequirement = (count: number) =>
   count === 1 ? "upload requirement detected" : "upload requirements detected";
 
-const GENERIC_UPLOAD_LABEL =
-  /^(attach|upload|browse|choose file|choose|select)(?:\s+file)?\.?$/i;
+const isFileConceptKey = (key: string): boolean =>
+  ontology.byKey(key)?.expects === "file";
 
-const uploadConceptArticle = (name: string): "a" | "an" | undefined => {
-  if (/\s/.test(name) || name.includes(".")) return undefined;
-  return /^[aeiou]/i.test(name) ? "an" : "a";
-};
-
-const uploadRequirementDetail = (
-  intent: UploadIntent,
-  conceptName: string,
-): string | undefined => {
-  const detail = intent.description?.trim();
-  if (!detail) return undefined;
-  if (GENERIC_UPLOAD_LABEL.test(detail)) return undefined;
-  if (detail.toLowerCase() === conceptName.toLowerCase()) return undefined;
-  return detail;
-};
-
-const uploadKindIcon = (kind: UploadIntent["kind"]) => {
+const uploadKindIcon = (conceptKey: string, intent?: UploadIntent) => {
+  const kind =
+    intent?.kind ??
+    (conceptKey.endsWith(".photo")
+      ? "photo"
+      : conceptKey.endsWith(".signature")
+        ? "signature"
+        : "document");
   if (kind === "photo") return FileImage;
   if (kind === "signature") return PenLine;
   if (kind === "document") return FileText;
   return HelpCircle;
 };
 
-const uploadAcceptHint = (intent: UploadIntent): string => {
-  const accept = intent.constraints.find(
+const uploadAcceptHint = (intent?: UploadIntent): string => {
+  const accept = intent?.constraints.find(
     (constraint) => constraint.kind === "accept",
   );
   if (!accept) return "Images or PDF";
@@ -527,13 +517,11 @@ const AnswersSummaryCard = ({
   fillStatus,
   onOpenDetails,
   onFill,
-  children,
 }: {
   readonly count: number;
   readonly fillStatus: FillStatus;
   readonly onOpenDetails: () => void;
   readonly onFill: () => void;
-  readonly children?: React.ReactNode;
 }) => {
   const filling = fillStatus.kind === "filling";
   const filled = fillStatus.kind === "filled";
@@ -632,7 +620,6 @@ const AnswersSummaryCard = ({
           >
             {filling ? "Filling..." : "Fill My Form 😡"}
           </Button>
-          {children}
         </div>
       )}
     </SummaryCardShell>
@@ -671,7 +658,7 @@ const UploadRequirementsSummaryCard = ({
     testId="upload-requirements-summary"
     onOpenDetails={onOpenDetails}
     title={`${count} ${pluralizeUploadRequirement(count)}`}
-    subtitle="Original files stay unchanged. Prepared copies expire automatically."
+    subtitle="Saved files are remembered like My information."
   >
     <Button
       type="button"
@@ -688,281 +675,147 @@ const UploadRequirementsSummaryCard = ({
 );
 
 const UploadIntentItem = ({
-  intent,
-  onPrepare,
-  output,
-  error,
+  requirement,
+  fileRef,
+  status,
+  onChoose,
 }: {
-  readonly intent: UploadIntent;
-  readonly onPrepare: (file: File) => Promise<void>;
-  readonly output?: {
-    readonly artifact: PreparedArtifact;
-    readonly store: FileReferenceStore;
-    readonly name: string;
-    readonly size: number;
-    readonly mimeType: string;
-  };
-  readonly error?: string;
+  readonly requirement: RecognizedUploadRequirement;
+  readonly fileRef?: FileReference;
+  readonly status: FieldStatus;
+  readonly onChoose: (file: File) => void;
 }) => {
   const fileInputId = useId();
-  const [sourceFile, setSourceFile] = useState<File>();
   const [dragActive, setDragActive] = useState(false);
-  const sourceUrl = useObjectUrl(sourceFile);
   const accept =
-    intent.constraints
+    requirement.intent?.constraints
       .find((constraint) => constraint.kind === "accept")
       ?.value.join(",") ?? "image/*,application/pdf";
-  const conceptName = nameForUploadIntent(intent, ontology);
-  const conceptArticle = uploadConceptArticle(conceptName);
-  const requirementDetail = uploadRequirementDetail(intent, conceptName);
-  const KindIcon = uploadKindIcon(intent.kind);
-  const chooseLabel = intent.label ?? conceptName;
+  const concept = ontology.byKey(requirement.conceptKey);
+  const KindIcon = uploadKindIcon(requirement.conceptKey, requirement.intent);
+  const chooseLabel = concept?.label ?? requirement.conceptKey;
+  const saved = Boolean(fileRef) || status === "saved";
 
   const chooseFile = (file: File | undefined) => {
     if (!file) return;
-    setSourceFile(file);
+    onChoose(file);
   };
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-primary/25 bg-card p-3 shadow-sm shadow-black/5 dark:shadow-black/20">
+    <div
+      className="flex flex-col gap-3 rounded-lg border border-primary/25 bg-card p-3 shadow-sm shadow-black/5 dark:shadow-black/20"
+      data-testid="upload-intent-item"
+    >
       <div className="flex items-start gap-3">
         <span className="mt-0.5 shrink-0 text-muted-foreground">
           <KindIcon className="size-4" aria-hidden="true" />
         </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm">
-            We know this is
-            {conceptArticle ? ` ${conceptArticle}` : ""}{" "}
-            <span className="font-medium">{conceptName}</span>, but you haven't
-            prepared a copy for it yet — choose a file below.
-          </p>
-          {requirementDetail && (
-            <p className="mt-1 text-muted-foreground text-xs">
-              {requirementDetail}
-            </p>
-          )}
-        </div>
+        <p className="min-w-0 flex-1 text-sm">
+          We know this is{" "}
+          <span className="font-medium">{requirement.conceptKey}</span>
+          {saved
+            ? ". It's saved in My information."
+            : ", but you haven't saved a file for it yet — choose a file below."}
+        </p>
       </div>
-      {sourceFile ? (
-        <>
-          {sourceUrl && sourceFile.type.startsWith("image/") ? (
-            <div className="h-48 overflow-hidden rounded-lg border bg-muted">
-              <img
-                src={sourceUrl}
-                alt="Selected upload preview"
-                className="h-full w-full object-contain"
-              />
-            </div>
-          ) : (
-            <div className="rounded-lg border bg-muted/30 p-4 text-center text-muted-foreground text-xs">
-              Document selected. Prepare a temporary upload copy locally.
-            </div>
+      <div className="relative">
+        <label
+          htmlFor={fileInputId}
+          className={cn(
+            "flex min-h-24 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-muted/40 px-3 py-4 text-center transition-colors hover:border-primary/60 hover:bg-accent/35",
+            dragActive && "border-primary/70 bg-accent/45",
           )}
-          <div className="flex items-center justify-between gap-2 rounded-md border border-border bg-card px-2.5 py-2 text-xs">
-            <span className="min-w-0 truncate">
-              {sourceFile.name} · {Math.round(sourceFile.size / 1024)} KB
-            </span>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="size-7 shrink-0"
-              onClick={() => setSourceFile(undefined)}
-              aria-label="Remove selected file"
-            >
-              <X className="size-3.5" />
-            </Button>
-          </div>
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => void onPrepare(sourceFile)}
-          >
-            Prepare file
-          </Button>
-        </>
-      ) : (
-        <>
-          <label
-            htmlFor={fileInputId}
-            className={cn(
-              "flex min-h-24 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-muted/40 px-3 py-4 text-center transition-colors hover:border-primary/60 hover:bg-accent/35",
-              dragActive && "border-primary/70 bg-accent/45",
-            )}
-            onDragEnter={(event) => {
-              event.preventDefault();
-              setDragActive(true);
-            }}
-            onDragOver={(event) => {
-              event.preventDefault();
-              setDragActive(true);
-            }}
-            onDragLeave={(event) => {
-              event.preventDefault();
-              setDragActive(false);
-            }}
-            onDrop={(event) => {
-              event.preventDefault();
-              setDragActive(false);
-              chooseFile(event.dataTransfer.files[0]);
-            }}
-          >
-            <FileUp className="size-5 text-muted-foreground" />
-            <span className="font-medium text-sm">
-              Browse or drag a file here
-            </span>
-            <span className="text-muted-foreground text-xs">
-              {uploadAcceptHint(intent)}
-            </span>
-          </label>
-          <input
-            id={fileInputId}
-            className="sr-only"
-            type="file"
-            accept={accept}
-            aria-label={`Choose ${chooseLabel}`}
-            onChange={(event) => {
-              chooseFile(event.currentTarget.files?.[0]);
-              event.currentTarget.value = "";
-            }}
+          onDragEnter={(event) => {
+            event.preventDefault();
+            setDragActive(true);
+          }}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setDragActive(true);
+          }}
+          onDragLeave={(event) => {
+            event.preventDefault();
+            setDragActive(false);
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            setDragActive(false);
+            chooseFile(event.dataTransfer.files[0]);
+          }}
+        >
+          <FileUp className="size-5 text-muted-foreground" />
+          <span className="font-medium text-sm">
+            Browse or drag a file here
+          </span>
+          <span className="text-muted-foreground text-xs">
+            {uploadAcceptHint(requirement.intent)}
+          </span>
+        </label>
+        <input
+          id={fileInputId}
+          className="sr-only"
+          type="file"
+          accept={accept}
+          aria-label={`Choose ${chooseLabel}`}
+          onChange={(event) => {
+            chooseFile(event.currentTarget.files?.[0]);
+            event.currentTarget.value = "";
+          }}
+        />
+      </div>
+      {(fileRef || status !== "idle") && (
+        <div className="relative rounded-md border border-border bg-card px-2.5 py-2 pr-9 text-xs">
+          <span className="min-w-0 truncate">
+            {fileRef
+              ? `${fileRef.name} · ${Math.round(fileRef.sizeBytes / 1024)} KB`
+              : "Saving..."}
+          </span>
+          <AutosaveStatusIcon
+            fieldKey={requirement.conceptKey}
+            status={status}
           />
-        </>
+        </div>
       )}
-      {output && (
-        <>
-          <PreparedFileHandoff
-            artifact={output.artifact}
-            store={output.store}
-            label={chooseLabel}
-          />
-          {output.artifact.mimeType.startsWith("image/") ? (
-            <PreparationSuccessSupport />
-          ) : null}
-        </>
-      )}
-      {error && <p className="text-destructive text-xs">{error}</p>}
     </div>
   );
 };
 
 const UploadIntentsCard = ({
-  intents,
+  requirements,
+  onRememberedChange,
 }: {
-  readonly intents: readonly UploadIntent[];
+  readonly requirements: readonly RecognizedUploadRequirement[];
+  readonly onRememberedChange: (remembered: boolean) => void;
 }) => {
-  const [prepared, setPrepared] = useState<
-    Record<
-      string,
-      {
-        readonly artifact: PreparedArtifact;
-        readonly store: FileReferenceStore;
-        readonly name: string;
-        readonly size: number;
-        readonly mimeType: string;
-        readonly cleanupIds: readonly string[];
-      }
-    >
-  >({});
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const preparedRef = useRef(prepared);
-
-  useEffect(() => {
-    preparedRef.current = prepared;
-  }, [prepared]);
-
-  useEffect(
-    () => () => {
-      for (const output of Object.values(preparedRef.current)) {
-        void Promise.all(
-          output.cleanupIds.map((id) => output.store.delete(id)),
-        );
-      }
-    },
-    [],
+  const autosave = useMemoryAutosave();
+  const remembered = requirements.some(
+    (requirement) => autosave.getStatus(requirement.conceptKey) === "saved",
   );
 
-  const prepare = async (intent: UploadIntent, file: File) => {
-    setErrors((current) => ({ ...current, [intent.id]: "" }));
-    let originalId: string | undefined;
-    let storeForCleanup: FileReferenceStore | undefined;
-    try {
-      const store = await createIndexedDbFileReferenceStore();
-      storeForCleanup = store;
-      const original = await store.save(file);
-      originalId = original.id;
-      const registry = createBrowserFilePreparationRegistry(store);
-      const adapter = registry.adapterFor({
-        kind:
-          file.type === "application/pdf" ||
-          file.name.toLowerCase().endsWith(".pdf")
-            ? "pdf"
-            : "image",
-        name: file.name,
-        mimeType: file.type,
-        sizeBytes: file.size,
-      });
-      if (!adapter) {
-        await store.delete(original.id);
-        originalId = undefined;
-        setErrors((current) => ({
-          ...current,
-          [intent.id]: "This file type is not supported by a local adapter.",
-        }));
-        return;
-      }
-      const output = await adapter.prepareForConstraints(
-        original,
-        intent.constraints,
-      );
-      await store.delete(original.id);
-      originalId = undefined;
-      if (!output.ok) {
-        setErrors((current) => ({
-          ...current,
-          [intent.id]: output.reason,
-        }));
-        return;
-      }
-      setPrepared((current) => {
-        const previous = current[intent.id];
-        if (previous) {
-          void Promise.all(
-            previous.cleanupIds.map((id) => previous.store.delete(id)),
-          );
-        }
-        return {
-          ...current,
-          [intent.id]: {
-            artifact: output.artifact,
-            store,
-            name: output.artifact.name,
-            size: output.artifact.sizeBytes,
-            mimeType: output.artifact.mimeType,
-            cleanupIds: [output.artifact.derived.id],
-          },
-        };
-      });
-    } catch {
-      if (storeForCleanup && originalId)
-        void storeForCleanup.delete(originalId);
-      setErrors((current) => ({
-        ...current,
-        [intent.id]: "Local preparation failed.",
-      }));
-    }
-  };
+  useEffect(() => {
+    onRememberedChange(remembered);
+  }, [onRememberedChange, remembered]);
 
   return (
     <div className="flex flex-col gap-2">
-      {intents.map((intent) => (
-        <UploadIntentItem
-          key={intent.id}
-          intent={intent}
-          output={prepared[intent.id]}
-          error={errors[intent.id]}
-          onPrepare={(file) => prepare(intent, file)}
-        />
-      ))}
+      {requirements.map((requirement) => {
+        const concept = ontology.byKey(requirement.conceptKey);
+        return (
+          <UploadIntentItem
+            key={requirement.conceptKey}
+            requirement={requirement}
+            fileRef={autosave.fileRefs[requirement.conceptKey]}
+            status={autosave.getStatus(requirement.conceptKey)}
+            onChoose={(file) =>
+              void autosave.updateFileField(
+                requirement.conceptKey,
+                concept?.label ?? requirement.conceptKey,
+                file,
+              )
+            }
+          />
+        );
+      })}
     </div>
   );
 };
@@ -974,6 +827,7 @@ export const FillPanel = () => {
   const [proposalViewTransition, setProposalViewTransition] =
     useState<ProposalViewTransition>("none");
   const [knownFieldsRemembered, setKnownFieldsRemembered] = useState(false);
+  const [uploadsRemembered, setUploadsRemembered] = useState(false);
   const [scanVersion, setScanVersion] = useState(0);
   const [confirmedIds, setConfirmedIds] = useState<Set<DecisionId>>(new Set());
   const [fillStatus, setFillStatus] = useState<FillStatus>({ kind: "ready" });
@@ -1385,8 +1239,38 @@ export const FillPanel = () => {
 
   const knownNoAnswerProposals: FieldProposal[] =
     scanState.kind === "proposals"
-      ? scanState.proposals.filter(
-          (p) => p.state === "no_value" || p.state === "ambiguous",
+      ? scanState.proposals.filter((p) => {
+          if (p.state === "ambiguous") return true;
+          if (p.state !== "no_value") return false;
+          return !isFileConceptKey(p.conceptKey);
+        })
+      : [];
+
+  const fileNoValueKeys =
+    scanState.kind === "proposals"
+      ? scanState.proposals.flatMap((p) =>
+          p.state === "no_value" && isFileConceptKey(p.conceptKey)
+            ? [p.conceptKey]
+            : [],
+        )
+      : [];
+  const rememberedFileKeys = new Set(
+    scanState.kind === "proposals"
+      ? scanState.proposals.flatMap((p) =>
+          (p.state === "pending" || p.state === "restricted") &&
+          isFileConceptKey(p.conceptKey)
+            ? [p.conceptKey]
+            : [],
+        )
+      : [],
+  );
+  const recognizedUploads =
+    scanState.kind === "proposals"
+      ? recognizedUploadRequirements(
+          scanState.uploadIntents,
+          fileNoValueKeys,
+          rememberedFileKeys,
+          ontology,
         )
       : [];
 
@@ -1527,7 +1411,10 @@ export const FillPanel = () => {
               size="sm"
               className="self-start"
               onClick={() => {
-                if (proposalView === "known" && knownFieldsRemembered) {
+                if (
+                  (proposalView === "known" && knownFieldsRemembered) ||
+                  (proposalView === "uploads" && uploadsRemembered)
+                ) {
                   sound.play("proposalDetailsClosed");
                   void scanGrantedTab();
                   return;
@@ -1541,7 +1428,10 @@ export const FillPanel = () => {
               Back
             </Button>
             {proposalView === "uploads" ? (
-              <UploadIntentsCard intents={scanState.uploadIntents} />
+              <UploadIntentsCard
+                requirements={recognizedUploads}
+                onRememberedChange={setUploadsRemembered}
+              />
             ) : proposalView === "known" ? (
               <KnownFieldsDetails
                 proposals={detailsProposals}
@@ -1579,11 +1469,7 @@ export const FillPanel = () => {
                     sound.play("proposalDetailsOpened");
                   }}
                   onFill={() => confirm(answeredDecisionIds)}
-                >
-                  {knownNoAnswerProposals.length === 0 && (
-                    <AgentRunPanel key={scanVersion} tabId={activeTabId} />
-                  )}
-                </AnswersSummaryCard>
+                />
               )}
               {knownNoAnswerProposals.length > 0 && (
                 <KnownFieldsSummaryCard
@@ -1600,15 +1486,17 @@ export const FillPanel = () => {
               )}
               {!showAnswersSummary &&
                 knownNoAnswerProposals.length === 0 &&
+                recognizedUploads.length === 0 &&
                 (scanLiterallyEmpty ? (
                   <ScanEmptyState />
                 ) : (
                   <AgentRunPanel key={scanVersion} tabId={activeTabId} />
                 ))}
-              {scanState.uploadIntents.length > 0 && (
+              {recognizedUploads.length > 0 && (
                 <UploadRequirementsSummaryCard
-                  count={scanState.uploadIntents.length}
+                  count={recognizedUploads.length}
                   onOpenDetails={() => {
+                    setUploadsRemembered(false);
                     setProposalViewTransition("forward");
                     setProposalView("uploads");
                     sound.play("proposalDetailsOpened");
