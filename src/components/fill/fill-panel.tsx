@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -10,6 +11,7 @@ import {
   LoaderCircle,
   PenLine,
   SearchX,
+  ShieldOff,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
@@ -127,6 +129,10 @@ type ScanUiState =
   | "blocked"
   | "failed";
 
+type ScanAccessHint =
+  | { readonly kind: "internal_page" }
+  | { readonly kind: "message"; readonly text: string };
+
 /**
  * The side panel's own `currentWindow` is unambiguous — it is attached to
  * a specific window — unlike the background service worker, which has no
@@ -222,27 +228,55 @@ const formatGrantedOrigin = (origin: string) => {
   }
 };
 
-const ScanEmptyState = () => (
+const ScanNotice = ({
+  testId,
+  icon: Icon,
+  title,
+  hint,
+}: {
+  readonly testId: string;
+  readonly icon: LucideIcon;
+  readonly title: string;
+  readonly hint: string;
+}) => (
   <div
     className="flex min-h-48 flex-1 flex-col items-center justify-center gap-3 px-3 py-8 text-center motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-reduce:animate-none"
-    data-testid="scan-no-fields-found"
+    data-testid={testId}
     role="status"
   >
     <span
       className="grid size-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm shadow-primary/30"
       aria-hidden="true"
     >
-      <SearchX className="size-7" />
+      <Icon className="size-7" />
     </span>
     <div className="flex max-w-xs flex-col gap-2">
       <h2 className="text-balance font-semibold text-2xl text-foreground leading-tight tracking-tight">
-        {browser.i18n.getMessage("scanNoFieldsFound")}
+        {title}
       </h2>
       <p className="text-pretty text-base text-muted-foreground leading-relaxed">
-        {browser.i18n.getMessage("scanNoFieldsFoundHint")}
+        {hint}
       </p>
     </div>
   </div>
+);
+
+const ScanEmptyState = () => (
+  <ScanNotice
+    testId="scan-no-fields-found"
+    icon={SearchX}
+    title={browser.i18n.getMessage("scanNoFieldsFound")}
+    hint={browser.i18n.getMessage("scanNoFieldsFoundHint")}
+  />
+);
+
+const ScanInternalPageState = () => (
+  <ScanNotice
+    testId="scan-internal-page"
+    icon={ShieldOff}
+    title={browser.i18n.getMessage("scanInternalPage")}
+    hint={browser.i18n.getMessage("scanInternalPageHint")}
+  />
 );
 
 const formatScanTimestamp = (scannedAt: Date | undefined) => {
@@ -944,7 +978,9 @@ export const FillPanel = () => {
   const [confirmedIds, setConfirmedIds] = useState<Set<DecisionId>>(new Set());
   const [fillStatus, setFillStatus] = useState<FillStatus>({ kind: "ready" });
   const [scanUiState, setScanUiState] = useState<ScanUiState>("idle");
-  const [scanAccessHint, setScanAccessHint] = useState<string | undefined>();
+  const [scanAccessHint, setScanAccessHint] = useState<
+    ScanAccessHint | undefined
+  >();
   const [lastScannedAt, setLastScannedAt] = useState<Date>();
   const [, setClockTick] = useState(0);
   const [grantedOrigins, setGrantedOrigins] = useState<readonly string[]>([]);
@@ -1128,9 +1164,10 @@ export const FillPanel = () => {
         fillResult = await sendMessage("runFill", { tabId: activeTabId });
         if (!fillResult.granted) {
           setActiveTabGranted(false);
-          setScanAccessHint(
-            "Access looks granted but this page still cannot be read. Reload the tab, then scan again.",
-          );
+          setScanAccessHint({
+            kind: "message",
+            text: "Access looks granted but this page still cannot be read. Reload the tab, then scan again.",
+          });
           setScanState({ kind: "not_granted" });
           setScanUiState("blocked");
           sound.stopLoop("scan-page");
@@ -1195,9 +1232,10 @@ export const FillPanel = () => {
     });
 
     if (access.kind === "no_tab") {
-      setScanAccessHint(
-        "No active tab was found. Focus a browser tab with a form, then scan again.",
-      );
+      setScanAccessHint({
+        kind: "message",
+        text: "No active tab was found. Focus a browser tab with a form, then scan again.",
+      });
       setScanState({ kind: "not_granted" });
       setScanUiState("blocked");
       sound.stopLoop("scan-page");
@@ -1206,9 +1244,7 @@ export const FillPanel = () => {
     }
 
     if (access.kind === "not_permissible") {
-      setScanAccessHint(
-        "This tab cannot be scanned (internal browser pages). Open an http or https page, then scan again.",
-      );
+      setScanAccessHint({ kind: "internal_page" });
       setScanState({ kind: "not_granted" });
       setScanUiState("blocked");
       sound.stopLoop("scan-page");
@@ -1217,9 +1253,10 @@ export const FillPanel = () => {
     }
 
     if (access.kind === "request_threw") {
-      setScanAccessHint(
-        "Could not request access from this click. Try Scan again; if no prompt appears, check site access in the browser’s extension settings.",
-      );
+      setScanAccessHint({
+        kind: "message",
+        text: "Could not request access from this click. Try Scan again; if no prompt appears, check site access in the browser’s extension settings.",
+      });
       setScanState({ kind: "not_granted" });
       setScanUiState("blocked");
       sound.stopLoop("scan-page");
@@ -1228,9 +1265,10 @@ export const FillPanel = () => {
     }
 
     if (access.kind === "denied") {
-      setScanAccessHint(
-        "Permission was not granted. If no prompt appeared, check the extension’s site access in chrome://extensions (or use Allow on all sites from the first-run screen).",
-      );
+      setScanAccessHint({
+        kind: "message",
+        text: "Permission was not granted. If no prompt appeared, check the extension’s site access in chrome://extensions (or use Allow on all sites from the first-run screen).",
+      });
       setScanState({ kind: "not_granted" });
       setScanUiState("blocked");
       sound.stopLoop("scan-page");
@@ -1466,12 +1504,15 @@ export const FillPanel = () => {
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
       <div className="flex min-h-0 flex-1 flex-col gap-4">
-        {scanState.kind === "not_granted" && (
-          <p className="text-muted-foreground text-sm">
-            {scanAccessHint ??
-              'This site needs access before it can be scanned. Use "Scan this page" and approve the browser prompt to continue.'}
-          </p>
-        )}
+        {scanState.kind === "not_granted" &&
+          (scanAccessHint?.kind === "internal_page" ? (
+            <ScanInternalPageState />
+          ) : (
+            <p className="text-muted-foreground text-sm">
+              {scanAccessHint?.text ??
+                'This site needs access before it can be scanned. Use "Scan this page" and approve the browser prompt to continue.'}
+            </p>
+          ))}
 
         {scanState.kind === "proposals" && showProposalDetails ? (
           <div

@@ -44,6 +44,14 @@
     "description": "Supporting explanation when a scan finds no form fields or uploads.",
     "message": "No fillable fields on this page."
   },
+  "scanInternalPage": {
+    "description": "Headline when the active tab is an internal browser page that cannot be scanned.",
+    "message": "This tab cannot be scanned."
+  },
+  "scanInternalPageHint": {
+    "description": "Supporting explanation when a scan is blocked on an internal browser page.",
+    "message": "Internal browser pages aren't readable. Open an http or https page, then scan again."
+  },
   "localDataExport": {
     "message": "Export"
   },
