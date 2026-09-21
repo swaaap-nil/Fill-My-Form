@@ -113,9 +113,12 @@ export const seedFile = async (
  *
  * Opening the panel makes *that* tab active, so wait for the form tab's
  * grant chrome after focusing it. Per-site access now reads "This site
- * only:" rather than "Access is on for". Do not click Scan here — that
- * would fill the page and leave later tests looking for an idle scan
- * button.
+ * only:" rather than "Access is on for".
+ *
+ * A granted http(s) tab with no snapshot auto-scans, so after focusing the
+ * form wait until Scan/Rescan is clickable again (not "Scanning..."). Do
+ * not click Scan here — that would fill the page and leave later tests
+ * looking for an idle scan button.
  */
 export const grantAccess = async (formPage: Page, panelPage: Page) => {
   await formPage.bringToFront();
@@ -123,10 +126,19 @@ export const grantAccess = async (formPage: Page, panelPage: Page) => {
     panelPage.getByText(/This site only:|Access is on for/),
   ).toBeVisible({ timeout: 10_000 });
   await formPage.reload({ waitUntil: "domcontentloaded" });
+  await expect(fillScanButton(panelPage)).toBeVisible({ timeout: 15_000 });
 };
 
 export const clickScan = async (panelPage: Page) => {
   await fillScanButton(panelPage).click();
+  // Auto-scan can already have left proposals (and "Answer now and never again") on screen.
+  // Wait out this scan so the next action is not a race with "Scanning...".
+  await expect(
+    panelPage.getByRole("button", { name: "Scanning..." }),
+  ).toBeVisible({ timeout: 5_000 });
+  await expect(
+    panelPage.getByRole("button", { name: "Scanning..." }),
+  ).toBeHidden({ timeout: 15_000 });
 };
 
 export const openProposalDetails = async (panelPage: Page) => {
@@ -134,7 +146,7 @@ export const openProposalDetails = async (panelPage: Page) => {
 };
 
 /**
- * Drives the Phase 2 agent loop (`AgentRunPanel`'s "Answer now") to
+ * Drives the Phase 2 agent loop (`AgentRunPanel`'s "Answer now and never again") to
  * completion by repeatedly clicking Confirm.
  *
  * The background answers a review confirmation synchronously and often
@@ -147,14 +159,16 @@ export const openProposalDetails = async (panelPage: Page) => {
  * loop iteration's check for "Run complete." see what actually happened.
  *
  * A per-tab scan snapshot (or a scan that already ran) can leave "Answer
- * now" on screen. Clicking Rescan in that state races the next assertion,
- * so start the loop from the proposals that are already there.
+ * now and never again" on screen. Clicking Rescan in that state races the
+ * next assertion, so start the loop from the proposals that are already there.
  */
 export const driveAgentToCompletion = async (
   panelPage: Page,
   maxClicks = 15,
 ) => {
-  const answerNow = panelPage.getByRole("button", { name: "Answer now" });
+  const answerNow = panelPage.getByRole("button", {
+    name: "Answer now and never again",
+  });
   if (!(await answerNow.isVisible({ timeout: 1000 }).catch(() => false))) {
     await clickScan(panelPage);
   }

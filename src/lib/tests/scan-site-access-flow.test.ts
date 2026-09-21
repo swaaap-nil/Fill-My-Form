@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import {
   runAllSitesAccessRequest,
   runScanSiteAccess,
+  shouldAutoScanGrantedTab,
 } from "~/lib/scan-site-access-flow";
 import { createSiteAccess } from "~/lib/site-access";
 import {
@@ -89,6 +90,22 @@ describe("runScanSiteAccess", () => {
       expect(outcome).toEqual({ kind: "granted" });
       expect(fake.promptedOrigins).toEqual([]);
     });
+
+    it(`treats a post-grant register throw as granted on ${browserName}`, async () => {
+      const fake = createBrowser();
+      fake.registerShouldThrow = () => true;
+      const siteAccess = createSiteAccess(fake);
+
+      const outcome = await runScanSiteAccess({
+        url: "https://example.com/form",
+        tabId: 4,
+        requestSiteAccess: (url, tabId) =>
+          siteAccess.requestSiteAccess(url, tabId),
+      });
+
+      expect(outcome).toEqual({ kind: "granted" });
+      expect(fake.grantedOrigins.has("https://example.com/*")).toBe(true);
+    });
   }
 });
 
@@ -164,5 +181,61 @@ describe("runAllSitesAccessRequest", () => {
         },
       }),
     ).resolves.toEqual({ kind: "failed", reason: "request_threw" });
+  });
+});
+
+describe("shouldAutoScanGrantedTab", () => {
+  it("auto-scans an http(s) tab that is already allowed and has no snapshot", () => {
+    expect(
+      shouldAutoScanGrantedTab({
+        url: "https://example.com/form",
+        hasAccess: true,
+        hasSnapshot: false,
+      }),
+    ).toBe(true);
+    expect(
+      shouldAutoScanGrantedTab({
+        url: "http://localhost:4173/simple.html",
+        hasAccess: true,
+        hasSnapshot: false,
+      }),
+    ).toBe(true);
+  });
+
+  it("does not auto-scan when access is missing, a snapshot exists, or the URL is not http(s)", () => {
+    expect(
+      shouldAutoScanGrantedTab({
+        url: "https://example.com/form",
+        hasAccess: false,
+        hasSnapshot: false,
+      }),
+    ).toBe(false);
+    expect(
+      shouldAutoScanGrantedTab({
+        url: "https://example.com/form",
+        hasAccess: true,
+        hasSnapshot: true,
+      }),
+    ).toBe(false);
+    expect(
+      shouldAutoScanGrantedTab({
+        url: "chrome://extensions",
+        hasAccess: true,
+        hasSnapshot: false,
+      }),
+    ).toBe(false);
+    expect(
+      shouldAutoScanGrantedTab({
+        url: "chrome-extension://abc/sidepanel.html",
+        hasAccess: true,
+        hasSnapshot: false,
+      }),
+    ).toBe(false);
+    expect(
+      shouldAutoScanGrantedTab({
+        hasAccess: true,
+        hasSnapshot: false,
+      }),
+    ).toBe(false);
   });
 });

@@ -124,6 +124,12 @@ export const contentScriptIdFor = (origin: string): string => {
   return `${CONTENT_SCRIPT_ID}:${encoded}`;
 };
 
+/** Chrome: "Duplicate script ID '…'". Firefox: "already registered". */
+export const isDuplicateScriptIdError = (error: unknown): boolean => {
+  const message = error instanceof Error ? error.message : String(error);
+  return /duplicate script id|already registered/i.test(message);
+};
+
 const requestOriginsFromGesture = (
   browser: SiteAccessBrowser,
   origins: string[],
@@ -198,15 +204,22 @@ export const createSiteAccess = (browser: SiteAccessBrowser): SiteAccess => {
     });
     if (existing.length > 0) return;
 
-    await browser.scripting.registerContentScripts([
-      {
-        id,
-        matches,
-        js: CONTENT_SCRIPT_JS,
-        css: CONTENT_SCRIPT_CSS,
-        runAt: "document_idle",
-      },
-    ]);
+    try {
+      await browser.scripting.registerContentScripts([
+        {
+          id,
+          matches,
+          js: CONTENT_SCRIPT_JS,
+          css: CONTENT_SCRIPT_CSS,
+          runAt: "document_idle",
+        },
+      ]);
+    } catch (error) {
+      // Background onAdded and the Scan path can both pass the empty-list
+      // check, then the loser throws. The script is already registered.
+      if (isDuplicateScriptIdError(error)) return;
+      throw error;
+    }
   };
 
   const registerGlobalContentScript = async (
@@ -300,7 +313,11 @@ export const createSiteAccess = (browser: SiteAccessBrowser): SiteAccess => {
       const granted = await requestOriginsFromGesture(browser, [origin]);
       if (!granted) return false;
 
-      await registerForOrigin(origin);
+      try {
+        await registerForOrigin(origin);
+      } catch {
+        // Grant succeeded; runtime registration is best-effort.
+      }
 
       if (activeTabId !== undefined) {
         await injectContentScript(activeTabId);

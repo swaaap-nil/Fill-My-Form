@@ -5,6 +5,7 @@ import {
   createSiteAccess,
   GLOBAL_HTTP_SCRIPT_ID,
   GLOBAL_HTTPS_SCRIPT_ID,
+  isDuplicateScriptIdError,
   toOriginPattern,
   wireSiteAccessPermissionEvents,
 } from "~/lib/site-access";
@@ -34,6 +35,24 @@ describe("contentScriptIdFor", () => {
   it("does not collide for hostnames that squash to the same alphanumeric id", () => {
     expect(contentScriptIdFor("https://foo.bar.com/*")).not.toBe(
       contentScriptIdFor("https://foo-bar.com/*"),
+    );
+  });
+});
+
+describe("isDuplicateScriptIdError", () => {
+  it("matches Chrome and Firefox already-registered messages", () => {
+    expect(
+      isDuplicateScriptIdError(
+        new Error("Duplicate script ID 'form-agent-content:abc'"),
+      ),
+    ).toBe(true);
+    expect(
+      isDuplicateScriptIdError(
+        new Error("Content script with id is already registered"),
+      ),
+    ).toBe(true);
+    expect(isDuplicateScriptIdError(new Error("registration failed"))).toBe(
+      false,
     );
   });
 });
@@ -112,6 +131,51 @@ for (const [browserName, createBrowser] of GESTURE_BROWSERS) {
 
       expect(granted).toBe(true);
       expect(fake.promptedOrigins).toEqual([]);
+      expect(
+        fake.registered.has(contentScriptIdFor("https://example.com/*")),
+      ).toBe(true);
+    });
+
+    it("still returns true when script registration throws after a grant", async () => {
+      const fake = createBrowser();
+      fake.registerShouldThrow = () => true;
+      const siteAccess = createSiteAccess(fake);
+
+      await expect(
+        siteAccess.requestSiteAccess("https://example.com/apply", 8),
+      ).resolves.toBe(true);
+      expect(fake.grantedOrigins.has("https://example.com/*")).toBe(true);
+      expect(fake.executedScripts).toEqual([
+        { tabId: 8, files: ["content-scripts/content.js"] },
+      ]);
+    });
+
+    it("treats a duplicate script id as already registered", async () => {
+      const origin = "https://example.com/*";
+      const id = contentScriptIdFor(origin);
+      const fake = createBrowser({
+        registered: new Set([id]),
+      });
+      fake.scripting.getRegisteredContentScripts = async () => [];
+      const siteAccess = createSiteAccess(fake);
+
+      await expect(
+        siteAccess.requestSiteAccess("https://example.com/apply"),
+      ).resolves.toBe(true);
+      expect(fake.registered.has(id)).toBe(true);
+    });
+
+    it("does not throw when onAdded registers the origin before Scan finishes", async () => {
+      const fake = createBrowser();
+      const siteAccess = createSiteAccess(fake);
+      wireSiteAccessPermissionEvents(fake, siteAccess);
+
+      fake.emitAdded(["https://example.com/*"]);
+      await Promise.resolve();
+
+      await expect(
+        siteAccess.requestSiteAccess("https://example.com/apply"),
+      ).resolves.toBe(true);
       expect(
         fake.registered.has(contentScriptIdFor("https://example.com/*")),
       ).toBe(true);

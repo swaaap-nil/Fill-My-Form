@@ -107,7 +107,9 @@ const waitForEditorPage = async (context: BrowserContext): Promise<Page> => {
 };
 
 const advanceAgentToFileQuestion = async (panelPage: Page) => {
-  const answerNow = panelPage.getByRole("button", { name: "Answer now" });
+  const answerNow = panelPage.getByRole("button", {
+    name: "Answer now and never again",
+  });
   if (!(await answerNow.isVisible({ timeout: 1000 }).catch(() => false))) {
     await clickScan(panelPage);
   }

@@ -167,6 +167,9 @@ export const createFakeBrowser = (
           if (fake.registerShouldThrow?.(script.id)) {
             throw new Error(`registration failed: ${script.id}`);
           }
+          if (registered.has(script.id)) {
+            throw new Error(`Duplicate script ID '${script.id}'`);
+          }
           registered.add(script.id);
         }
       },

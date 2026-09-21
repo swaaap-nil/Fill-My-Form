@@ -37,6 +37,7 @@ import {
 import {
   runAllSitesAccessRequest,
   runScanSiteAccess,
+  shouldAutoScanGrantedTab,
 } from "~/lib/scan-site-access-flow";
 import { useSound } from "~/lib/sfx/react";
 import {
@@ -71,7 +72,8 @@ import { ProposalCard } from "./proposal-card";
  * **"Scan this page" owns the permission prompt.** If the active tab's own
  * origin is not granted yet, the scan click requests that one-origin grant
  * before trying to read the page. That keeps the privacy boundary deliberate
- * without making the user learn a separate grant-then-scan step.
+ * without making the user learn a separate grant-then-scan step. Already
+ * granted http(s) tabs with no snapshot auto-scan; Rescan stays a click.
  *
  * **Site access is called directly here, not through a background
  * message.** `chrome.permissions.request()` only succeeds inside the
@@ -864,7 +866,7 @@ export const FillPanel = () => {
     };
   }, [refreshAccessState, applyActiveTab]);
 
-  const scanRef = useRef<() => Promise<void>>(async () => {});
+  const scanGrantedRef = useRef<() => Promise<void>>(async () => {});
 
   const resetPanelForTabWithoutSnapshot = useCallback(() => {
     setScanState({ kind: "idle" });
@@ -904,14 +906,28 @@ export const FillPanel = () => {
           hydrateFromTabSnapshot(panelStateFromSnapshot(snapshot));
           return;
         }
-        await scanRef.current();
+        // Nudge / notification: access already exists; do not call request().
+        await scanGrantedRef.current();
         return;
       }
 
       if (snapshot) {
         hydrateFromTabSnapshot(panelStateFromSnapshot(snapshot));
-      } else {
-        resetPanelForTabWithoutSnapshot();
+        return;
+      }
+
+      resetPanelForTabWithoutSnapshot();
+      const hasAccess = activeTabUrl
+        ? await siteAccess.hasSiteAccess(activeTabUrl)
+        : false;
+      if (
+        shouldAutoScanGrantedTab({
+          url: activeTabUrl,
+          hasAccess,
+          hasSnapshot: false,
+        })
+      ) {
+        await scanGrantedRef.current();
       }
     })();
   }, [
@@ -930,6 +946,78 @@ export const FillPanel = () => {
 
     return () => window.clearInterval(interval);
   }, [lastScannedAt]);
+
+  const scanGrantedTab = async () => {
+    if (activeTabId === undefined || activeTabUrl === undefined) {
+      sound.stopLoop("scan-page");
+      return;
+    }
+
+    setScanUiState("scanning");
+    setScanAccessHint(undefined);
+    setFillStatus({ kind: "ready" });
+    sound.startLoop("scan-page", "scanStarted");
+
+    try {
+      await siteAccess.syncScriptsForGrantedAccess(activeTabUrl, activeTabId);
+      await refreshAccessState();
+
+      let fillResult = await sendMessage("runFill", { tabId: activeTabId });
+      if (!fillResult.granted) {
+        await siteAccess.syncScriptsForGrantedAccess(activeTabUrl, activeTabId);
+        fillResult = await sendMessage("runFill", { tabId: activeTabId });
+        if (!fillResult.granted) {
+          setActiveTabGranted(false);
+          setScanAccessHint(
+            "Access looks granted but this page still cannot be read. Reload the tab, then scan again.",
+          );
+          setScanState({ kind: "not_granted" });
+          setScanUiState("blocked");
+          sound.stopLoop("scan-page");
+          sound.play("scanBlocked");
+          return;
+        }
+      }
+      setConfirmedIds(new Set());
+      setProposalView("summary");
+      setProposalViewTransition("none");
+      const scannedAt = new Date();
+      const nextScanVersion = scanVersion + 1;
+      setScanVersion(nextScanVersion);
+      setScanState({
+        kind: "proposals",
+        proposals: fillResult.proposals,
+        uploadIntents: fillResult.uploadIntents,
+      });
+      setLastScannedAt(scannedAt);
+      setScanUiState("results");
+      await saveTabFillSnapshot(
+        snapshotFromPanelState({
+          tabId: activeTabId,
+          scanState: {
+            kind: "proposals",
+            proposals: fillResult.proposals,
+            uploadIntents: fillResult.uploadIntents,
+          },
+          scanUiState: "results",
+          fillStatus: { kind: "ready" },
+          lastScannedAt: scannedAt,
+          confirmedIds: new Set(),
+          scanVersion: nextScanVersion,
+          pageUrl: activeTabUrl,
+        }),
+      );
+      sound.stopLoop("scan-page");
+      sound.play("scanSucceeded");
+    } catch {
+      // No content script reachable in this tab. Leave Scan available.
+      setActiveTabGranted(false);
+      setScanState({ kind: "not_granted" });
+      setScanUiState("failed");
+      sound.stopLoop("scan-page");
+      sound.play("scanFailed");
+    }
+  };
 
   const scan = async () => {
     setScanUiState("scanning");
@@ -990,72 +1078,10 @@ export const FillPanel = () => {
       return;
     }
 
-    if (activeTabId === undefined || activeTabUrl === undefined) return;
-
-    try {
-      await siteAccess.syncScriptsForGrantedAccess(activeTabUrl, activeTabId);
-      await refreshAccessState();
-
-      let fillResult = await sendMessage("runFill", { tabId: activeTabId });
-      if (!fillResult.granted) {
-        await siteAccess.syncScriptsForGrantedAccess(activeTabUrl, activeTabId);
-        fillResult = await sendMessage("runFill", { tabId: activeTabId });
-        if (!fillResult.granted) {
-          setActiveTabGranted(false);
-          setScanAccessHint(
-            "Access looks granted but this page still cannot be read. Reload the tab, then scan again.",
-          );
-          setScanState({ kind: "not_granted" });
-          setScanUiState("blocked");
-          sound.stopLoop("scan-page");
-          sound.play("scanBlocked");
-          return;
-        }
-      }
-      setConfirmedIds(new Set());
-      setProposalView("summary");
-      setProposalViewTransition("none");
-      const scannedAt = new Date();
-      const nextScanVersion = scanVersion + 1;
-      setScanVersion(nextScanVersion);
-      setScanState({
-        kind: "proposals",
-        proposals: fillResult.proposals,
-        uploadIntents: fillResult.uploadIntents,
-      });
-      setLastScannedAt(scannedAt);
-      setScanUiState("results");
-      await saveTabFillSnapshot(
-        snapshotFromPanelState({
-          tabId: activeTabId,
-          scanState: {
-            kind: "proposals",
-            proposals: fillResult.proposals,
-            uploadIntents: fillResult.uploadIntents,
-          },
-          scanUiState: "results",
-          fillStatus: { kind: "ready" },
-          lastScannedAt: scannedAt,
-          confirmedIds: new Set(),
-          scanVersion: nextScanVersion,
-          pageUrl: activeTabUrl,
-        }),
-      );
-      sound.stopLoop("scan-page");
-      sound.play("scanSucceeded");
-    } catch {
-      // No content script reachable in this tab, or the permission request
-      // failed. Same recovery as an outright missing grant: explain that
-      // access is required and let the next scan click try again.
-      setActiveTabGranted(false);
-      setScanState({ kind: "not_granted" });
-      setScanUiState("failed");
-      sound.stopLoop("scan-page");
-      sound.play("scanFailed");
-    }
+    await scanGrantedTab();
   };
 
-  scanRef.current = scan;
+  scanGrantedRef.current = scanGrantedTab;
 
   const revoke = async (origin: string) => {
     try {

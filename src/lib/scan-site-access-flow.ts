@@ -33,6 +33,22 @@ export const runScanSiteAccess = async (deps: {
   }
 };
 
+/**
+ * Auto-scan when the tab is already allowed and there is nothing to restore.
+ * Must not call `permissions.request` (no user gesture on panel open).
+ */
+export const shouldAutoScanGrantedTab = (input: {
+  readonly url?: string;
+  readonly hasAccess: boolean;
+  readonly hasSnapshot: boolean;
+}): boolean =>
+  Boolean(
+    input.url &&
+      isPermissibleUrl(input.url) &&
+      input.hasAccess &&
+      !input.hasSnapshot,
+  );
+
 export type AllSitesAccessOutcome =
   | { readonly kind: "completed"; readonly granted: boolean }
   | { readonly kind: "failed"; readonly reason: "request_threw" };

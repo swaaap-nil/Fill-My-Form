@@ -215,7 +215,7 @@ export const AgentRunPanel = ({ tabId }: AgentRunPanelProps) => {
           disabled={busy}
           onClick={start}
         >
-          Answer now
+          Answer now and never again
         </Button>
       )}
 

@@ -166,7 +166,7 @@ test("propose: scanning shows every field's proposal and fills nothing", async (
   await expect(formPage.getByLabel("First name")).toHaveValue("");
 });
 
-test("empty scan: shows localized message instead of Answer now", async ({
+test("empty scan: shows localized message instead of Answer now and never again", async ({
   context,
   extensionId,
 }) => {
@@ -183,7 +183,7 @@ test("empty scan: shows localized message instead of Answer now", async ({
     "Sorry, you're on your own on this one.",
   );
   await expect(
-    panelPage.getByRole("button", { name: "Answer now" }),
+    panelPage.getByRole("button", { name: "Answer now and never again" }),
   ).toBeHidden();
 });
 
