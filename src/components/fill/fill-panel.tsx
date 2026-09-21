@@ -3,9 +3,15 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  FileImage,
+  FileText,
+  FileUp,
+  HelpCircle,
   LoaderCircle,
+  PenLine,
+  X,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { Browser } from "wxt/browser";
 import { browser } from "wxt/browser";
 import { Button } from "~/components/ui/button";
@@ -58,7 +64,7 @@ import { PreparationSuccessSupport } from "../files/preparation-success-support"
 import { PreparedFileHandoff } from "../files/prepared-file-handoff";
 import { useObjectUrl } from "../files/use-object-url";
 import { AgentRunPanel } from "./agent-run-panel";
-import { ProposalCard } from "./proposal-card";
+import { KnownFieldsDetails, ProposalCard } from "./proposal-card";
 
 /**
  * Drives one grant-then-fill cycle for the active tab.
@@ -96,7 +102,7 @@ type ScanState =
       readonly uploadIntents: readonly UploadIntent[];
     };
 
-type ProposalView = "summary" | "answers" | "known";
+type ProposalView = "summary" | "answers" | "known" | "uploads";
 type ProposalViewTransition = "none" | "forward" | "back";
 
 type FillStatus =
@@ -139,6 +145,65 @@ const pluralizeFilledAnswer = (count: number) =>
 
 const pluralizeKnownField = (count: number) =>
   count === 1 ? "known field detected" : "known fields detected";
+
+const pluralizeUploadRequirement = (count: number) =>
+  count === 1 ? "upload requirement detected" : "upload requirements detected";
+
+const GENERIC_UPLOAD_LABEL =
+  /^(attach|upload|browse|choose file|choose|select)(?:\s+file)?\.?$/i;
+
+const uploadConceptName = (intent: UploadIntent): string => {
+  const source = [intent.label, intent.description, ...intent.requirements]
+    .filter((value): value is string => Boolean(value))
+    .join(" ");
+  if (intent.kind === "photo") return "photograph";
+  if (intent.kind === "signature") return "signature";
+  if (intent.kind === "document") {
+    if (/\bresume\b|\bcv\b/i.test(source)) return "resume";
+    if (/\bcertificate\b/i.test(source)) return "certificate";
+    return "document";
+  }
+  const label = intent.label?.trim();
+  if (label && !GENERIC_UPLOAD_LABEL.test(label)) return label;
+  return "upload";
+};
+
+const uploadConceptArticle = (name: string): "a" | "an" | undefined => {
+  if (/\s/.test(name)) return undefined;
+  return /^[aeiou]/i.test(name) ? "an" : "a";
+};
+
+const uploadRequirementDetail = (
+  intent: UploadIntent,
+  conceptName: string,
+): string | undefined => {
+  const detail = intent.description?.trim();
+  if (!detail) return undefined;
+  if (GENERIC_UPLOAD_LABEL.test(detail)) return undefined;
+  if (detail.toLowerCase() === conceptName.toLowerCase()) return undefined;
+  return detail;
+};
+
+const uploadKindIcon = (kind: UploadIntent["kind"]) => {
+  if (kind === "photo") return FileImage;
+  if (kind === "signature") return PenLine;
+  if (kind === "document") return FileText;
+  return HelpCircle;
+};
+
+const uploadAcceptHint = (intent: UploadIntent): string => {
+  const accept = intent.constraints.find(
+    (constraint) => constraint.kind === "accept",
+  );
+  if (!accept) return "Images or PDF";
+  const labels = accept.value.map((value) => {
+    if (value === "application/pdf" || value === ".pdf") return "PDF";
+    if (value.startsWith(".")) return value.slice(1).toUpperCase();
+    if (value.startsWith("image/")) return "Images";
+    return value;
+  });
+  return [...new Set(labels)].join(", ");
+};
 
 const findGrantedOriginForUrl = (
   url: string | undefined,
@@ -551,6 +616,33 @@ const KnownFieldsSummaryCard = ({
   </SummaryCardShell>
 );
 
+const UploadRequirementsSummaryCard = ({
+  count,
+  onOpenDetails,
+}: {
+  readonly count: number;
+  readonly onOpenDetails: () => void;
+}) => (
+  <SummaryCardShell
+    testId="upload-requirements-summary"
+    onOpenDetails={onOpenDetails}
+    title={`${count} ${pluralizeUploadRequirement(count)}`}
+    subtitle="Original files stay unchanged. Prepared copies expire automatically."
+  >
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={(event) => {
+        event.stopPropagation();
+        onOpenDetails();
+      }}
+    >
+      Upload Files and forget about them
+    </Button>
+  </SummaryCardShell>
+);
+
 const UploadIntentItem = ({
   intent,
   onPrepare,
@@ -568,41 +660,49 @@ const UploadIntentItem = ({
   };
   readonly error?: string;
 }) => {
+  const fileInputId = useId();
   const [sourceFile, setSourceFile] = useState<File>();
+  const [dragActive, setDragActive] = useState(false);
   const sourceUrl = useObjectUrl(sourceFile);
   const accept =
     intent.constraints
       .find((constraint) => constraint.kind === "accept")
       ?.value.join(",") ?? "image/*,application/pdf";
+  const conceptName = uploadConceptName(intent);
+  const conceptArticle = uploadConceptArticle(conceptName);
+  const requirementDetail = uploadRequirementDetail(intent, conceptName);
+  const KindIcon = uploadKindIcon(intent.kind);
+  const chooseLabel = intent.label ?? conceptName;
+
+  const chooseFile = (file: File | undefined) => {
+    if (!file) return;
+    setSourceFile(file);
+  };
 
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-border p-3">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="font-medium text-sm">{intent.label ?? "Upload"}</p>
-          <p className="text-muted-foreground text-xs">
-            {intent.kind} ·{" "}
-            {intent.actionability === "automatic"
-              ? "native upload available"
-              : "choose the prepared copy on the page"}
+    <div className="flex flex-col gap-3 rounded-lg border border-primary/25 bg-card p-3 shadow-sm shadow-black/5 dark:shadow-black/20">
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 shrink-0 text-muted-foreground">
+          <KindIcon className="size-4" aria-hidden="true" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm">
+            We know this is
+            {conceptArticle ? ` ${conceptArticle}` : ""}{" "}
+            <span className="font-medium">{conceptName}</span>, but you haven't
+            prepared a copy for it yet — choose a file below.
           </p>
+          {requirementDetail && (
+            <p className="mt-1 text-muted-foreground text-xs">
+              {requirementDetail}
+            </p>
+          )}
         </div>
-        <input
-          className="max-w-32 text-xs"
-          type="file"
-          accept={accept}
-          aria-label={`Choose ${intent.label ?? "upload"}`}
-          onChange={(event) => {
-            const file = event.currentTarget.files?.[0];
-            if (!file) return;
-            setSourceFile(file);
-          }}
-        />
       </div>
-      {sourceUrl && (
+      {sourceFile ? (
         <>
-          {sourceFile?.type.startsWith("image/") ? (
-            <div className="h-48 overflow-hidden rounded border bg-muted">
+          {sourceUrl && sourceFile.type.startsWith("image/") ? (
+            <div className="h-48 overflow-hidden rounded-lg border bg-muted">
               <img
                 src={sourceUrl}
                 alt="Selected upload preview"
@@ -610,28 +710,86 @@ const UploadIntentItem = ({
               />
             </div>
           ) : (
-            <div className="rounded border bg-muted/30 p-4 text-center text-muted-foreground text-xs">
+            <div className="rounded-lg border bg-muted/30 p-4 text-center text-muted-foreground text-xs">
               Document selected. Prepare a temporary upload copy locally.
             </div>
           )}
+          <div className="flex items-center justify-between gap-2 rounded-md border border-border bg-card px-2.5 py-2 text-xs">
+            <span className="min-w-0 truncate">
+              {sourceFile.name} · {Math.round(sourceFile.size / 1024)} KB
+            </span>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="size-7 shrink-0"
+              onClick={() => setSourceFile(undefined)}
+              aria-label="Remove selected file"
+            >
+              <X className="size-3.5" />
+            </Button>
+          </div>
           <Button
             type="button"
             size="sm"
-            onClick={() => sourceFile && void onPrepare(sourceFile)}
+            onClick={() => void onPrepare(sourceFile)}
           >
-            Prepare {intent.label?.toLowerCase() ?? intent.kind}
+            Prepare file
           </Button>
         </>
+      ) : (
+        <>
+          <label
+            htmlFor={fileInputId}
+            className={cn(
+              "flex min-h-24 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-muted/40 px-3 py-4 text-center transition-colors hover:border-primary/60 hover:bg-accent/35",
+              dragActive && "border-primary/70 bg-accent/45",
+            )}
+            onDragEnter={(event) => {
+              event.preventDefault();
+              setDragActive(true);
+            }}
+            onDragOver={(event) => {
+              event.preventDefault();
+              setDragActive(true);
+            }}
+            onDragLeave={(event) => {
+              event.preventDefault();
+              setDragActive(false);
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              setDragActive(false);
+              chooseFile(event.dataTransfer.files[0]);
+            }}
+          >
+            <FileUp className="size-5 text-muted-foreground" />
+            <span className="font-medium text-sm">
+              Browse or drag a file here
+            </span>
+            <span className="text-muted-foreground text-xs">
+              {uploadAcceptHint(intent)}
+            </span>
+          </label>
+          <input
+            id={fileInputId}
+            className="sr-only"
+            type="file"
+            accept={accept}
+            aria-label={`Choose ${chooseLabel}`}
+            onChange={(event) => {
+              chooseFile(event.currentTarget.files?.[0]);
+              event.currentTarget.value = "";
+            }}
+          />
+        </>
       )}
-      <p className="line-clamp-4 text-muted-foreground text-xs">
-        {intent.description}
-      </p>
       {output && (
         <>
           <PreparedFileHandoff
             artifact={output.artifact}
             store={output.store}
-            label={intent.label ?? intent.kind}
+            label={chooseLabel}
           />
           {output.artifact.mimeType.startsWith("image/") ? (
             <PreparationSuccessSupport />
@@ -751,16 +909,7 @@ const UploadIntentsCard = ({
   };
 
   return (
-    <section className="flex flex-col gap-3 rounded-lg border border-primary/25 bg-card p-3 shadow-sm">
-      <div>
-        <p className="font-semibold text-sm">
-          {intents.length} upload{" "}
-          {intents.length === 1 ? "requirement" : "requirements"} detected
-        </p>
-        <p className="text-muted-foreground text-xs">
-          Original files stay unchanged. Prepared copies expire automatically.
-        </p>
-      </div>
+    <div className="flex flex-col gap-2">
       {intents.map((intent) => (
         <UploadIntentItem
           key={intent.id}
@@ -770,7 +919,7 @@ const UploadIntentsCard = ({
           onPrepare={(file) => prepare(intent, file)}
         />
       ))}
-    </section>
+    </div>
   );
 };
 
@@ -780,6 +929,7 @@ export const FillPanel = () => {
   const [proposalView, setProposalView] = useState<ProposalView>("summary");
   const [proposalViewTransition, setProposalViewTransition] =
     useState<ProposalViewTransition>("none");
+  const [knownFieldsRemembered, setKnownFieldsRemembered] = useState(false);
   const [scanVersion, setScanVersion] = useState(0);
   const [confirmedIds, setConfirmedIds] = useState<Set<DecisionId>>(new Set());
   const [fillStatus, setFillStatus] = useState<FillStatus>({ kind: "ready" });
@@ -1212,7 +1362,9 @@ export const FillPanel = () => {
 
   const showProposalDetails =
     scanState.kind === "proposals" &&
-    (proposalView === "answers" || proposalView === "known");
+    (proposalView === "answers" ||
+      proposalView === "known" ||
+      proposalView === "uploads");
   const showAnswersSummary =
     answerDetailProposals.length > 0 || fillStatus.kind !== "ready";
   const scanLiterallyEmpty =
@@ -1324,6 +1476,11 @@ export const FillPanel = () => {
               size="sm"
               className="self-start"
               onClick={() => {
+                if (proposalView === "known" && knownFieldsRemembered) {
+                  sound.play("proposalDetailsClosed");
+                  void scanGrantedTab();
+                  return;
+                }
                 setProposalViewTransition("back");
                 setProposalView("summary");
                 sound.play("proposalDetailsClosed");
@@ -1332,14 +1489,25 @@ export const FillPanel = () => {
               <ChevronLeft className="size-4" />
               Back
             </Button>
-            {detailsProposals.map((proposal) => (
-              <ProposalCard
-                key={proposal.fieldId}
-                proposal={proposal}
+            {proposalView === "uploads" ? (
+              <UploadIntentsCard intents={scanState.uploadIntents} />
+            ) : proposalView === "known" ? (
+              <KnownFieldsDetails
+                proposals={detailsProposals}
                 onConfirm={(decisionId) => confirm([decisionId])}
                 confirmedIds={confirmedIds}
+                onRememberedChange={setKnownFieldsRemembered}
               />
-            ))}
+            ) : (
+              detailsProposals.map((proposal) => (
+                <ProposalCard
+                  key={proposal.fieldId}
+                  proposal={proposal}
+                  onConfirm={(decisionId) => confirm([decisionId])}
+                  confirmedIds={confirmedIds}
+                />
+              ))
+            )}
           </div>
         ) : (
           scanState.kind === "proposals" && (
@@ -1369,6 +1537,7 @@ export const FillPanel = () => {
                 <KnownFieldsSummaryCard
                   count={knownNoAnswerProposals.length}
                   onOpenDetails={() => {
+                    setKnownFieldsRemembered(false);
                     setProposalViewTransition("forward");
                     setProposalView("known");
                     sound.play("proposalDetailsOpened");
@@ -1390,7 +1559,14 @@ export const FillPanel = () => {
                   <AgentRunPanel key={scanVersion} tabId={activeTabId} />
                 ))}
               {scanState.uploadIntents.length > 0 && (
-                <UploadIntentsCard intents={scanState.uploadIntents} />
+                <UploadRequirementsSummaryCard
+                  count={scanState.uploadIntents.length}
+                  onOpenDetails={() => {
+                    setProposalViewTransition("forward");
+                    setProposalView("uploads");
+                    sound.play("proposalDetailsOpened");
+                  }}
+                />
               )}
             </div>
           )

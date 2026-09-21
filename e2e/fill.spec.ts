@@ -204,6 +204,63 @@ test("summary cards: hides answers summary when no answers are detected", async 
   await expect(
     panelPage.getByTestId("known-fields-summary-card"),
   ).toBeVisible();
+  await expect(
+    panelPage.getByTestId("upload-requirements-summary-card"),
+  ).toBeVisible();
+});
+
+test("summary cards: upload requirements stay collapsed until opened", async ({
+  context,
+  extensionId,
+}) => {
+  const formPage = await context.newPage();
+  await formPage.goto("/simple.html");
+
+  const panelPage = await openPanel(context, extensionId);
+  await grantAccess(formPage, panelPage);
+
+  await formPage.bringToFront();
+  await clickScan(panelPage);
+
+  const uploadCard = panelPage.getByTestId("upload-requirements-summary-card");
+  await expect(uploadCard).toBeVisible();
+  await expect(
+    uploadCard.getByText("1 upload requirement detected"),
+  ).toBeVisible();
+  await expect(
+    panelPage.getByRole("button", {
+      name: "Upload Files and forget about them",
+    }),
+  ).toBeVisible();
+  await expect(uploadCard.locator('input[type="file"]')).toHaveCount(0);
+
+  await uploadCard.click({ position: { x: 8, y: 8 } });
+  await expect(
+    panelPage.getByText(
+      "We know this is a resume, but you haven't prepared a copy for it yet — choose a file below.",
+    ),
+  ).toBeVisible();
+  await expect(
+    panelPage.getByText("Upload resume PDF, max 2 MB"),
+  ).toBeVisible();
+  await expect(panelPage.getByText("Browse or drag a file here")).toBeVisible();
+  await expect(panelPage.getByRole("button", { name: "Back" })).toBeVisible();
+  await expect(uploadCard).toBeHidden();
+
+  await panelPage.getByRole("button", { name: "Back" }).click();
+  await expect(uploadCard).toBeVisible();
+  await expect(uploadCard.locator('input[type="file"]')).toHaveCount(0);
+
+  await panelPage
+    .getByRole("button", { name: "Upload Files and forget about them" })
+    .click();
+  await expect(panelPage.getByText("Browse or drag a file here")).toBeVisible();
+  await panelPage.getByRole("button", { name: "Back" }).click();
+
+  await expect(uploadCard).toBeVisible();
+  await expect(
+    panelPage.getByTestId("known-fields-summary-card"),
+  ).toBeVisible();
 });
 
 test("summary cards: card surface opens details without stealing fill clicks", async ({
@@ -233,12 +290,60 @@ test("summary cards: card surface opens details without stealing fill clicks", a
   await expect(panelPage.getByText("identity.first_name")).toBeVisible();
   await panelPage.getByRole("button", { name: "Back" }).click();
 
+  await panelPage
+    .getByTestId("upload-requirements-summary-card")
+    .click({ position: { x: 8, y: 8 } });
+  await expect(panelPage.getByText("Browse or drag a file here")).toBeVisible();
+  await panelPage.getByRole("button", { name: "Back" }).click();
+
   await panelPage.getByRole("button", { name: "Fill My Form 😡" }).click();
   await expect(panelPage.getByText("1 answer filled")).toBeVisible();
   await expect(panelPage.getByRole("button", { name: "Back" })).toBeHidden();
   await expect(formPage.getByLabel("Email address")).toHaveValue(
     "ananya@example.com",
   );
+});
+
+test("known fields: autosaving a value from the card turns it into an answer", async ({
+  context,
+  extensionId,
+}) => {
+  const formPage = await context.newPage();
+  await formPage.goto("/simple.html");
+
+  const panelPage = await openPanel(context, extensionId);
+  await grantAccess(formPage, panelPage);
+
+  await formPage.bringToFront();
+  await clickScan(panelPage);
+
+  await panelPage
+    .getByTestId("known-fields-summary-card")
+    .click({ position: { x: 8, y: 8 } });
+  await expect(
+    panelPage.getByText(
+      "We know this is identity.first_name, but you haven't saved a value for it yet — enter it below.",
+    ),
+  ).toBeVisible();
+  await expect(panelPage.getByRole("button", { name: "Save" })).toBeHidden();
+
+  const firstName = panelPage.getByLabel("First name", { exact: true });
+  const status = panelPage.getByTestId("autosave-status-identity.first_name");
+  await firstName.fill("Ananya");
+  await expect(status).toBeVisible();
+  await expect(status).toHaveAttribute(
+    "aria-label",
+    /Waiting to save|Saving|Saved/,
+  );
+  await expect(status).toHaveAttribute("aria-label", "Saved");
+
+  await panelPage.getByRole("button", { name: "Back" }).click();
+  await expect(panelPage.getByText("1 answer detected")).toBeVisible();
+  await panelPage
+    .getByTestId("answers-summary-card")
+    .click({ position: { x: 8, y: 8 } });
+  await expect(panelPage.getByText("identity.first_name")).toBeVisible();
+  await expect(panelPage.getByText("Ananya")).toBeVisible();
 });
 
 test("confirm: confirming a proposal writes the value into the page", async ({

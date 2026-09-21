@@ -4,15 +4,17 @@ import { createIndexedDbFileReferenceStore } from "~/lib/files/adapters";
 import { sendMessage } from "~/lib/messaging";
 import { useSound } from "~/lib/sfx/react";
 
-// Keeps onboarding persistence out of the form component.
-// This hook owns memory snapshots, debounced text saves, file tagging, status
-// updates, and save-result sounds; the component only renders fields.
+/**
+ * Debounced memory writes shared by onboarding and known-field cards.
+ * Owns snapshot load, per-key status, file tagging, and the typing/save
+ * sounds so both surfaces stay in lockstep.
+ */
 
 const AUTOSAVE_DELAY_MS = 600;
 
 export type FieldStatus = "idle" | "pending" | "saving" | "saved" | "error";
 
-export const useOnboardingMemory = () => {
+export const useMemoryAutosave = () => {
   const sound = useSound();
   const [values, setValues] = useState<Record<string, string>>({});
   const [fileRefs, setFileRefs] = useState<Record<string, FileReference>>({});
@@ -79,12 +81,12 @@ export const useOnboardingMemory = () => {
         if (saveVersions.current[key] !== version) return false;
         setSavedKeys((prev) => new Set(prev).add(key));
         setFieldStatus(key, "saved");
-        if (playOutcome) sound.play("onboardingSaveSucceeded");
+        if (playOutcome) sound.play("memorySaveSucceeded");
         return true;
       } catch {
         if (saveVersions.current[key] === version) {
           setFieldStatus(key, "error");
-          if (playOutcome) sound.play("onboardingSaveFailed");
+          if (playOutcome) sound.play("memorySaveFailed");
         }
         return false;
       }
@@ -108,12 +110,12 @@ export const useOnboardingMemory = () => {
           return next;
         });
         setFieldStatus(key, "saved");
-        sound.play("onboardingSaveSucceeded");
+        sound.play("memorySaveSucceeded");
         return true;
       } catch {
         if (saveVersions.current[key] === version) {
           setFieldStatus(key, "error");
-          sound.play("onboardingSaveFailed");
+          sound.play("memorySaveFailed");
         }
         return false;
       }
@@ -149,7 +151,7 @@ export const useOnboardingMemory = () => {
 
   const updateTextField = useCallback(
     (key: string, value: string, label: string) => {
-      sound.play("onboardingTyping");
+      sound.play("memoryTyping");
       setValues((prev) => ({
         ...prev,
         [key]: value,
@@ -191,7 +193,7 @@ export const useOnboardingMemory = () => {
       } finally {
         sound.stopLoop(`file-tagging:${key}`);
       }
-      sound.play(saved ? "onboardingSaveSucceeded" : "onboardingSaveFailed");
+      sound.play(saved ? "memorySaveSucceeded" : "memorySaveFailed");
     },
     [recordField, setFieldStatus, sound],
   );

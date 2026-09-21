@@ -23,9 +23,9 @@ export const SFX_EVENT_CUES = {
   agentAnswerSent: "send",
   agentReviewConfirmed: "success",
   agentReviewSkipped: "cancel",
-  onboardingTyping: "typing",
-  onboardingSaveSucceeded: "success",
-  onboardingSaveFailed: "error",
+  memoryTyping: "typing",
+  memorySaveSucceeded: "success",
+  memorySaveFailed: "error",
   fileTagging: "processing",
   fileSourceSelected: "select",
   fileSelected: "select",
@@ -68,7 +68,7 @@ export const isKnownCue = (cue: string): cue is CueName =>
   CUES.some((item) => item.name === cue);
 
 export const optionsForEvent = (event: SfxEvent): PlayOptions | undefined => {
-  if (event === "onboardingTyping") return { volume: 0.18, cooldownMs: 0 };
+  if (event === "memoryTyping") return { volume: 0.18, cooldownMs: 0 };
   if (event === "soundVolumeChanged") return { cooldownMs: 120 };
   return undefined;
 };

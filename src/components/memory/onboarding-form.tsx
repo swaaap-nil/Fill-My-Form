@@ -1,11 +1,12 @@
-import { AlertCircle, Check, FileUp, Loader2, Lock } from "lucide-react";
+import { FileUp, Lock } from "lucide-react";
 import { useMemo } from "react";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { concepts } from "~/core/ontology";
 import { Sensitivity } from "~/core/ontology/types";
+import { AutosaveStatusIcon, AutosaveTextField } from "./autosave-text-field";
 import { LocalDataControls } from "./local-data-controls";
-import { type FieldStatus, useOnboardingMemory } from "./use-onboarding-memory";
+import { useMemoryAutosave } from "./use-memory-autosave";
 
 /**
  * An ontology-driven "tell us about yourself" form.
@@ -20,23 +21,13 @@ import { type FieldStatus, useOnboardingMemory } from "./use-onboarding-memory";
  * concept's `expects` to an `<Input type>` is the only place presentation
  * is decided, so replacing the look later is replacing that one mapping,
  * not rewriting a form. File uploads are out of scope for this phase (see
- * the brief's "Out of scope"), so `expects: "file"` concepts are excluded.
+ * the brief's "Out of scope"), so `expects: "file"` concepts are excluded
+ * from the text mapping and handled as native file inputs below.
  *
  * {@link Sensitivity.RESTRICTED} concepts are grouped into their own
  * section, presented last and marked with a lock icon — "respect
  * sensitivity in how prominently a field is presented" from the brief.
  */
-
-const EXPECTS_TO_INPUT_TYPE: Record<string, string> = {
-  email: "email",
-  tel: "tel",
-  url: "url",
-  number: "number",
-  date: "date",
-};
-
-const inputTypeFor = (expects: string): string =>
-  EXPECTS_TO_INPUT_TYPE[expects] ?? "text";
 
 const groupLabel = (key: string): string => {
   const [prefix] = key.split(".");
@@ -75,58 +66,20 @@ export const OnboardingForm = () => {
     updateFileField,
     updateTextField,
     values,
-  } = useOnboardingMemory();
+  } = useMemoryAutosave();
   const groupedStandard = useMemo(() => groupByPrefix(standardConcepts), []);
 
-  const renderStatus = (key: string) => {
-    const status = getStatus(key);
-    if (status === "idle") return null;
-
-    const statusLabels: Record<Exclude<FieldStatus, "idle">, string> = {
-      pending: "Waiting to save",
-      saving: "Saving",
-      saved: "Saved",
-      error: "Save failed",
-    };
-
-    return (
-      <span
-        aria-label={statusLabels[status]}
-        className="pointer-events-none absolute top-1/2 right-2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full bg-card/90 text-muted-foreground"
-        data-testid={`autosave-status-${key}`}
-        role="img"
-      >
-        {status === "pending" || status === "saving" ? (
-          <Loader2 className="size-3.5 animate-spin" />
-        ) : status === "saved" ? (
-          <Check className="size-3.5 text-primary" />
-        ) : (
-          <AlertCircle className="size-3.5 text-destructive" />
-        )}
-      </span>
-    );
-  };
-
-  const renderTextField = (concept: (typeof fillableConcepts)[number]) => {
-    return (
-      <div key={concept.key} className="flex flex-col gap-1">
-        <Label htmlFor={concept.key}>{concept.label}</Label>
-        <div className="relative">
-          <Input
-            className="pr-9"
-            id={concept.key}
-            type={inputTypeFor(concept.expects)}
-            value={values[concept.key] ?? ""}
-            onChange={(e) => {
-              const value = e.target.value;
-              updateTextField(concept.key, value, concept.label);
-            }}
-          />
-          {renderStatus(concept.key)}
-        </div>
-      </div>
-    );
-  };
+  const renderTextField = (concept: (typeof fillableConcepts)[number]) => (
+    <AutosaveTextField
+      key={concept.key}
+      fieldKey={concept.key}
+      label={concept.label}
+      expects={concept.expects}
+      value={values[concept.key] ?? ""}
+      status={getStatus(concept.key)}
+      onChange={(value) => updateTextField(concept.key, value, concept.label)}
+    />
+  );
 
   return (
     <form
@@ -185,7 +138,10 @@ export const OnboardingForm = () => {
                     )
                   }
                 />
-                {renderStatus(concept.key)}
+                <AutosaveStatusIcon
+                  fieldKey={concept.key}
+                  status={getStatus(concept.key)}
+                />
               </div>
               {ref && (
                 <p className="text-muted-foreground text-xs">

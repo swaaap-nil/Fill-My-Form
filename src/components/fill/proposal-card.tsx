@@ -5,7 +5,14 @@ import {
   ShieldAlert,
   SplitSquareVertical,
 } from "lucide-react";
+import { useEffect } from "react";
+import { AutosaveTextField } from "~/components/memory/autosave-text-field";
+import {
+  type FieldStatus,
+  useMemoryAutosave,
+} from "~/components/memory/use-memory-autosave";
 import { Button } from "~/components/ui/button";
+import { ontology } from "~/core/ontology";
 import type { DecisionId, FieldProposal } from "~/lib/messaging";
 
 /**
@@ -21,6 +28,11 @@ interface ProposalCardProps {
   readonly proposal: FieldProposal;
   readonly onConfirm: (decisionId: string) => void;
   readonly confirmedIds: ReadonlySet<DecisionId>;
+  readonly autosave?: {
+    readonly value: string;
+    readonly status: FieldStatus;
+    readonly onChange: (value: string) => void;
+  };
 }
 
 const fieldName = (proposal: FieldProposal): string =>
@@ -65,17 +77,41 @@ const UnknownProposal = ({
   </CardShell>
 );
 
-const NoValueProposal = ({ conceptKey }: { readonly conceptKey: string }) => (
-  <CardShell
-    icon={<HelpCircle className="size-4 text-muted-foreground" />}
-    tone="muted"
-  >
-    <p className="text-sm">
-      We know this is <span className="font-medium">{conceptKey}</span>, but you
-      haven't saved a value for it yet — add it in onboarding.
-    </p>
-  </CardShell>
-);
+const NoValueProposal = ({
+  conceptKey,
+  autosave,
+}: {
+  readonly conceptKey: string;
+  readonly autosave?: ProposalCardProps["autosave"];
+}) => {
+  const concept = ontology.byKey(conceptKey);
+  const label = concept?.label ?? conceptKey;
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-primary/25 bg-card p-3 shadow-sm shadow-black/5 dark:shadow-black/20">
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 shrink-0 text-muted-foreground">
+          <HelpCircle className="size-4" aria-hidden="true" />
+        </span>
+        <p className="min-w-0 flex-1 text-sm">
+          We know this is <span className="font-medium">{conceptKey}</span>, but
+          you haven't saved a value for it yet — enter it below.
+        </p>
+      </div>
+      {concept?.expects === "file" || !autosave ? null : (
+        <AutosaveTextField
+          fieldKey={conceptKey}
+          label={label}
+          showLabel={false}
+          expects={concept?.expects}
+          value={autosave.value}
+          status={autosave.status}
+          onChange={autosave.onChange}
+        />
+      )}
+    </div>
+  );
+};
 
 const AmbiguousProposal = ({
   candidates,
@@ -189,12 +225,15 @@ export const ProposalCard = ({
   proposal,
   onConfirm,
   confirmedIds,
+  autosave,
 }: ProposalCardProps) => {
   switch (proposal.state) {
     case "unknown":
       return <UnknownProposal proposal={proposal} />;
     case "no_value":
-      return <NoValueProposal conceptKey={proposal.conceptKey} />;
+      return (
+        <NoValueProposal conceptKey={proposal.conceptKey} autosave={autosave} />
+      );
     case "ambiguous":
       return <AmbiguousProposal candidates={proposal.candidates} />;
     case "choose_option":
@@ -224,4 +263,59 @@ export const ProposalCard = ({
         />
       );
   }
+};
+
+export const KnownFieldsDetails = ({
+  proposals,
+  onConfirm,
+  confirmedIds,
+  onRememberedChange,
+}: {
+  readonly proposals: readonly FieldProposal[];
+  readonly onConfirm: (decisionId: string) => void;
+  readonly confirmedIds: ReadonlySet<DecisionId>;
+  readonly onRememberedChange: (remembered: boolean) => void;
+}) => {
+  const autosave = useMemoryAutosave();
+  const remembered = proposals.some(
+    (proposal) =>
+      proposal.state === "no_value" &&
+      autosave.getStatus(proposal.conceptKey) === "saved",
+  );
+
+  useEffect(() => {
+    onRememberedChange(remembered);
+  }, [onRememberedChange, remembered]);
+
+  return (
+    <>
+      {proposals.map((proposal) => {
+        const conceptKey =
+          proposal.state === "no_value" ? proposal.conceptKey : undefined;
+        const concept = conceptKey ? ontology.byKey(conceptKey) : undefined;
+        return (
+          <ProposalCard
+            key={proposal.fieldId}
+            proposal={proposal}
+            onConfirm={onConfirm}
+            confirmedIds={confirmedIds}
+            autosave={
+              conceptKey
+                ? {
+                    value: autosave.values[conceptKey] ?? "",
+                    status: autosave.getStatus(conceptKey),
+                    onChange: (value) =>
+                      autosave.updateTextField(
+                        conceptKey,
+                        value,
+                        concept?.label ?? conceptKey,
+                      ),
+                  }
+                : undefined
+            }
+          />
+        );
+      })}
+    </>
+  );
 };
