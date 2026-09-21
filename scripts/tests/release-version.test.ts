@@ -1,9 +1,14 @@
 import { describe, expect, it } from "bun:test";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   assertReleaseVersion,
+  bumpVersion,
   compareVersions,
   normalizeTag,
   parseVersion,
+  writePackageVersion,
 } from "../release-version";
 
 describe("release version checks", () => {
@@ -51,5 +56,33 @@ describe("release version checks", () => {
         firefox: "0.1.0",
       }),
     ).toThrow(/must be greater/);
+  });
+
+  it("bumps major, minor and patch, zeroing the lesser numbers", () => {
+    expect(bumpVersion("1.6.0", "patch")).toBe("1.6.1");
+    expect(bumpVersion("1.6.4", "minor")).toBe("1.7.0");
+    expect(bumpVersion("1.6.4", "major")).toBe("2.0.0");
+  });
+
+  it("rewrites only the package.json version field", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "package-version-"));
+    const path = join(dir, "package.json");
+    await writeFile(
+      path,
+      `{
+  "name": "fill-my-form",
+  "version": "1.6.0",
+  "private": true
+}
+`,
+    );
+
+    try {
+      await writePackageVersion(path, "1.6.1");
+      expect(await readFile(path, "utf8")).toContain('"version": "1.6.1"');
+      expect(await readFile(path, "utf8")).toContain('"name": "fill-my-form"');
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 });

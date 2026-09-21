@@ -78,6 +78,57 @@ export const compareVersions = (left: string, right: string): number => {
 export const normalizeTag = (tag: string): string =>
   tag.startsWith("refs/tags/") ? tag.slice("refs/tags/".length) : tag;
 
+export type VersionBump = "major" | "minor" | "patch";
+
+export const isVersionBump = (value: string): value is VersionBump =>
+  value === "major" || value === "minor" || value === "patch";
+
+export const bumpVersion = (current: string, bump: VersionBump): string => {
+  const parsed = parseVersion(current);
+  if (bump === "major") return `${parsed.major + 1}.0.0`;
+  if (bump === "minor") return `${parsed.major}.${parsed.minor + 1}.0`;
+  return `${parsed.major}.${parsed.minor}.${parsed.patch + 1}`;
+};
+
+export const writePackageVersion = async (
+  path: string,
+  version: string,
+): Promise<void> => {
+  const text = await Bun.file(path).text();
+  if (!/"version"\s*:\s*"[^"]+"/.test(text)) {
+    throw new Error(`No version field in ${path}`);
+  }
+  await Bun.write(
+    path,
+    text.replace(/("version"\s*:\s*")([^"]+)(")/, `$1${version}$3`),
+  );
+};
+
+const writeGithubOutput = async (
+  values: Record<string, string>,
+): Promise<void> => {
+  const githubOutput = process.env.GITHUB_OUTPUT;
+  const lines = Object.entries(values).map(([key, value]) => `${key}=${value}`);
+  const body = `${lines.join("\n")}\n`;
+  if (githubOutput) {
+    const existing = (await Bun.file(githubOutput).exists())
+      ? await Bun.file(githubOutput).text()
+      : "";
+    await Bun.write(githubOutput, `${existing}${body}`);
+    return;
+  }
+  console.log(body.trimEnd());
+};
+
+const loadPublishedVersions = async (): Promise<
+  ReleaseConfig["publishedVersions"]
+> => {
+  const config = (await Bun.file("scripts/release-config.json").json()) as
+    | ReleaseConfig
+    | undefined;
+  return config?.publishedVersions ?? { chrome: null, firefox: null };
+};
+
 export const assertReleaseVersion = (
   tag: string,
   packageVersion: string,
@@ -106,30 +157,40 @@ export const assertReleaseVersion = (
 };
 
 if (import.meta.main) {
-  const tag = process.env.GITHUB_REF_NAME ?? process.argv[2];
-  if (!tag) {
-    console.error(
-      "No release tag provided. Set GITHUB_REF_NAME or pass a tag argument.",
-    );
-    process.exit(1);
-  }
-
-  const config = (await Bun.file("scripts/release-config.json").json()) as
-    | ReleaseConfig
-    | undefined;
+  const [command, bumpArg] = process.argv.slice(2);
 
   try {
-    assertReleaseVersion(
-      tag,
-      packageJson.version,
-      config?.publishedVersions ?? { chrome: null, firefox: null },
+    const publishedVersions = await loadPublishedVersions();
+
+    if (command === "bump") {
+      if (!bumpArg || !isVersionBump(bumpArg)) {
+        throw new Error(
+          `Unknown bump "${bumpArg ?? ""}". Expected major, minor, or patch.`,
+        );
+      }
+
+      const version = bumpVersion(packageJson.version, bumpArg);
+      const tag = `v${version}`;
+      assertReleaseVersion(tag, version, publishedVersions);
+      await writePackageVersion("package.json", version);
+      await writeGithubOutput({ version, tag });
+      console.log(`Bumped ${packageJson.version} -> ${version} (${bumpArg}).`);
+      process.exit(0);
+    }
+
+    const tag = command ?? process.env.GITHUB_REF_NAME;
+    if (!tag) {
+      throw new Error(
+        "No release tag provided. Pass a tag argument or set GITHUB_REF_NAME.",
+      );
+    }
+
+    assertReleaseVersion(tag, packageJson.version, publishedVersions);
+    console.log(
+      `Release tag ${normalizeTag(tag)} matches package.json and is newer than configured published versions.`,
     );
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
-
-  console.log(
-    `Release tag ${normalizeTag(tag)} matches package.json and is newer than configured published versions.`,
-  );
 }

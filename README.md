@@ -256,10 +256,11 @@ tests never depend on a third-party website.
 
 ## CI
 
-`.github/workflows/tests.yml` runs two jobs on every pull request.
+`.github/workflows/ci.yml` runs two jobs on every pull request and on `main`.
 
 **Quality** — lint (including the import boundaries), typecheck, unit tests,
-build, and a scan of the build output for secret-shaped strings.
+the fixture-generalization check, build, and a scan of the build output for
+secret-shaped strings.
 
 **End-to-end** — installs Chromium and runs the smoke tests. Kept separate so a
 lint failure surfaces in seconds rather than waiting on a browser.
@@ -267,7 +268,21 @@ lint failure surfaces in seconds rather than waiting on a browser.
 Any failure blocks the merge.
 
 `bun check` runs the same gates locally. A pre-commit hook runs the fast subset
-(lint-fix and typecheck); tests are left to CI so committing stays quick.
+(lint-fix, typecheck, and the fixture-generalization check); tests are left to
+CI so committing stays quick.
+
+## Release
+
+Releases are manual. Run **Release** from `main` in GitHub Actions and choose
+`patch` (bug fix), `minor`, or `major`. That workflow is the only thing that
+bumps `package.json`, writes `CHANGELOG.md`, creates the tag, and publishes
+the GitHub release.
+
+If Quality and End-to-end already passed on that commit, tests are skipped.
+Otherwise the release run executes them before tagging.
+
+The landing page is a separate package: Cloudflare deploys it automatically,
+and `.github/workflows/landing-page.yml` is a manual verify/deploy escape hatch.
 
 ## Documentation
 

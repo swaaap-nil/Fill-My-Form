@@ -7,7 +7,7 @@ submitted to addons.mozilla.org from the source code in this repository.
 
 - **OS:** macOS 15.1 (also builds cleanly on Ubuntu 22.04+ and Windows 11;
   nothing in the build touches OS-specific paths or native modules)
-- **Bun:** 1.3.14
+- **Bun:** 1.3.14 (pinned in `.bun-version`, which CI also reads)
 - **Node.js:** 24.18.0 (required: `>=24`, see `package.json`'s `engines` field)
 - **Package manager:** Bun's own (`bun install`), using the committed
   `bun.lock` — no `npm`, no `yarn`, no `pnpm`
@@ -56,5 +56,5 @@ bun run scripts/check-bundle-secrets.ts     # fails if any secret-shaped string 
 bun run scripts/check-release-manifest.ts   # fails if host_permissions or any de-starter artifact is present
 ```
 
-Both are part of this repository's own CI gate (`.github/workflows/tests.yml`)
+Both are part of this repository's own CI gate (`.github/workflows/ci.yml`)
 and run on every commit, not only at submission time.

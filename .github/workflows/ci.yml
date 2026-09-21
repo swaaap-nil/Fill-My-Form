@@ -2,20 +2,21 @@ name: CI
 
 on:
   pull_request:
-    branches: ["*"]
   push:
-    branches: ["main"]
+    branches: [main]
   merge_group:
   workflow_dispatch:
   workflow_call:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_call' }}
+
+permissions:
+  contents: read
 
 env:
   FORCE_COLOR: 3
-  NODE_VERSION: 24.x
   # The extension must build with no configuration: every integration is
   # optional and every value is public. If this ever needs a real secret to
   # pass, something has crossed the privacy boundary — see docs/privacy.md.
@@ -23,65 +24,68 @@ env:
 
 jobs:
   quality:
-    name: 🧪 Quality
+    name: Quality
+    if: github.event_name != 'push' || !startsWith(github.event.head_commit.message, 'chore(release):')
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - name: ✅ Checkout code
+      - name: Checkout
         uses: actions/checkout@v7
 
-      - name: 🔨 Setup
-        uses: ./.github/workflows/setup
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+      - name: Setup
+        uses: ./.github/actions/setup
 
       # `biome check` covers formatting, linting and import order, and it is
       # what enforces the src/core import boundaries in biome.json.
-      - name: 🛻 Lint, format and boundaries
+      - name: Lint, format and boundaries
         run: bun lint
 
-      - name: 💡 Typecheck
+      - name: Typecheck
         run: bun typecheck
 
-      - name: 🧪 Unit tests
+      - name: Unit tests
         run: bun test ./src ./scripts
 
-      - name: 🔍 Assert no document-reading dependencies
-        run: bun run scripts/check-forbidden-deps.ts
+      - name: Assert no document-reading dependencies
+        run: bun run check:forbidden-deps
 
-      - name: 📦 Build
+      - name: Assert fixtures stay generalized
+        run: bun run check:generalized-fixtures
+
+      - name: Build
         run: bun run build
 
-      - name: 🔍 Assert no secrets were bundled
+      - name: Assert no secrets were bundled
         run: bun run scripts/check-bundle-secrets.ts
 
-      - name: 🔍 Assert the release manifest is clean
+      - name: Assert the release manifest is clean
         run: bun run scripts/check-release-manifest.ts
 
   e2e:
-    name: 🎭 End-to-end
+    name: End-to-end
+    if: github.event_name != 'push' || !startsWith(github.event.head_commit.message, 'chore(release):')
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     # Separate from the main gate on purpose: it launches a real browser, so
     # it is an order of magnitude slower than the unit tests. A quality
     # failure should surface in seconds without waiting on this.
     steps:
-      - name: ✅ Checkout code
+      - name: Checkout
         uses: actions/checkout@v7
 
-      - name: 🔨 Setup
-        uses: ./.github/workflows/setup
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+      - name: Setup
+        uses: ./.github/actions/setup
 
-      - name: 🎭 Install Chromium
+      - name: Install Chromium
         run: bunx playwright install --with-deps chromium
 
       # Builds the extension, then loads it into a real browser.
-      - name: 🧪 End-to-end tests
+      - name: End-to-end tests
         run: bun run test:e2e
 
-      - name: 📸 Upload failure artifacts
+      - name: Upload failure artifacts
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-results
           path: test-results/

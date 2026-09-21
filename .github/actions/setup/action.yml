@@ -1,0 +1,26 @@
+name: Setup
+description: Install Bun, Node, and locked dependencies
+
+inputs:
+  install-packages:
+    description: Install packages from the frozen lockfile
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version-file: .bun-version
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v7
+      with:
+        node-version: 24
+
+    - name: Install
+      if: inputs.install-packages == 'true'
+      shell: bash
+      run: bun install --frozen-lockfile

@@ -1,63 +1,97 @@
 name: Landing page
+
 on:
-  # Disabled for now: Cloudflare handles automatic landing-page builds/deploys.
-  # Keep manual dispatch available for verification or an explicit deploy.
+  # Cloudflare handles automatic landing-page builds/deploys. Keep manual
+  # dispatch for verification or an explicit deploy.
   workflow_dispatch:
     inputs:
       deploy:
         type: choice
         options: [none, preview, production]
         default: none
+
 permissions:
   contents: read
+
+env:
+  ASTRO_TELEMETRY_DISABLED: "1"
+  WRANGLER_SEND_METRICS: "false"
+
 jobs:
   verify:
+    name: Verify
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: landing-page
-    env:
-      ASTRO_TELEMETRY_DISABLED: '1'
-      WRANGLER_SEND_METRICS: 'false'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
           cache-dependency-path: landing-page/package-lock.json
-      - run: npm ci
-      - run: npm run check && npm test && npm run build
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
-      - uses: actions/upload-artifact@v4
-        if: always()
+
+      - name: Install
+        run: npm ci
+
+      - name: Check
+        run: npm run check
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: End-to-end tests
+        run: npm run test:e2e
+
+      - name: Upload verification artifacts
+        if: failure()
+        uses: actions/upload-artifact@v7
         with:
           name: landing-page-verification
           path: |
             landing-page/artifacts
             landing-page/test-results
+          retention-days: 7
+
   deploy:
+    name: Deploy
     needs: verify
     if: github.event_name == 'workflow_dispatch' && inputs.deploy != 'none'
     environment: ${{ inputs.deploy }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: landing-page
     env:
-      ASTRO_TELEMETRY_DISABLED: '1'
-      WRANGLER_SEND_METRICS: 'false'
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       PUBLIC_GA4_ID: ${{ vars.PUBLIC_GA4_ID }}
       DEPLOY_TARGET: ${{ inputs.deploy }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
           cache-dependency-path: landing-page/package-lock.json
-      - run: npm ci
-      - run: npm run "deploy:$DEPLOY_TARGET"
+
+      - name: Install
+        run: npm ci
+
+      - name: Deploy
+        run: npm run "deploy:$DEPLOY_TARGET"
