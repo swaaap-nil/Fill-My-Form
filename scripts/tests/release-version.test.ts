@@ -8,6 +8,7 @@ import {
   compareVersions,
   normalizeTag,
   parseVersion,
+  resolveReleaseVersion,
   writePackageVersion,
 } from "../release-version";
 
@@ -62,6 +63,19 @@ describe("release version checks", () => {
     expect(bumpVersion("1.6.0", "patch")).toBe("1.6.1");
     expect(bumpVersion("1.6.4", "minor")).toBe("1.7.0");
     expect(bumpVersion("1.6.4", "major")).toBe("2.0.0");
+  });
+
+  it("keeps the current version when the bump is none", () => {
+    expect(resolveReleaseVersion("1.7.0", "none")).toEqual({
+      version: "1.7.0",
+      tag: "v1.7.0",
+      changed: false,
+    });
+    expect(resolveReleaseVersion("1.7.0", "patch")).toEqual({
+      version: "1.7.1",
+      tag: "v1.7.1",
+      changed: true,
+    });
   });
 
   it("rewrites only the package.json version field", async () => {

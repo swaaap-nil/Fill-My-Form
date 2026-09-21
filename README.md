@@ -274,9 +274,11 @@ CI so committing stays quick.
 ## Release
 
 Releases are manual. Run **Release** from `main` in GitHub Actions and choose
-`patch` (bug fix), `minor`, or `major`. That workflow is the only thing that
-bumps `package.json`, writes `CHANGELOG.md`, creates the tag, and publishes
-the GitHub release.
+`patch` (bug fix), `minor`, `major`, or `none` (keep the current version).
+Unless you pick `none`, that workflow bumps `package.json`, writes
+`CHANGELOG.md`, creates the tag, and publishes the GitHub release. `none`
+builds and submits the current version as-is — useful if a tag already exists
+and you still need store artifacts.
 
 If Quality and End-to-end already passed on that commit, tests are skipped.
 Otherwise the release run executes them before tagging.

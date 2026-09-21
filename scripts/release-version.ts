@@ -79,15 +79,36 @@ export const normalizeTag = (tag: string): string =>
   tag.startsWith("refs/tags/") ? tag.slice("refs/tags/".length) : tag;
 
 export type VersionBump = "major" | "minor" | "patch";
+export type ReleaseBump = VersionBump | "none";
 
 export const isVersionBump = (value: string): value is VersionBump =>
   value === "major" || value === "minor" || value === "patch";
+
+export const isReleaseBump = (value: string): value is ReleaseBump =>
+  value === "none" || isVersionBump(value);
 
 export const bumpVersion = (current: string, bump: VersionBump): string => {
   const parsed = parseVersion(current);
   if (bump === "major") return `${parsed.major + 1}.0.0`;
   if (bump === "minor") return `${parsed.major}.${parsed.minor + 1}.0`;
   return `${parsed.major}.${parsed.minor}.${parsed.patch + 1}`;
+};
+
+export const resolveReleaseVersion = (
+  current: string,
+  bump: ReleaseBump,
+): {
+  readonly version: string;
+  readonly tag: string;
+  readonly changed: boolean;
+} => {
+  if (bump === "none") {
+    parseVersion(current);
+    return { version: current, tag: `v${current}`, changed: false };
+  }
+
+  const version = bumpVersion(current, bump);
+  return { version, tag: `v${version}`, changed: true };
 };
 
 export const writePackageVersion = async (
@@ -163,18 +184,33 @@ if (import.meta.main) {
     const publishedVersions = await loadPublishedVersions();
 
     if (command === "bump") {
-      if (!bumpArg || !isVersionBump(bumpArg)) {
+      if (!bumpArg || !isReleaseBump(bumpArg)) {
         throw new Error(
-          `Unknown bump "${bumpArg ?? ""}". Expected major, minor, or patch.`,
+          `Unknown bump "${bumpArg ?? ""}". Expected major, minor, patch, or none.`,
         );
       }
 
-      const version = bumpVersion(packageJson.version, bumpArg);
-      const tag = `v${version}`;
-      assertReleaseVersion(tag, version, publishedVersions);
-      await writePackageVersion("package.json", version);
-      await writeGithubOutput({ version, tag });
-      console.log(`Bumped ${packageJson.version} -> ${version} (${bumpArg}).`);
+      const resolved = resolveReleaseVersion(packageJson.version, bumpArg);
+      if (resolved.changed) {
+        assertReleaseVersion(resolved.tag, resolved.version, publishedVersions);
+        await writePackageVersion("package.json", resolved.version);
+      } else {
+        parseVersion(resolved.version);
+      }
+
+      const ref = resolved.changed
+        ? resolved.tag
+        : (process.env.GITHUB_SHA ?? "HEAD");
+      await writeGithubOutput({
+        version: resolved.version,
+        tag: resolved.tag,
+        ref,
+      });
+      console.log(
+        resolved.changed
+          ? `Bumped ${packageJson.version} -> ${resolved.version} (${bumpArg}).`
+          : `Keeping ${resolved.version} with no version change.`,
+      );
       process.exit(0);
     }
 
