@@ -38,8 +38,14 @@ export const markFirstRunSiteAccess = async (
 };
 
 /** Show the all-sites gate until the user chooses or already has global access. */
+export const isFirstRunAccessGatePending = (
+  hasAllSiteAccess: boolean,
+  promptSeen: boolean,
+): boolean => !hasAllSiteAccess && !promptSeen;
+
 export const shouldShowFirstRunAccessGate = async (): Promise<boolean> => {
-  if (await siteAccess.hasAllSiteAccess()) return false;
+  const hasAllSiteAccess = await siteAccess.hasAllSiteAccess();
+  if (hasAllSiteAccess) return false;
   const record = await loadFirstRunSiteAccess();
-  return !record.promptSeen;
+  return isFirstRunAccessGatePending(hasAllSiteAccess, record.promptSeen);
 };

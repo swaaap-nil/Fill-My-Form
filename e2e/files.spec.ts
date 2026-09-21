@@ -4,6 +4,7 @@ import { deflateSync } from "node:zlib";
 import type { BrowserContext, Page } from "@playwright/test";
 import { expect, test } from "./fill-fixtures";
 import {
+  clickScan,
   grantAccess,
   openPanel,
   openProposalDetails,
@@ -106,8 +107,11 @@ const waitForEditorPage = async (context: BrowserContext): Promise<Page> => {
 };
 
 const advanceAgentToFileQuestion = async (panelPage: Page) => {
-  await panelPage.getByRole("button", { name: "Scan this page" }).click();
-  await panelPage.getByRole("button", { name: "Answer now" }).click();
+  const answerNow = panelPage.getByRole("button", { name: "Answer now" });
+  if (!(await answerNow.isVisible({ timeout: 1000 }).catch(() => false))) {
+    await clickScan(panelPage);
+  }
+  await answerNow.click();
 
   const filePrompt = panelPage.getByText("Browse or drag a file here");
 
@@ -177,7 +181,7 @@ test("files: a saved resume PDF uploads on simple.html", async ({
   await grantAccess(formPage, panelPage);
 
   await formPage.bringToFront();
-  await panelPage.getByRole("button", { name: "Scan this page" }).click();
+  await clickScan(panelPage);
   await openProposalDetails(panelPage);
   await expect(panelPage.getByText("documents.resume")).toBeVisible();
   await panelPage
@@ -248,7 +252,7 @@ test("files: an oversized photo is transformed before upload", async ({
   await grantAccess(formPage, panelPage);
 
   await formPage.bringToFront();
-  await panelPage.getByRole("button", { name: "Scan this page" }).click();
+  await clickScan(panelPage);
   await openProposalDetails(panelPage);
   await expect(panelPage.getByText("documents.photo")).toBeVisible();
   await panelPage.getByRole("button", { name: "Confirm", exact: true }).click();

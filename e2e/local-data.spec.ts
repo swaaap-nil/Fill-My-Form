@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test } from "./fill-fixtures";
-import { grantAccess, openPanel, seedAnswer } from "./fill-helpers";
+import { clickScan, grantAccess, openPanel, seedAnswer } from "./fill-helpers";
 
 test("my information: text fields autosave with inline status", async ({
   context,
@@ -40,7 +40,7 @@ test("local data: export, wipe, and import round-trips memory and journal", asyn
   await grantAccess(formPage, panelPage);
 
   await formPage.bringToFront();
-  await panelPage.getByRole("button", { name: "Scan this page" }).click();
+  await clickScan(panelPage);
   await panelPage.getByRole("button", { name: "My information" }).click();
 
   const downloadPromise = panelPage.waitForEvent("download");

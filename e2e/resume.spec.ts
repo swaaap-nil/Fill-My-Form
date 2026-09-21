@@ -1,6 +1,6 @@
 import type { BrowserContext } from "@playwright/test";
 import { expect, test } from "./fill-fixtures";
-import { grantAccess, openPanel } from "./fill-helpers";
+import { clickScan, grantAccess, openPanel } from "./fill-helpers";
 
 /**
  * Deliverable 3 (resumability) and deliverable 6 (the `ask_user` round
@@ -80,7 +80,7 @@ test("resume: a run waiting on ask_user is persisted to session storage, not hel
   await formPage.bringToFront();
   // No onboarding answers seeded: the first known-concept field with no
   // stored value produces an `ask_user` pause.
-  await panelPage.getByRole("button", { name: "Scan this page" }).click();
+  await clickScan(panelPage);
   await panelPage.getByRole("button", { name: "Answer now" }).click();
   await expect(
     panelPage.getByRole("button", { name: "Answer", exact: true }),
@@ -101,7 +101,7 @@ test("resume: answering a question backed only by session storage writes the fie
   await grantAccess(formPage, panelPage);
 
   await formPage.bringToFront();
-  await panelPage.getByRole("button", { name: "Scan this page" }).click();
+  await clickScan(panelPage);
   await panelPage.getByRole("button", { name: "Answer now" }).click();
 
   // "First name" is the first control on `simple.html` and the first field

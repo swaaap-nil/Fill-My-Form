@@ -1,6 +1,7 @@
 import type { BrowserContext } from "@playwright/test";
 import { expect, test } from "./fill-fixtures";
 import {
+  clickScan,
   grantAccess,
   openPanel,
   openProposalDetails,
@@ -52,6 +53,35 @@ const getRegisteredScriptIds = async (
   });
 };
 
+test("first run: Not now dismisses the all-sites gate and shows the fill panel", async ({
+  context,
+  extensionId,
+}) => {
+  const panelPage = await context.newPage();
+  await panelPage.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+
+  const gate = panelPage.getByTestId("first-run-access-gate");
+  await expect(gate).toBeVisible();
+  await expect(
+    panelPage.getByRole("heading", { name: "Detect forms automatically" }),
+  ).toBeVisible();
+  await expect(
+    panelPage.getByRole("button", { name: "Continue" }),
+  ).toBeVisible();
+
+  await gate.getByRole("button", { name: "Not now" }).click();
+  await expect(gate).toBeHidden();
+  await expect(
+    panelPage.getByRole("button", { name: "Scan this page" }),
+  ).toBeVisible();
+
+  await panelPage.reload();
+  await expect(gate).toBeHidden();
+  await expect(
+    panelPage.getByRole("button", { name: "Scan this page" }),
+  ).toBeVisible();
+});
+
 test("grant: clicking the panel's grant button registers the content script", async ({
   context,
   extensionId,
@@ -77,11 +107,8 @@ test("propose: scanning shows every field's proposal and fills nothing", async (
   await seedAnswer(panelPage, "Email address", "ananya@example.com");
   await grantAccess(formPage, panelPage);
 
-  await expect(
-    panelPage.getByRole("button", { name: "Scan this page" }),
-  ).toBeVisible();
   await formPage.bringToFront();
-  await panelPage.getByRole("button", { name: "Scan this page" }).click();
+  await clickScan(panelPage);
 
   await expect(panelPage.getByText("1 answer detected")).toBeVisible();
   await expect(panelPage.getByText(/^Last scanned .+/)).toBeVisible();
@@ -107,7 +134,7 @@ test("empty scan: shows localized message instead of Answer now", async ({
   await grantAccess(formPage, panelPage);
 
   await formPage.bringToFront();
-  await panelPage.getByRole("button", { name: "Scan this page" }).click();
+  await clickScan(panelPage);
 
   await expect(panelPage.getByTestId("scan-no-fields-found")).toHaveText(
     "Sorry, you're on your own on this one.",
@@ -128,7 +155,7 @@ test("summary cards: hides answers summary when no answers are detected", async 
   await grantAccess(formPage, panelPage);
 
   await formPage.bringToFront();
-  await panelPage.getByRole("button", { name: "Scan this page" }).click();
+  await clickScan(panelPage);
 
   await expect(panelPage.getByTestId("answers-summary-card")).toBeHidden();
   await expect(
@@ -148,7 +175,7 @@ test("summary cards: card surface opens details without stealing fill clicks", a
   await grantAccess(formPage, panelPage);
 
   await formPage.bringToFront();
-  await panelPage.getByRole("button", { name: "Scan this page" }).click();
+  await clickScan(panelPage);
   await expect(panelPage.getByText("1 answer detected")).toBeVisible();
 
   await panelPage
@@ -183,7 +210,7 @@ test("confirm: confirming a proposal writes the value into the page", async ({
   await grantAccess(formPage, panelPage);
 
   await formPage.bringToFront();
-  await panelPage.getByRole("button", { name: "Scan this page" }).click();
+  await clickScan(panelPage);
   await openProposalDetails(panelPage);
 
   await panelPage
@@ -216,7 +243,7 @@ test("closed-vocabulary fields: a stored value resolves to the field's own optio
   await grantAccess(formPage, panelPage);
 
   await formPage.bringToFront();
-  await panelPage.getByRole("button", { name: "Scan this page" }).click();
+  await clickScan(panelPage);
   await openProposalDetails(panelPage);
   for (const confirmButton of await panelPage
     .getByRole("button", { name: "Confirm", exact: true })
@@ -241,7 +268,7 @@ test("untouched: the csrf field and the terms checkbox are never filled", async 
   await grantAccess(formPage, panelPage);
 
   await formPage.bringToFront();
-  await panelPage.getByRole("button", { name: "Scan this page" }).click();
+  await clickScan(panelPage);
   await expect(panelPage.getByText("1 answer detected")).toBeVisible();
   await panelPage.getByRole("button", { name: "Fill My Form 😡" }).click();
   await expect(formPage.getByText("1 field updated")).toBeVisible();
@@ -272,7 +299,7 @@ test("restricted: the Aadhaar field is reported as restricted and never auto-fil
   await grantAccess(formPage, panelPage);
 
   await formPage.bringToFront();
-  await panelPage.getByRole("button", { name: "Scan this page" }).click();
+  await clickScan(panelPage);
   await expect(panelPage.getByText("1 answer detected")).toBeVisible();
   await openProposalDetails(panelPage);
 
@@ -312,7 +339,7 @@ test("onboarding round trip: a value typed in onboarding appears as a proposal w
   await grantAccess(formPage, panelPage);
 
   await formPage.bringToFront();
-  await panelPage.getByRole("button", { name: "Scan this page" }).click();
+  await clickScan(panelPage);
   await openProposalDetails(panelPage);
 
   await expect(panelPage.getByText("identity.first_name")).toBeVisible();
@@ -348,7 +375,7 @@ test("privacy: fixture fills make no outbound network requests", async ({
   });
 
   await formPage.bringToFront();
-  await panelPage.getByRole("button", { name: "Scan this page" }).click();
+  await clickScan(panelPage);
   await expect(panelPage.getByText("3 answers detected")).toBeVisible();
   await panelPage.getByRole("button", { name: "Fill My Form 😡" }).click();
   await expect(panelPage.getByText("3 answers filled")).toBeVisible();
