@@ -19,6 +19,8 @@ import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import type { PreparedArtifact } from "~/core/files/preparation";
 import type { UploadIntent } from "~/core/form/types";
+import { nameForUploadIntent } from "~/core/matching/upload-intent-name";
+import { ontology } from "~/core/ontology";
 import { getActiveBrowserTab } from "~/lib/active-browser-tab";
 import {
   ALL_SITES_UPGRADE_FULL_STRIP_MAX_IMPRESSIONS,
@@ -153,24 +155,8 @@ const pluralizeUploadRequirement = (count: number) =>
 const GENERIC_UPLOAD_LABEL =
   /^(attach|upload|browse|choose file|choose|select)(?:\s+file)?\.?$/i;
 
-const uploadConceptName = (intent: UploadIntent): string => {
-  const source = [intent.label, intent.description, ...intent.requirements]
-    .filter((value): value is string => Boolean(value))
-    .join(" ");
-  if (intent.kind === "photo") return "photograph";
-  if (intent.kind === "signature") return "signature";
-  if (intent.kind === "document") {
-    if (/\bresume\b|\bcv\b/i.test(source)) return "resume";
-    if (/\bcertificate\b/i.test(source)) return "certificate";
-    return "document";
-  }
-  const label = intent.label?.trim();
-  if (label && !GENERIC_UPLOAD_LABEL.test(label)) return label;
-  return "upload";
-};
-
 const uploadConceptArticle = (name: string): "a" | "an" | undefined => {
-  if (/\s/.test(name)) return undefined;
+  if (/\s/.test(name) || name.includes(".")) return undefined;
   return /^[aeiou]/i.test(name) ? "an" : "a";
 };
 
@@ -692,7 +678,7 @@ const UploadIntentItem = ({
     intent.constraints
       .find((constraint) => constraint.kind === "accept")
       ?.value.join(",") ?? "image/*,application/pdf";
-  const conceptName = uploadConceptName(intent);
+  const conceptName = nameForUploadIntent(intent, ontology);
   const conceptArticle = uploadConceptArticle(conceptName);
   const requirementDetail = uploadRequirementDetail(intent, conceptName);
   const KindIcon = uploadKindIcon(intent.kind);

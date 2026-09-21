@@ -242,7 +242,7 @@ test("summary cards: upload requirements stay collapsed until opened", async ({
   await uploadCard.click({ position: { x: 8, y: 8 } });
   await expect(
     panelPage.getByText(
-      "We know this is a resume, but you haven't prepared a copy for it yet — choose a file below.",
+      "We know this is documents.resume, but you haven't prepared a copy for it yet — choose a file below.",
     ),
   ).toBeVisible();
   await expect(
