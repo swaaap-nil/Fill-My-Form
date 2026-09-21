@@ -146,21 +146,27 @@ export const openProposalDetails = async (panelPage: Page) => {
 };
 
 /**
- * Drives the Phase 2 agent loop (`AgentRunPanel`'s "Answer now and never again") to
- * completion by repeatedly clicking Confirm.
+ * Drives a fill to completion from whichever entry point the panel offers.
  *
- * The background answers a review confirmation synchronously and often
- * finishes the whole run in the same tick — faster than Playwright's own
- * actionability re-check after locating the button, so the button can be
- * gone by the time the click would land. Without a bounded `timeout` here,
- * `.click()`'s internal retry loop for a vanished target keeps going until
- * the *test's* timeout, which reads as a hang rather than what it is: the
- * run already finished. A short click timeout, swallowed, lets the next
- * loop iteration's check for "Run complete." see what actually happened.
+ * Detected answers now get a one-shot "Fill My Form" button on the answers
+ * card (`confirmFill`, no agent loop). "Answer now and never again" only
+ * renders for known fields that still have no stored answer, or when no
+ * summary card applies. So: click Fill when it is there and wait for the
+ * card to report an outcome; otherwise fall through to the agent loop.
  *
- * A per-tab scan snapshot (or a scan that already ran) can leave "Answer
- * now and never again" on screen. Clicking Rescan in that state races the
- * next assertion, so start the loop from the proposals that are already there.
+ * The agent loop path repeatedly clicks Confirm. The background answers a
+ * review confirmation synchronously and often finishes the whole run in the
+ * same tick — faster than Playwright's own actionability re-check after
+ * locating the button, so the button can be gone by the time the click would
+ * land. Without a bounded `timeout` here, `.click()`'s internal retry loop
+ * for a vanished target keeps going until the *test's* timeout, which reads
+ * as a hang rather than what it is: the run already finished. A short click
+ * timeout, swallowed, lets the next loop iteration's check for "Run
+ * complete." see what actually happened.
+ *
+ * A per-tab scan snapshot (or a scan that already ran) can leave a start
+ * button on screen. Clicking Rescan in that state races the next assertion,
+ * so start from the proposals that are already there.
  */
 export const driveAgentToCompletion = async (
   panelPage: Page,
@@ -169,8 +175,24 @@ export const driveAgentToCompletion = async (
   const answerNow = panelPage.getByRole("button", {
     name: "Answer now and never again",
   });
-  if (!(await answerNow.isVisible({ timeout: 1000 }).catch(() => false))) {
+  const fillAnswers = panelPage.getByTestId("fill-answers");
+  const entryPoint = answerNow.or(fillAnswers);
+  if (!(await entryPoint.isVisible({ timeout: 1000 }).catch(() => false))) {
     await clickScan(panelPage);
+  }
+  await expect(entryPoint.first()).toBeVisible({ timeout: 5_000 });
+
+  if (await fillAnswers.isVisible()) {
+    await fillAnswers.click();
+    // Any settled outcome counts: a fixture with an unwritable control (the
+    // combobox on controlled.html) legitimately ends "3 of 4 answers filled".
+    // The caller asserts the values that matter.
+    await expect(
+      panelPage.getByText(
+        /Applied to form|\d+ of \d+ answers filled|Could not fill answers/,
+      ),
+    ).toBeVisible({ timeout: 15_000 });
+    return;
   }
   await answerNow.click();
 

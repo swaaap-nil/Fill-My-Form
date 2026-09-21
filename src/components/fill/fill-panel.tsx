@@ -616,6 +616,7 @@ const AnswersSummaryCard = ({
             size="sm"
             disabled={disabled}
             onClick={onFill}
+            data-testid="fill-answers"
             className="flex-1 motion-safe:active:scale-[0.99]"
           >
             {filling ? "Filling..." : "Fill My Form 😡"}
