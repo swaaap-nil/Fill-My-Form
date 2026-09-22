@@ -192,9 +192,45 @@ jobs:
             "${{ steps.artifacts.outputs.firefox_zip }}" \
             "${{ steps.artifacts.outputs.sources_zip }}"
 
-  # Chrome Web Store submission stays off until the CWS developer account
-  # exists. Re-enable with the same dry-run-then-submit shape as Firefox,
-  # using `wxt submit --chrome-zip`. See docs/store/submission-log.md.
+  submit-chrome:
+    name: Submit Chrome
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [prepare, build]
+    if: always() && needs.build.result == 'success'
+    environment: Production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Download Chrome artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: chrome-${{ needs.prepare.outputs.tag }}
+          path: build
+
+      - name: Dry-run Chrome submission
+        run: bun wxt submit --dry-run --chrome-zip "${CHROME_ZIP}"
+        env:
+          CHROME_ZIP: ${{ needs.build.outputs.chrome_zip }}
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+
+      - name: Submit Chrome
+        run: bun wxt submit --chrome-zip "${CHROME_ZIP}"
+        env:
+          CHROME_ZIP: ${{ needs.build.outputs.chrome_zip }}
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
 
   submit-firefox:
     name: Submit Firefox
