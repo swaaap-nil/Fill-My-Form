@@ -157,6 +157,13 @@ test("field ids on dynamic.html survive the step-1 to step-2 transition", async 
 test("the 600ms injected referral field appears only in a re-observation", async ({
   page,
 }) => {
+  // Installed before navigation so the fixture's own setTimeout(600) is
+  // paused from the moment its script runs — the first `observe()` below is
+  // then guaranteed to land before it fires, no matter how long page load +
+  // extractor injection take in wall-clock time. Without this, a slow CI
+  // runner can burn past 600ms of real time before the first `observe()`
+  // ever runs, making the field already present and this assertion flaky.
+  await page.clock.install();
   await page.goto("/dynamic.html");
   await injectExtractor(page);
 
@@ -164,8 +171,9 @@ test("the 600ms injected referral field appears only in a re-observation", async
   const labelsBefore = first.forms[0]?.fields.map((f) => f.label) ?? [];
   expect(labelsBefore).not.toContain("How did you hear about us?");
 
-  // The fixture's own 600ms timer injects this field; wait on the DOM, not a
-  // fixed sleep.
+  // Deterministically fire the fixture's 600ms timer instead of waiting on
+  // real time.
+  await page.clock.fastForward(600);
   await page.locator("#referral").waitFor({ state: "attached" });
 
   const second = await observe(page);
