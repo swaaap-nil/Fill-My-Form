@@ -327,7 +327,7 @@ test("summary cards: card surface opens details without stealing fill clicks", a
   await expect(panelPage.getByText("Browse or drag a file here")).toBeVisible();
   await panelPage.getByRole("button", { name: "Back" }).click();
 
-  await panelPage.getByRole("button", { name: "Fill My Form 😡" }).click();
+  await panelPage.getByTestId("fill-answers").click();
   await expect(panelPage.getByText("1 answer filled")).toBeVisible();
   await expect(panelPage.getByRole("button", { name: "Back" })).toBeHidden();
   await expect(formPage.getByLabel("Email address")).toHaveValue(

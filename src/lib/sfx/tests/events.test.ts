@@ -1,13 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import { getPlaybackMode } from "uisfx";
-import { isKnownCue, isLoopEvent, SFX_EVENT_CUES } from "~/lib/sfx/events";
+import { isLoopEvent, SFX_EVENT_CUES } from "~/lib/sfx/events";
 
 describe("SFX event mapping", () => {
-  it("maps every product event to a valid uisfx cue", () => {
-    for (const cue of Object.values(SFX_EVENT_CUES)) {
-      expect(isKnownCue(cue)).toBe(true);
-    }
-  });
+  // No "every event maps to a valid uisfx cue" test here: SFX_EVENT_CUES is
+  // declared `as const satisfies Record<string, CueName>`, so an invalid
+  // cue is already a compile error — a runtime test of it would only
+  // restate what `tsc` guarantees.
 
   it("marks only loop-backed semantic events as loops", () => {
     for (const event of Object.keys(SFX_EVENT_CUES) as Array<

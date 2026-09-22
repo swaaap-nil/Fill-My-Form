@@ -1,33 +1,28 @@
 import { expect, test } from "./fixtures";
 
 /**
- * Guards the fixtures themselves.
+ * Guards the fixtures themselves, for the specific properties nothing else
+ * in the suite proves.
  *
- * These are the pages form detection will be built and measured against, so a
- * fixture that silently loses its awkwardness — someone "tidying up" messy.html
- * by adding labels — would quietly make future accuracy numbers meaningless.
+ * Most fixture-shape drift is already caught more precisely by
+ * `e2e/extraction.spec.ts`'s committed goldens (`simple`/`messy`/`dynamic`/
+ * `controlled`) and its dedicated per-fixture assertions (`ibps-like.html`,
+ * `supabase.html`, …), and by `e2e/verify.spec.ts` for `controlled.html`'s
+ * write-technique behaviour — those test what the extractor and the fill
+ * loop actually do with a fixture, which is the thing that matters. A test
+ * here earns its place only when it proves something a golden or a
+ * behavioural test cannot: that the fixture's own markup or client-side JS
+ * still poses the specific problem it exists to pose, in a way an extracted
+ * `FormField`'s shape wouldn't visibly change even if the fixture lost it.
  */
-
-test("simple.html exposes every common control, all labelled", async ({
-  page,
-}) => {
-  await page.goto("/simple.html");
-
-  // Every control resolves by its accessible name: the easy case.
-  await expect(page.getByLabel("First name")).toBeVisible();
-  await expect(page.getByLabel("Email address")).toBeVisible();
-  await expect(page.getByLabel("10th Passing Year")).toBeVisible();
-  await expect(page.getByLabel("Undergraduate degree")).toBeVisible();
-  await expect(page.getByLabel("Cover note")).toBeVisible();
-  await expect(page.getByLabel("Upload resume")).toBeVisible();
-  await expect(page.getByRole("radio", { name: "Email" })).toBeVisible();
-});
 
 test("messy.html stays messy", async ({ page }) => {
   await page.goto("/messy.html");
 
   // The whole point of this fixture. If a label element appears here, the
-  // fixture has stopped representing the problem.
+  // fixture has stopped representing the problem — and a golden wouldn't
+  // necessarily notice, since <label for> resolving to the same text as the
+  // sibling-text fallback it replaced changes nothing in the extracted JSON.
   await expect(page.locator("label")).toHaveCount(0);
 
   const inputs = page.locator("#registration input");
@@ -44,85 +39,15 @@ test("messy.html stays messy", async ({ page }) => {
   await expect(page.getByText("Aadhaar Number")).toBeVisible();
 });
 
-test("ibps-like.html exposes the scanned photograph upload shape", async ({
-  page,
-}) => {
-  await page.goto("/ibps-like.html");
-
-  const photographRow = page
-    .locator(".file-row")
-    .filter({ hasText: "Scanned Photograph of the Candidate:" });
-  await expect(
-    photographRow.getByText("Scanned Photograph of the Candidate:"),
-  ).toBeVisible();
-  await expect(page.locator("#photographUpload")).toHaveAttribute(
-    "type",
-    "file",
-  );
-  await expect(photographRow.getByText("Choose file")).toBeVisible();
-  await expect(
-    photographRow.getByRole("button", { name: "Browse" }),
-  ).toBeVisible();
-
-  const signatureRow = page
-    .locator(".file-row")
-    .filter({ hasText: "Scanned Signature of the Candidate:" });
-  await expect(
-    signatureRow.getByText("Scanned Signature of the Candidate:"),
-  ).toBeVisible();
-  await expect(page.locator("#signatureUpload")).toHaveAttribute(
-    "type",
-    "file",
-  );
-  await expect(signatureRow.getByText("Choose file")).toBeVisible();
-  await expect(
-    signatureRow.getByRole("button", { name: "Browse" }),
-  ).toBeVisible();
-});
-
-test("dynamic.html injects fields after load and between steps", async ({
-  page,
-}) => {
-  await page.goto("/dynamic.html");
-
-  // Not present in the served HTML — appears on a timer.
-  await expect(page.getByLabel("How did you hear about us?")).toBeVisible();
-
-  // Step two is hidden until step one validates.
-  await expect(page.getByLabel("College / university")).toBeHidden();
-
-  await page.getByLabel("Email address").fill("not-an-email");
-  await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page.getByText("Enter a valid email address")).toBeVisible();
-  await expect(page.getByLabel("College / university")).toBeHidden();
-
-  await page.getByLabel("Email address").fill("someone@example.com");
-  await page.getByRole("button", { name: "Continue" }).click();
-
-  await expect(page.getByLabel("College / university")).toBeVisible();
-  await expect(page.getByLabel("Year of graduation")).toBeVisible();
-});
-
-test("controlled.html keeps its four hard-to-fill controls", async ({
+test("controlled.html: the custom combobox is only drivable by clicking an option", async ({
   page,
 }) => {
   await page.goto("/controlled.html");
 
-  // 1. React-controlled: a plain value write must be visibly undone by the
-  // page's own input handler, or this fixture has stopped proving anything.
-  const reactInput = page.locator("#react-name");
-  await reactInput.evaluate((el: HTMLInputElement) => {
-    el.value = "bypassed";
-  });
-  await expect(reactInput).toHaveValue("");
-
-  // 2. Masked phone: typing digits produces a reformatted value, not the
-  // raw keystrokes.
-  await page.locator("#masked-phone").pressSequentially("5551234567");
-  await expect(page.locator("#masked-phone")).toHaveValue("(555) 123-4567");
-
-  // 3. Custom combobox: a `<div>`, not a native control, and setting
-  // `.value` on it does nothing — only a click on an option works.
+  // A `<div>`, not a native control — setting `.value` does nothing, and
+  // nothing else in the suite proves the click-to-select affordance itself
+  // still works (`e2e/extraction.spec.ts` only proves the widget's options
+  // are visible to extraction, not that clicking one changes anything).
   await expect(page.locator("#combo-input")).toHaveAttribute(
     "role",
     "combobox",
@@ -130,8 +55,15 @@ test("controlled.html keeps its four hard-to-fill controls", async ({
   await page.locator("#combo-input").click();
   await page.getByRole("option", { name: "India" }).click();
   await expect(page.locator("#combo-input")).toHaveText("India");
+});
 
-  // 4. Strict-format date: an invalid format is silently reverted.
+test("controlled.html: an invalid strict-format date is silently reverted", async ({
+  page,
+}) => {
+  await page.goto("/controlled.html");
+
+  // Nothing else in the suite drives this field with a bad format — only
+  // with a value already known to be acceptable.
   const dateInput = page.locator("#strict-date");
   await dateInput.fill("15/06/1990");
   await dateInput.blur();
@@ -141,9 +73,13 @@ test("controlled.html keeps its four hard-to-fill controls", async ({
   await expect(dateInput).toHaveValue("15/06/1990");
 });
 
-test("supabase.html exposes an ATS application form with generated field names", async ({
+test("supabase.html: field names are still framework-generated, not human-readable", async ({
   page,
 }) => {
+  // The whole point of this fixture. `e2e/extraction.spec.ts`'s test proves
+  // the extractor resolves these fields by label/concept regardless of the
+  // name — which is exactly why it wouldn't notice the names themselves
+  // becoming ordinary and no longer exercising that resilience case.
   await page.route("**/*", (route) => {
     const url = new URL(route.request().url());
     return url.hostname === "localhost"
@@ -153,25 +89,6 @@ test("supabase.html exposes an ATS application form with generated field names",
   await page.goto("/supabase.html", { waitUntil: "domcontentloaded" });
 
   const labelledControls = page.locator("#form label[for]");
-  await expect(labelledControls).toHaveCount(12);
-
-  await expect(page.getByLabel("Name")).toBeVisible();
-  await expect(page.getByLabel("Email")).toBeVisible();
-  await expect(page.locator("#_systemfield_resume")).toHaveAttribute(
-    "type",
-    "file",
-  );
-  await expect(page.getByLabel("Passport Country")).toBeVisible();
-  await expect(page.getByLabel("Country of Residence")).toBeVisible();
-  await expect(page.getByLabel("Github Profile")).toBeVisible();
-  await expect(page.getByLabel("Linkedin")).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Upload File", exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Submit Application" }),
-  ).toBeVisible();
-
   const generatedNames = await labelledControls.evaluateAll((labels) =>
     labels
       .map((label) =>
@@ -181,6 +98,7 @@ test("supabase.html exposes an ATS application form with generated field names",
       )
       .filter((name): name is string => !!name),
   );
+
   expect(generatedNames).toContain("_systemfield_name");
   expect(generatedNames).toContain("_systemfield_email");
   expect(generatedNames.some((name) => /^[0-9a-f-]{36}$/.test(name))).toBe(
