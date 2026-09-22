@@ -3,6 +3,7 @@ import {
   agentAnswerButton,
   agentConfirmButton,
   agentStartButton,
+  clickScan,
   driveAgentToCompletion,
   grantAccess,
   openPanel,
@@ -122,6 +123,18 @@ test("dynamic.html: the agent loop itself (not the answers-card shortcut) surviv
   await formPage.bringToFront();
   await formPage.locator("#referral").waitFor({ state: "attached" });
 
+  // `grantAccess` only guarantees the scan control itself is idle again, not
+  // that the auto-scan it kicked off has already rendered a result — under
+  // CI's slower/parallel runners that gap is wide enough to matter, which
+  // `driveAgentToCompletion` elsewhere in this suite already guards against.
+  // Same guard here, since this test drives the loop's own buttons directly.
+  if (
+    !(await agentStartButton(panelPage)
+      .isVisible({ timeout: 1000 })
+      .catch(() => false))
+  ) {
+    await clickScan(panelPage);
+  }
   await agentStartButton(panelPage).click();
   await panelPage.getByPlaceholder("Your answer").fill("ananya@example.com");
   await agentAnswerButton(panelPage).click();
