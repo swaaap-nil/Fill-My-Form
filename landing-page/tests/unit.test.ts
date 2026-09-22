@@ -95,4 +95,9 @@ test('launch config rejects invalid GA4 and enables GA only in production', () =
     '',
   );
   assert.ok(validateConfig({}).firefox.includes('fill-my-form'));
+  assert.ok(
+    validateConfig({}).chrome.includes(
+      'chromewebstore.google.com/detail/fill-my-form/',
+    ),
+  );
 });

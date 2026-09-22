@@ -1,8 +1,8 @@
 /** Public site and store listing URLs — edit here, not via env. */
 export const storeLinks = {
   site: 'https://getfillmyform.store',
-  /** Empty hides the Chrome install button until a listing URL is set. */
-  chrome: '',
+  chrome:
+    'https://chromewebstore.google.com/detail/fill-my-form/hjhgganiglmckpgddgmbomechocnibie',
   firefox: 'https://addons.mozilla.org/en-US/firefox/addon/fill-my-form/',
 } as const;
 
