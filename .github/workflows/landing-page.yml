@@ -1,25 +1,27 @@
 name: Landing page
 
-on:
-  # Cloudflare handles automatic landing-page builds/deploys; this workflow
-  # is the PR gate (lint, unit tests, e2e) plus manual verification/deploy.
-  # Path-filtered so a PR that never touches landing-page/ doesn't pay for
-  # a Chromium install it has no use for.
-  pull_request:
-    paths:
-      - "landing-page/**"
-      - ".github/workflows/landing-page.yml"
-  push:
-    branches: [main]
-    paths:
-      - "landing-page/**"
-      - ".github/workflows/landing-page.yml"
-  workflow_dispatch:
-    inputs:
-      deploy:
-        type: choice
-        options: [none, preview, production]
-        default: none
+# Disabled. Cloudflare builds and deploys the landing page.
+# Uncomment the triggers below to restore this workflow.
+# on:
+#   # Cloudflare handles automatic landing-page builds/deploys; this workflow
+#   # is the PR gate (lint, unit tests, e2e) plus manual verification/deploy.
+#   # Path-filtered so a PR that never touches landing-page/ doesn't pay for
+#   # a Chromium install it has no use for.
+#   pull_request:
+#     paths:
+#       - "landing-page/**"
+#       - ".github/workflows/landing-page.yml"
+#   push:
+#     branches: [main]
+#     paths:
+#       - "landing-page/**"
+#       - ".github/workflows/landing-page.yml"
+#   workflow_dispatch:
+#     inputs:
+#       deploy:
+#         type: choice
+#         options: [none, preview, production]
+#         default: none
 
 concurrency:
   group: landing-page-${{ github.event_name }}-${{ github.ref }}
