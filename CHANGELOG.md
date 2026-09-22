@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.8.1](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.8.0...v1.8.1) (2026-09-22)
+
+### Features
+
+* **flow:** enabled chrome submit phase ([2b7b7be](https://github.com/swaaap-nil/Fill-My-Form/commit/2b7b7be7949ba52573c6b7126b1cef5c22edfd78))
+
 ## [1.8.0](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.7.0...v1.8.0) (2026-09-22)
 
 ### Features
