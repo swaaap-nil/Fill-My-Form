@@ -31,6 +31,7 @@ declare global {
   interface Window {
     __formAgentExtract?: (doc?: Document) => PageObservation;
     __formAgentExtractFull?: (doc?: Document) => Form[];
+    __pendingReferralTimer?: () => void;
   }
 }
 
@@ -157,13 +158,28 @@ test("field ids on dynamic.html survive the step-1 to step-2 transition", async 
 test("the 600ms injected referral field appears only in a re-observation", async ({
   page,
 }) => {
-  // Installed before navigation so the fixture's own setTimeout(600) is
-  // paused from the moment its script runs — the first `observe()` below is
-  // then guaranteed to land before it fires, no matter how long page load +
-  // extractor injection take in wall-clock time. Without this, a slow CI
-  // runner can burn past 600ms of real time before the first `observe()`
-  // ever runs, making the field already present and this assertion flaky.
-  await page.clock.install();
+  // Playwright's fake clock (`page.clock`) needs CDP virtual-time support
+  // that isn't guaranteed on every `channel: "chromium"` build CI resolves —
+  // when it's missing, `clock.install()` silently no-ops and the fixture's
+  // real setTimeout(600) is back to racing page load + extractor injection
+  // against wall-clock time. Intercepting `setTimeout` ourselves via an init
+  // script sidesteps CDP entirely: the callback is captured, not scheduled,
+  // and we fire it on command, so the test is deterministic on every runner.
+  await page.addInitScript(() => {
+    const realSetTimeout = window.setTimeout.bind(window);
+    window.setTimeout = ((
+      handler: TimerHandler,
+      timeout?: number,
+      ...args: unknown[]
+    ) => {
+      if (timeout === 600 && typeof handler === "function") {
+        window.__pendingReferralTimer = handler as () => void;
+        return 0;
+      }
+      return realSetTimeout(handler as TimerHandler, timeout, ...args);
+    }) as typeof window.setTimeout;
+  });
+
   await page.goto("/dynamic.html");
   await injectExtractor(page);
 
@@ -171,9 +187,8 @@ test("the 600ms injected referral field appears only in a re-observation", async
   const labelsBefore = first.forms[0]?.fields.map((f) => f.label) ?? [];
   expect(labelsBefore).not.toContain("How did you hear about us?");
 
-  // Deterministically fire the fixture's 600ms timer instead of waiting on
-  // real time.
-  await page.clock.fastForward(600);
+  // Fire the captured callback directly instead of waiting on real time.
+  await page.evaluate(() => window.__pendingReferralTimer?.());
   await page.locator("#referral").waitFor({ state: "attached" });
 
   const second = await observe(page);
