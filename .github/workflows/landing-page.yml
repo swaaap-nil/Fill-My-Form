@@ -1,14 +1,29 @@
 name: Landing page
 
 on:
-  # Cloudflare handles automatic landing-page builds/deploys. Keep manual
-  # dispatch for verification or an explicit deploy.
+  # Cloudflare handles automatic landing-page builds/deploys; this workflow
+  # is the PR gate (lint, unit tests, e2e) plus manual verification/deploy.
+  # Path-filtered so a PR that never touches landing-page/ doesn't pay for
+  # a Chromium install it has no use for.
+  pull_request:
+    paths:
+      - "landing-page/**"
+      - ".github/workflows/landing-page.yml"
+  push:
+    branches: [main]
+    paths:
+      - "landing-page/**"
+      - ".github/workflows/landing-page.yml"
   workflow_dispatch:
     inputs:
       deploy:
         type: choice
         options: [none, preview, production]
         default: none
+
+concurrency:
+  group: landing-page-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_call' }}
 
 permissions:
   contents: read

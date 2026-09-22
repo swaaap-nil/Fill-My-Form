@@ -43,8 +43,12 @@ jobs:
       - name: Typecheck
         run: bun typecheck
 
-      - name: Unit tests
-        run: bun test ./src ./scripts
+      # Runs the unit suite (same as `bun test ./src ./scripts`) and then
+      # enforces the coverage floor on src/core and src/lib — see
+      # scripts/check-coverage.ts for why that isn't bunfig's own
+      # coverageThreshold.
+      - name: Unit tests and coverage floor
+        run: bun run check:coverage
 
       - name: Assert no document-reading dependencies
         run: bun run check:forbidden-deps
