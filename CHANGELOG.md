@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.9.0](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.8.1...v1.9.0) (2026-09-22)
+
+* See the Git history for this tag.
+
 ## [1.8.1](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.8.0...v1.8.1) (2026-09-22)
 
 ### Features
