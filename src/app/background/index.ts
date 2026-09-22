@@ -5,7 +5,6 @@ import {
   answerQuestion,
   confirmReview,
   createRun,
-  currentReview,
   drive,
   FILL_FIELD_TOOL,
   INSPECT_FORM_TOOL,
@@ -14,9 +13,8 @@ import {
   UPLOAD_FILE_TOOL,
 } from "~/core/agent/loop";
 import { Certainty, isTerminal } from "~/core/agent/types";
-import { confirmDecision, planFill } from "~/core/fill/driver";
+import { planFill } from "~/core/fill/driver";
 import { PendingDecisionRegistry } from "~/core/fill/pending-decisions";
-import { FieldKind } from "~/core/form/types";
 import { createLogger, LogErrorCode } from "~/core/logging";
 import { resolve } from "~/core/matching/resolve";
 import { deriveFreshnessHorizon } from "~/core/memory/freshness";
@@ -52,7 +50,7 @@ import {
   isLocalDataExport,
   type PersistentLocalDataStore,
 } from "~/lib/indexeddb-local-data";
-import { onMessage, type RunView, sendMessage } from "~/lib/messaging";
+import { onMessage, sendMessage } from "~/lib/messaging";
 import { siteAccess, wireSiteAccessPermissionEvents } from "~/lib/site-access";
 import { clearTabFillSnapshot } from "~/lib/tab-fill-snapshot";
 import {
@@ -63,6 +61,11 @@ import {
   pendingDecisionsProxy,
   wireProactiveDetection,
 } from "~/lib/wire-proactive-detection";
+import {
+  confirmFillHandler,
+  getMemorySnapshotHandler,
+  toRunView,
+} from "./handlers";
 
 /**
  * The composition root.
@@ -290,43 +293,6 @@ const buildLoopPorts = async (tabId: number): Promise<LoopPorts> => {
   };
 };
 
-const toRunView = (snapshot: RunSnapshot): RunView => ({
-  runId: snapshot.run.id,
-  phase: snapshot.run.state.phase,
-  status: snapshot.run.state.status,
-  pendingQuestion: snapshot.run.state.pendingQuestion,
-  pendingInput: pendingInputFor(snapshot),
-  review: currentReview(snapshot),
-});
-
-const pendingInputFor = (
-  snapshot: RunSnapshot,
-): RunView["pendingInput"] | undefined => {
-  if (
-    snapshot.run.state.status !== "waiting_for_user" ||
-    snapshot.pendingDecision?.action.type !== "ask_user" ||
-    !snapshot.cursor
-  ) {
-    return undefined;
-  }
-
-  const field = snapshot.fields.find(
-    (candidate) => candidate.id === snapshot.cursor,
-  );
-  if (!field || field.kind !== FieldKind.FILE) return { kind: "text" };
-
-  const accept = field.constraints.find(
-    (constraint) => constraint.kind === "accept",
-  );
-  return {
-    kind: "file",
-    fieldId: field.id,
-    label: field.label,
-    accept: accept?.value,
-    constraints: field.constraints,
-  };
-};
-
 /** Drives a run and persists the result, clearing the snapshot once terminal. */
 const driveAndPersist = async (
   snapshot: RunSnapshot,
@@ -444,114 +410,30 @@ const main = () => {
     return { granted: true, proposals, uploadIntents };
   });
 
-  onMessage("confirmFill", async ({ data }) => {
-    const memoryStore = withFileReferenceCleanup(await getLocalDataStore());
-    const files = createBrowserFileComplianceAdapter(await getFileStore());
-    const tabId = data.tabId;
-
-    if (!(await tabHasSiteAccess(tabId))) {
-      return {
-        results: data.decisionIds.map((decisionId) => ({
-          decisionId,
-          ok: false,
-        })),
-      };
-    }
-
-    const results = await Promise.all(
-      data.decisionIds.map(async (decisionId) => {
-        const decision = pendingDecisions.take(decisionId, tabId);
-        if (!decision) return { decisionId, ok: false };
-
-        const outcome = confirmDecision(decision, defaultPolicy);
-        if (!outcome.ok) return { decisionId, ok: false };
-        if (!(await tabHasSiteAccess(tabId))) return { decisionId, ok: false };
-
-        let ok = false;
-        if (outcome.payload.kind === "file") {
-          const prepared = await files.prepareLocalFile(
-            outcome.payload.ref,
-            decision.constraints ?? [],
-          );
-          if (prepared) {
-            try {
-              const result = await sendMessage(
-                "uploadFile",
-                {
-                  decisionId,
-                  fieldId: outcome.fieldId,
-                  upload: await uploadPayloadOf(prepared),
-                },
-                tabId,
-              );
-              ok = result.ok;
-            } finally {
-              if (prepared.temporaryRef) {
-                await files.cleanupPreparedFile(prepared.temporaryRef);
-              }
-            }
-          }
-        } else {
-          const result = await sendMessage(
-            "fillField",
-            {
-              decisionId,
-              fieldId: outcome.fieldId,
-              value: outcome.payload.value,
-            },
-            tabId,
-          );
-          ok = result.ok;
-        }
-
-        if (ok) {
-          const concept = ontology.byKey(decision.conceptKey);
-          const confirmedAt = new Date().toISOString();
-          // A select/radio field's payload carries the page's own option
-          // value (an opaque code, sometimes) — never what memory should
-          // remember. `memoryValue` is the canonical text for that case;
-          // every other decision leaves it unset and falls back to the
-          // payload, unchanged from before this existed.
-          const textMemoryValue =
-            outcome.memoryValue ??
-            (outcome.payload.kind === "text" ? outcome.payload.value : "");
-          const horizon = concept
-            ? deriveFreshnessHorizon(
-                concept,
-                textMemoryValue,
-                confirmedAt,
-                bundledFreshnessDurationPolicy,
-              )
-            : undefined;
-          await recordAnswer(memoryStore, {
-            profileId: DEFAULT_PROFILE_ID,
-            key: decision.conceptKey,
-            value:
-              outcome.payload.kind === "text"
-                ? textMemoryValue
-                : outcome.payload.ref,
-            source: MemorySource.USER_CONFIRMED,
-            now: confirmedAt,
-            expiresAt: horizon?.expiresAt,
-            freshnessRule: horizon?.freshnessRule,
-          });
-        }
-
-        return { decisionId, ok };
-      }),
-    );
-
-    const filledCount = results.filter((result) => result.ok).length;
-    if (filledCount > 0) {
-      await sendMessage("showFillFeedback", { filledCount }, tabId).catch(() =>
-        logger.warn("could not show fill feedback", {
-          errorCode: LogErrorCode.EXTENSION_API,
-        }),
-      );
-    }
-
-    return { results };
-  });
+  onMessage("confirmFill", async ({ data }) =>
+    confirmFillHandler(
+      {
+        memoryStore: withFileReferenceCleanup(await getLocalDataStore()),
+        files: createBrowserFileComplianceAdapter(await getFileStore()),
+        pendingDecisions,
+        hasSiteAccess: tabHasSiteAccess,
+        messaging: {
+          fillField: (payload, tabId) =>
+            sendMessage("fillField", payload, tabId),
+          uploadFile: (payload, tabId) =>
+            sendMessage("uploadFile", payload, tabId),
+          showFillFeedback: (payload, tabId) =>
+            sendMessage("showFillFeedback", payload, tabId).catch(() => {
+              logger.warn("could not show fill feedback", {
+                errorCode: LogErrorCode.EXTENSION_API,
+              });
+              return undefined;
+            }),
+        },
+      },
+      data,
+    ),
+  );
 
   onMessage("recordOnboardingAnswer", async ({ data }) => {
     const memoryStore = withFileReferenceCleanup(await getLocalDataStore());
@@ -585,11 +467,9 @@ const main = () => {
     return { ok: true };
   });
 
-  onMessage("getMemorySnapshot", async () => ({
-    items: await (await getLocalDataStore()).search({
-      profileId: DEFAULT_PROFILE_ID,
-    }),
-  }));
+  onMessage("getMemorySnapshot", async () =>
+    getMemorySnapshotHandler({ memoryStore: await getLocalDataStore() }),
+  );
 
   onMessage("exportLocalData", async () => ({
     data: await (await getLocalDataStore()).exportLocalData(),
