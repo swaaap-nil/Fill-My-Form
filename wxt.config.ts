@@ -72,11 +72,18 @@ export default defineConfig({
      * address, and is public (visible in the manifest and the AMO
      * listing), same as any other extension id.
      *
-     * `data_collection_permissions.required: ["none"]` is mandatory for
-     * new extensions from November 3, 2025 — not a warning to suppress.
-     * "none" is also the honest answer here: the extension makes no
-     * network requests of its own and there is no analytics client wired
-     * up. See docs/privacy.md.
+     * `data_collection_permissions.required` is mandatory for new
+     * extensions from November 3, 2025 — not a warning to suppress.
+     *
+     * TODO(before next Firefox submission): this is stale. `["none"]` was
+     * honest when the extension made no network requests of its own, but
+     * ADR 010 wires an optional, on-by-default, anonymous analytics client
+     * (OpenPanel). Update this to the correct AMO data-collection category
+     * (verify against Mozilla's current taxonomy at submission time — see
+     * docs/adr/010-product-analytics.md and docs/privacy.md) before the next
+     * `submit:firefox` run, and update the AMO listing's own disclosure to
+     * match. Left as "none" for now so this isn't silently wrong in a
+     * direction nobody reviewed.
      */
     ...(env.browser === "firefox" && {
       browser_specific_settings: {

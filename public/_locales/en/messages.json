@@ -82,6 +82,13 @@
   "localDataDeleted": {
     "message": "Deleted local data."
   },
+  "analyticsPreferenceLabel": {
+    "message": "Share anonymous usage analytics"
+  },
+  "analyticsPreferenceDescription": {
+    "description": "Explains what analytics does and does not include, shown under the toggle.",
+    "message": "Helps us see which features are used and where scans or fills fail. Never includes form values, page content, memory, or full URLs."
+  },
   "editImageGuidanceTrigger": {
     "description": "Help trigger shown near image editing controls.",
     "message": "Should I use this?"

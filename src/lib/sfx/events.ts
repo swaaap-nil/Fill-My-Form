@@ -1,7 +1,7 @@
 import { CUES, type CueName, type PlayOptions } from "uisfx";
 
 export const SELECTED_SFX_PACK = "soft";
-export const DEFAULT_SFX_VOLUME = 0.7;
+export const DEFAULT_SFX_VOLUME = 1.0;
 
 export const SFX_EVENT_CUES = {
   sidepanelViewSwitch: "select",

@@ -4,6 +4,7 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { concepts } from "~/core/ontology";
 import { Sensitivity } from "~/core/ontology/types";
+import { AnalyticsPreferenceControl } from "./analytics-preference-control";
 import { AutosaveStatusIcon, AutosaveTextField } from "./autosave-text-field";
 import { LocalDataControls } from "./local-data-controls";
 import { useMemoryAutosave } from "./use-memory-autosave";
@@ -158,6 +159,7 @@ export const OnboardingForm = () => {
         {savedCount} value{savedCount === 1 ? "" : "s"} saved
       </p>
       <LocalDataControls onDataChanged={reload} />
+      <AnalyticsPreferenceControl />
     </form>
   );
 };

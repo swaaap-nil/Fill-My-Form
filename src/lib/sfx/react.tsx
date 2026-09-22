@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { track } from "~/lib/analytics/track";
 import type { SfxEvent } from "./events";
 import {
   createSoundPreferenceStore,
@@ -72,8 +73,14 @@ export const SoundProvider = ({
     () => ({
       preferences,
       canPlayAudio: serviceRef.current?.canPlayAudio ?? false,
-      play: (event) => serviceRef.current?.play(event),
-      startLoop: (id, event) => serviceRef.current?.startLoop(id, event),
+      play: (event) => {
+        serviceRef.current?.play(event);
+        track(event);
+      },
+      startLoop: (id, event) => {
+        serviceRef.current?.startLoop(id, event);
+        track(event);
+      },
       stopLoop: (id) => serviceRef.current?.stopLoop(id),
       setEnabled: async (enabled) => {
         const next = { ...preferences, enabled };

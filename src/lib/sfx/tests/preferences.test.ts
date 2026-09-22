@@ -22,7 +22,7 @@ describe("sound preference store", () => {
 
     await expect(createSoundPreferenceStore(storage).load()).resolves.toEqual({
       enabled: true,
-      volume: 0.7,
+      volume: 1.0,
     });
   });
 

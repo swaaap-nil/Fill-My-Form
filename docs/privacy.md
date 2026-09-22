@@ -157,12 +157,30 @@ with an empty environment to keep it that way.
 
 ## When analytics is enabled
 
-Only anonymous product events. Never memory values, form values, file names,
-page content, or URLs with query strings. `LogFields` is the guide for what is
-safe: identifiers, enumerations and measurements.
+Analytics is [OpenPanel](https://openpanel.dev), wired the same way Supabase
+is: optional, key-gated (`VITE_OPENPANEL_CLIENT_ID`), `null` and a no-op with
+an empty `.env`. See [ADR 010](./adr/010-product-analytics.md) for why
+OpenPanel and not another vendor.
+
+Only anonymous product events, from a closed allowlist
+(`ANALYTICS_TRACKED_EVENTS` in `src/lib/analytics/events.ts`) of scan/fill/
+agent lifecycle events, feature usage, and local-data actions. Never memory
+values, form values, file names, page content, or URLs with query strings.
+`AnalyticsFields` — modeled on `LogFields` — is the guide for what is safe:
+identifiers, enumerations and measurements. `src/core/**` cannot import the
+OpenPanel client at all (`biome.json`); instrumentation lives in
+`src/lib/analytics/` and reuses the same call sites that already fire sound
+cues (`src/lib/sfx/react.tsx`), so no new places in the code report events.
 
 `origin` is loggable; a full URL is not. A query string can carry a session
 token, an email address or a search term.
+
+Analytics defaults to **on** — the schema above is anonymous and aggregate by
+construction, which is why it doesn't need the same opt-in gate as the
+ADR-007 contribution channel below. A toggle in the side panel's settings
+(`analyticsPreferenceLabel`) turns it off; the client only appears when
+configured, so the toggle itself is hidden when no `VITE_OPENPANEL_CLIENT_ID`
+is set.
 
 ## What crosses, in each direction
 
