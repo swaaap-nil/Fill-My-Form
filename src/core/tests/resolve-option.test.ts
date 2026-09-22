@@ -5,7 +5,9 @@ import { OptionMatchTier, resolveOption } from "~/core/matching/resolve-option";
 import type { Concept } from "~/core/ontology/types";
 import { Sensitivity, Volatility } from "~/core/ontology/types";
 
-const concept = (valueAliases?: Record<string, string>): Concept => ({
+const concept = (
+  valueAliases?: Record<string, Record<string, string>>,
+): Concept => ({
   key: "identity.test_concept",
   label: "Test concept",
   sensitivity: Sensitivity.PERSONAL,
@@ -54,7 +56,24 @@ describe("resolveOption", () => {
     const result = resolveOption(
       "Indian",
       options,
-      concept({ indian: "india" }),
+      concept({ en: { indian: "india" } }),
+    );
+    expect(result.certainty).toBe(Certainty.KNOWN);
+    if (result.certainty !== Certainty.KNOWN) throw new Error("unreachable");
+    expect(result.option).toEqual({ value: "IN", label: "India" });
+    expect(result.tier).toBe(OptionMatchTier.VALUE_ALIAS);
+  });
+
+  it("resolves a non-English demonym through the concept's locale-scoped valueAliases table", () => {
+    const options: readonly FormOption[] = [
+      { value: "IN", label: "India" },
+      { value: "US", label: "United States" },
+    ];
+    const result = resolveOption(
+      "Indio",
+      options,
+      concept({ en: { indian: "india" }, es: { indio: "india" } }),
+      "es",
     );
     expect(result.certainty).toBe(Certainty.KNOWN);
     if (result.certainty !== Certainty.KNOWN) throw new Error("unreachable");

@@ -400,6 +400,81 @@ describe("upload intents", () => {
   });
 });
 
+describe("documentLocale", () => {
+  it("reads the primary language subtag from <html lang>", () => {
+    const doc = docFromHtml(`
+      <form>
+        <input name="q">
+        <button type="submit">Apply</button>
+      </form>
+    `);
+    doc.documentElement.lang = "es-MX";
+    expect(extractFull(doc)[0]?.documentLocale).toBe("es");
+  });
+
+  it("is undefined when the page declares no lang", () => {
+    const doc = docFromHtml(`
+      <form>
+        <input name="q">
+        <button type="submit">Apply</button>
+      </form>
+    `);
+    expect(extractFull(doc)[0]?.documentLocale).toBeUndefined();
+  });
+});
+
+describe("non-English upload and submit classification (regression for the ontology-driven refactor)", () => {
+  it("classifies a German-labelled upload control by kind via the ontology, not English regex", () => {
+    const doc = docFromHtml(`
+      <form>
+        <div>
+          <label>Lebenslauf hochladen<input type="file" name="cv"></label>
+          <p>Nur PDF.</p>
+        </div>
+        <div>
+          <label>Unterschrift<input type="file" name="sig"></label>
+          <p>Bild hochladen.</p>
+        </div>
+        <div>
+          <label>Foto<input type="file" name="photo"></label>
+          <p>Bild hochladen.</p>
+        </div>
+        <button type="submit">Absenden</button>
+      </form>
+    `);
+    doc.documentElement.lang = "de";
+
+    const intents = extractFull(doc)[0]?.uploadIntents ?? [];
+    const kindOf = (label: string) =>
+      intents.find((i) => i.label === label)?.kind;
+
+    expect(kindOf("Lebenslauf hochladen")).toBe("document");
+    expect(kindOf("Unterschrift")).toBe("signature");
+    expect(kindOf("Foto")).toBe("photo");
+  });
+
+  it("recognises a German submit verb as the form's submit label", () => {
+    const doc = docFromHtml(`
+      <form>
+        <input name="q">
+        <button>Weiter</button>
+      </form>
+    `);
+    doc.documentElement.lang = "de";
+    expect(extractFull(doc)[0]?.submitLabel).toBe("Weiter");
+  });
+
+  it("still recognises the existing English submit verbs (no regression)", () => {
+    const doc = docFromHtml(`
+      <form>
+        <input name="q">
+        <button>Continue</button>
+      </form>
+    `);
+    expect(extractFull(doc)[0]?.submitLabel).toBe("Continue");
+  });
+});
+
 describe("nearbyText boundaries", () => {
   it("does not leak an unrelated field's boundary text (a following <fieldset>) into nearbyText", () => {
     const fields = fieldsOf(`

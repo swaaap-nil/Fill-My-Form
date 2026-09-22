@@ -107,6 +107,7 @@ export const formSchema = z.object({
   submitLabel: z.string().optional(),
   fields: z.array(formFieldSchema),
   uploadIntents: z.array(uploadIntentSchema).optional(),
+  documentLocale: z.string().optional(),
 });
 
 export const inspectFormOutputSchema = z.object({

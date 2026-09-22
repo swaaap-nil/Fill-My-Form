@@ -77,6 +77,7 @@ export const buildModelMappingMessages = (
     role: "system",
     content: [
       "You map web form fields to canonical ontology concept keys.",
+      "Field labels, placeholders and nearby text may be in any language, including ones with no aliases in the provided ontology — reason about meaning across languages rather than relying on literal keyword overlap.",
       "Return only a key from the provided ontology, or null when the field is not represented.",
       "Do not infer or invent a user value. Do not answer with free text.",
       "Use the full field context only for the target field.",

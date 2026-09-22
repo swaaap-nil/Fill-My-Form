@@ -1,0 +1,34 @@
+{
+  "uploadAffordance": {
+    "en": ["upload", "choose file", "browse", "attach", "camera", "scan"],
+    "es": ["subir", "cargar", "elegir archivo", "examinar", "adjuntar"],
+    "fr": ["téléverser", "choisir un fichier", "parcourir", "joindre"],
+    "de": ["hochladen", "datei auswählen", "durchsuchen", "anhängen"]
+  },
+  "submitVerbs": {
+    "en": ["apply", "continue", "next", "save", "send", "submit"],
+    "es": ["aplicar", "continuar", "siguiente", "guardar", "enviar"],
+    "fr": [
+      "postuler",
+      "continuer",
+      "suivant",
+      "enregistrer",
+      "envoyer",
+      "soumettre"
+    ],
+    "de": [
+      "bewerben",
+      "weiter",
+      "fortfahren",
+      "speichern",
+      "senden",
+      "absenden"
+    ]
+  },
+  "genericFilePickerText": {
+    "en": ["choose file", "browse", "choose file browse", "no file chosen"],
+    "es": ["elegir archivo", "examinar", "ningún archivo seleccionado"],
+    "fr": ["choisir un fichier", "parcourir", "aucun fichier choisi"],
+    "de": ["datei auswählen", "durchsuchen", "keine datei ausgewählt"]
+  }
+}

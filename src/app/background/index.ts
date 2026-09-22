@@ -361,6 +361,7 @@ const main = () => {
     const fields = forms.flatMap((form) => form.fields);
     const uploadIntents = forms.flatMap((form) => form.uploadIntents ?? []);
     const origin = new URL(tab.url).origin;
+    const documentLocale = forms[0]?.documentLocale;
 
     const { proposals, decisions } = await planFill(
       fields,
@@ -370,6 +371,7 @@ const main = () => {
       defaultPolicy,
       () => crypto.randomUUID(),
       () => new Date().toISOString(),
+      documentLocale,
     );
 
     const memoryValues = (
@@ -381,7 +383,7 @@ const main = () => {
       .filter((value): value is string => typeof value === "string");
 
     for (const field of fields) {
-      const match = resolve(field, ontology);
+      const match = resolve(field, ontology, documentLocale);
       if (
         match.certainty !== Certainty.UNKNOWN &&
         match.certainty !== Certainty.AMBIGUOUS

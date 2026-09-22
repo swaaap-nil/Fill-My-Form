@@ -66,6 +66,7 @@ export const wireProactiveDetection = (deps: {
     const uploadIntents = extracted.forms.flatMap(
       (form) => form.uploadIntents ?? [],
     );
+    const documentLocale = extracted.forms[0]?.documentLocale;
     const { proposals, decisions } = await planFill(
       fields,
       ontology,
@@ -74,6 +75,7 @@ export const wireProactiveDetection = (deps: {
       defaultPolicy,
       () => crypto.randomUUID(),
       () => new Date().toISOString(),
+      documentLocale,
     );
 
     for (const [decisionId, decision] of decisions) {

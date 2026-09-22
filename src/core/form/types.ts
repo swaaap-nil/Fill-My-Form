@@ -135,6 +135,8 @@ export interface FormSummary {
 export interface Form extends Omit<FormSummary, "fields"> {
   readonly fields: readonly FormField[];
   readonly uploadIntents?: readonly UploadIntent[];
+  /** Primary language subtag declared by the page (from `<html lang>`), e.g. "en", "hi", "es". */
+  readonly documentLocale?: string;
 }
 
 /**

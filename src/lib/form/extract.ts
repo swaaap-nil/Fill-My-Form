@@ -79,6 +79,12 @@ import type {
   UploadIntent,
 } from "../../core/form/types";
 import { FieldKind as Kind } from "../../core/form/types";
+import { classifyByAliasCoverage } from "../../core/matching/resolve";
+import { ontology } from "../../core/ontology";
+import {
+  containsLexiconPhrase,
+  isExactLexiconPhrase,
+} from "../../core/ontology/ui-lexicon";
 
 /**
  * Chosen with generous headroom over any real form (dozens of fields) while
@@ -144,24 +150,25 @@ const textOf = (el: Element | null | undefined): string | undefined => {
 const isFileInput = (el: Element): el is HTMLInputElement =>
   el instanceof HTMLInputElement && el.type === "file";
 
+/**
+ * Primary language subtag the page itself declares via `<html lang>` — the
+ * page author's own signal, unlike `navigator.language` which reflects the
+ * browser's UI locale, not this document's content. `"es-MX"` -> `"es"`.
+ */
+const documentLocaleOf = (doc: Document): string | undefined => {
+  const raw = doc.documentElement.lang || undefined;
+  return raw?.trim().toLowerCase().split(/[-_]/)[0] || undefined;
+};
+
 const isAriaWidget = (el: Element): el is HTMLElement =>
   el.getAttribute("role") === "combobox";
 
-const normaliseUiText = (text: string): string =>
-  text
-    .toLowerCase()
-    .replace(/[^a-z0-9 ]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
 const isGenericFilePickerText = (el: Element, text: string): boolean => {
   if (!isFileInput(el)) return false;
-  const normalised = normaliseUiText(text);
-  return (
-    normalised === "choose file" ||
-    normalised === "browse" ||
-    normalised === "choose file browse" ||
-    normalised === "no file chosen"
+  return isExactLexiconPhrase(
+    "genericFilePickerText",
+    text,
+    documentLocaleOf(el.ownerDocument),
   );
 };
 
@@ -615,6 +622,7 @@ const widgetOptionsOf = (
 };
 
 const submitLabelOf = (container: Element): string | undefined => {
+  const locale = documentLocaleOf(container.ownerDocument);
   const explicitSubmit = container.querySelector<HTMLElement>(
     'button[type="submit"], input[type="submit"]',
   );
@@ -623,9 +631,7 @@ const submitLabelOf = (container: Element): string | undefined => {
   ).filter((button) => {
     if (button.getAttribute("aria-pressed") !== null) return false;
     const text = textOf(button);
-    return text
-      ? /\b(apply|continue|next|save|send|submit)\b/i.test(text)
-      : false;
+    return text ? containsLexiconPhrase("submitVerbs", text, locale) : false;
   });
   const submit = explicitSubmit ?? implicitButtons.at(-1);
   if (!submit) return undefined;
@@ -644,34 +650,63 @@ export type FieldElements = Element | readonly Element[];
 const uploadControlText = (el: Element): string | undefined =>
   textOf(el) ?? el.getAttribute("aria-label")?.trim() ?? undefined;
 
-const uploadKindOf = (text: string): UploadIntent["kind"] => {
-  const value = normaliseUiText(text);
-  if (/signature|sign\b|handwritten|autograph|pen\b/.test(value))
-    return "signature";
-  if (
-    /photograph|photo\b|picture|portrait|headshot|camera\b|face image/.test(
-      value,
-    )
-  )
-    return "photo";
-  if (/document|certificate|resume|cv\b|pdf\b|proof|upload/.test(value))
-    return "document";
-  return "unknown";
+/**
+ * The three upload-kind concepts, classified through the same ontology-
+ * driven matcher used for known fields (`~/core/matching/resolve`) rather
+ * than a separate, English-only regex — see `conceptKeyForUploadIntent` in
+ * `~/core/matching/upload-intent-name`, which does the equivalent
+ * classification for a fully-extracted `UploadIntent`. `minAliasTokens: 1`
+ * because this call site picks among only 3 candidates, where the tier
+ * 4/5 default of 2 (tuned for disambiguating 80+ concepts) would reject
+ * every alias here, since they are mostly single words ("signature",
+ * "photo", "resume").
+ */
+const UPLOAD_KIND_CONCEPTS: Record<string, UploadIntent["kind"]> = {
+  "documents.signature": "signature",
+  "documents.photo": "photo",
+  "documents.resume": "document",
 };
 
+const uploadKindConcepts = ontology.all.filter(
+  (c) => c.key in UPLOAD_KIND_CONCEPTS,
+);
+
+const uploadKindOf = (text: string, locale?: string): UploadIntent["kind"] => {
+  const key = classifyByAliasCoverage(text, uploadKindConcepts, locale, 1);
+  return key ? (UPLOAD_KIND_CONCEPTS[key] ?? "unknown") : "unknown";
+};
+
+/**
+ * True for generic upload-chrome text ("Upload", "Browse", "Attach") *or*
+ * text that names one of the three recognised upload kinds directly
+ * ("Photo", "Signature", "Resume") even without an upload verb — the
+ * pre-refactor regex covered both cases, so this does too, now via the
+ * locale-keyed lexicon plus the same ontology classification `uploadKindOf`
+ * uses, rather than a second bespoke word list.
+ */
 const isUploadControl = (el: Element): boolean => {
   const text = uploadControlText(el);
-  return (
-    !!text &&
-    /upload|choose file|browse|attach|photograph|photo\b|signature|camera\b|scan/i.test(
-      text,
-    )
-  );
+  if (!text) return false;
+  const locale = documentLocaleOf(el.ownerDocument);
+  if (containsLexiconPhrase("uploadAffordance", text, locale)) return true;
+  return !!classifyByAliasCoverage(text, uploadKindConcepts, locale, 1);
 };
 
 const bytesForUnit = (value: number, unit: string): number =>
   value * (unit.toLowerCase() === "mb" ? 1024 * 1024 : 1024);
 
+/**
+ * Known limitation: parses free-form upload-constraint prose (dimensions,
+ * aspect ratio, file-size ranges) via English-only regex. This is
+ * open-ended natural-language parsing, not a bounded vocabulary like
+ * `uploadKindOf`/`isUploadControl` above, so it doesn't fit the static
+ * locale-keyed lexicon/ontology pattern used elsewhere in this file — a
+ * real fix would mean either a translation pipeline or routing this text
+ * through the LLM fallback (`~/core/matching/model-tier`) as a structured-
+ * extraction call. Deliberately left as-is; on a non-English page these
+ * constraints are simply not extracted (the upload is still detected and
+ * classified correctly, just without parsed dimension/size limits).
+ */
 const uploadConstraintsOf = (text: string): FieldConstraint[] => {
   const constraints: FieldConstraint[] = [];
   const formats = Array.from(
@@ -724,6 +759,7 @@ const uploadConstraintsOf = (text: string): FieldConstraint[] => {
 };
 
 const uploadSectionOf = (el: Element): Element => {
+  const locale = documentLocaleOf(el.ownerDocument);
   let current = el.parentElement;
   let best: Element | undefined;
   while (
@@ -732,12 +768,18 @@ const uploadSectionOf = (el: Element): Element => {
     current.tagName !== "FORM"
   ) {
     const text = textOf(current) ?? "";
+    // Format/constraint markers (file size, pixel resolution, aspect ratio)
+    // — same documented English-only limitation as `uploadConstraintsOf`.
     if (
       text.length <= 2400 &&
       /file size|pixel resolution|aspect ratio|JPEG|JPG|PNG/i.test(text)
     )
       return current;
-    if (!best && text.length <= 2400 && /upload|choose file|browse/i.test(text))
+    if (
+      !best &&
+      text.length <= 2400 &&
+      containsLexiconPhrase("uploadAffordance", text, locale)
+    )
       best = current;
     current = current.parentElement;
   }
@@ -748,6 +790,7 @@ const extractUploadIntents = (
   form: Element,
   formIndex: number,
 ): UploadIntent[] => {
+  const locale = documentLocaleOf(form.ownerDocument);
   const controls = Array.from(
     form.querySelectorAll<Element>('button, [role="button"], label'),
   ).filter(
@@ -762,7 +805,7 @@ const extractUploadIntents = (
     const label = uploadControlText(control);
     const description = textOf(section);
     if (!label || !description) return [];
-    const kind = uploadKindOf(`${label} ${description}`);
+    const kind = uploadKindOf(`${label} ${description}`, locale);
     const constraints = uploadConstraintsOf(description);
     const hasNativeTarget = !!section.querySelector('input[type="file"]');
     return [
@@ -908,6 +951,7 @@ const extractForm = (
     submitLabel: submitLabelOf(form),
     fields,
     uploadIntents: extractUploadIntents(form, formIndex),
+    documentLocale: documentLocaleOf(doc),
   };
 };
 

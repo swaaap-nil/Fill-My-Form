@@ -62,6 +62,16 @@ describe("model mapping prompt construction", () => {
     expect(prompt).toContain("Colour preference");
     expect(prompt).toContain("Other field");
   });
+
+  it("instructs the model to reason across languages rather than by keyword overlap", () => {
+    const messages = buildModelMappingMessages({
+      fieldSummaries: [],
+      field: field({ id: "target" }),
+      concepts: index.all,
+    });
+    const system = messages.find((m) => m.role === "system")?.content ?? "";
+    expect(system).toContain("may be in any language");
+  });
 });
 
 describe("model concept-key output", () => {

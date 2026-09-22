@@ -14,7 +14,10 @@
         "fname",
         "confirm first name"
       ],
-      "hi": ["पहला नाम", "नाम", "पहला नाम की पुष्टि करें"]
+      "hi": ["पहला नाम", "नाम", "पहला नाम की पुष्टि करें"],
+      "es": ["nombre", "nombre de pila", "primer nombre"],
+      "fr": ["prénom"],
+      "de": ["vorname"]
     }
   },
   {
@@ -44,7 +47,10 @@
         "lname",
         "confirm last name"
       ],
-      "hi": ["उपनाम", "कुलनाम", "उपनाम की पुष्टि करें"]
+      "hi": ["उपनाम", "कुलनाम", "उपनाम की पुष्टि करें"],
+      "es": ["apellido", "apellidos"],
+      "fr": ["nom de famille", "nom"],
+      "de": ["nachname", "familienname"]
     }
   },
   {
@@ -56,7 +62,10 @@
     "autocomplete": ["name"],
     "aliases": {
       "en": ["full name", "name", "your name", "candidate name"],
-      "hi": ["पूरा नाम", "अभ्यर्थी का नाम"]
+      "hi": ["पूरा नाम", "अभ्यर्थी का नाम"],
+      "es": ["nombre completo"],
+      "fr": ["nom complet"],
+      "de": ["vollständiger name", "voller name"]
     }
   },
   {
@@ -104,16 +113,39 @@
       "hi": ["राष्ट्रीयता", "नागरिकता"]
     },
     "valueAliases": {
-      "indian": "india",
-      "american": "united states",
-      "british": "united kingdom",
-      "pakistani": "pakistan",
-      "bangladeshi": "bangladesh",
-      "nepali": "nepal",
-      "sri lankan": "sri lanka",
-      "chinese": "china",
-      "australian": "australia",
-      "canadian": "canada"
+      "en": {
+        "indian": "india",
+        "american": "united states",
+        "british": "united kingdom",
+        "pakistani": "pakistan",
+        "bangladeshi": "bangladesh",
+        "nepali": "nepal",
+        "sri lankan": "sri lanka",
+        "chinese": "china",
+        "australian": "australia",
+        "canadian": "canada"
+      },
+      "es": {
+        "indio": "india",
+        "estadounidense": "estados unidos",
+        "británico": "reino unido",
+        "chino": "china",
+        "canadiense": "canadá"
+      },
+      "fr": {
+        "indien": "inde",
+        "américain": "états unis",
+        "britannique": "royaume uni",
+        "chinois": "chine",
+        "canadien": "canada"
+      },
+      "de": {
+        "indisch": "indien",
+        "amerikanisch": "vereinigte staaten",
+        "britisch": "vereinigtes königreich",
+        "chinesisch": "china",
+        "kanadisch": "kanada"
+      }
     }
   },
   {
@@ -254,10 +286,31 @@
       ]
     },
     "valueAliases": {
-      "true": "yes",
-      "false": "no",
-      "disabled": "yes",
-      "not disabled": "no"
+      "en": {
+        "true": "yes",
+        "false": "no",
+        "disabled": "yes",
+        "not disabled": "no"
+      },
+      "es": {
+        "si": "sí",
+        "verdadero": "sí",
+        "falso": "no",
+        "discapacitado": "sí",
+        "no discapacitado": "no"
+      },
+      "fr": {
+        "vrai": "oui",
+        "faux": "non",
+        "handicapé": "oui",
+        "non handicapé": "non"
+      },
+      "de": {
+        "wahr": "ja",
+        "falsch": "nein",
+        "behindert": "ja",
+        "nicht behindert": "nein"
+      }
     }
   },
   {
@@ -285,7 +338,10 @@
         "email id",
         "confirm email id"
       ],
-      "hi": ["ईमेल", "ईमेल पता", "ईमेल की पुष्टि करें"]
+      "hi": ["ईमेल", "ईमेल पता", "ईमेल की पुष्टि करें"],
+      "es": ["correo electrónico", "correo", "dirección de correo electrónico"],
+      "fr": ["adresse e-mail", "courriel", "adresse électronique"],
+      "de": ["e-mail", "e-mail-adresse"]
     }
   },
   {
@@ -320,7 +376,10 @@
         "contact number",
         "confirm mobile number"
       ],
-      "hi": ["फ़ोन", "मोबाइल नंबर", "संपर्क नंबर", "मोबाइल नंबर की पुष्टि करें"]
+      "hi": ["फ़ोन", "मोबाइल नंबर", "संपर्क नंबर", "मोबाइल नंबर की पुष्टि करें"],
+      "es": ["teléfono", "número de teléfono", "número de móvil"],
+      "fr": ["téléphone", "numéro de téléphone", "numéro de portable"],
+      "de": ["telefon", "telefonnummer", "handynummer"]
     }
   },
   {
@@ -347,7 +406,10 @@
     "autocomplete": ["address-line1"],
     "aliases": {
       "en": ["address line 1", "address 1", "street address", "house no"],
-      "hi": ["पता पंक्ति 1", "मकान नंबर"]
+      "hi": ["पता पंक्ति 1", "मकान नंबर"],
+      "es": ["dirección", "línea de dirección 1", "calle"],
+      "fr": ["adresse", "ligne d'adresse 1", "rue"],
+      "de": ["adresse", "adresszeile 1", "straße"]
     }
   },
   {
@@ -383,7 +445,10 @@
     "autocomplete": ["address-level2"],
     "aliases": {
       "en": ["city", "town", "city/town"],
-      "hi": ["शहर", "नगर"]
+      "hi": ["शहर", "नगर"],
+      "es": ["ciudad", "localidad"],
+      "fr": ["ville"],
+      "de": ["stadt", "ort"]
     }
   },
   {
@@ -406,7 +471,10 @@
     "autocomplete": ["address-level1"],
     "aliases": {
       "en": ["state", "state/province", "province"],
-      "hi": ["राज्य"]
+      "hi": ["राज्य"],
+      "es": ["estado", "provincia"],
+      "fr": ["état", "province", "région"],
+      "de": ["bundesland", "provinz"]
     }
   },
   {
@@ -423,7 +491,10 @@
         "residence country",
         "passport country"
       ],
-      "hi": ["देश"]
+      "hi": ["देश"],
+      "es": ["país", "país de residencia"],
+      "fr": ["pays", "pays de résidence"],
+      "de": ["land", "wohnsitzland"]
     }
   },
   {
@@ -435,7 +506,10 @@
     "autocomplete": ["postal-code"],
     "aliases": {
       "en": ["postal code", "zip", "zip code", "pin code", "pincode"],
-      "hi": ["पिन कोड", "डाक कोड"]
+      "hi": ["पिन कोड", "डाक कोड"],
+      "es": ["código postal"],
+      "fr": ["code postal"],
+      "de": ["postleitzahl"]
     }
   },
   {
@@ -527,7 +601,10 @@
         "matriculation year",
         "year of passing 10th"
       ],
-      "hi": ["दसवीं उत्तीर्ण वर्ष", "१०वीं पास वर्ष"]
+      "hi": ["दसवीं उत्तीर्ण वर्ष", "१०वीं पास वर्ष"],
+      "es": ["año de finalización de secundaria", "año de graduación"],
+      "fr": ["année d'obtention du brevet", "année de fin de scolarité"],
+      "de": ["abschlussjahr sekundarstufe", "abschlussjahr"]
     }
   },
   {
@@ -957,8 +1034,19 @@
     "volatility": "volatile",
     "expects": "file",
     "aliases": {
-      "en": ["resume", "cv", "curriculum vitae", "upload resume"],
-      "hi": ["बायोडाटा", "रिज्यूमे"]
+      "en": [
+        "resume",
+        "cv",
+        "curriculum vitae",
+        "upload resume",
+        "certificate",
+        "proof",
+        "document"
+      ],
+      "hi": ["बायोडाटा", "रिज्यूमे"],
+      "es": ["currículum", "curriculum vitae", "hoja de vida", "certificado"],
+      "fr": ["cv", "curriculum vitae", "certificat"],
+      "de": ["lebenslauf", "zertifikat"]
     }
   },
   {
@@ -978,7 +1066,10 @@
         "scanned photograph",
         "scanned photograph of the candidate"
       ],
-      "hi": ["फोटो", "फोटोग्राफ"]
+      "hi": ["फोटो", "फोटोग्राफ"],
+      "es": ["foto", "fotografía"],
+      "fr": ["photo", "photographie"],
+      "de": ["foto", "fotografie"]
     }
   },
   {
@@ -995,7 +1086,10 @@
         "scanned signature",
         "scanned signature of the candidate"
       ],
-      "hi": ["हस्ताक्षर"]
+      "hi": ["हस्ताक्षर"],
+      "es": ["firma"],
+      "fr": ["signature"],
+      "de": ["unterschrift"]
     }
   },
   {

@@ -95,6 +95,7 @@ export const resolveStoredValueForField = (
   value: MemoryValue,
   concept: Concept,
   confidence: ConfidenceLevel,
+  locale?: string,
 ): ResolvedStoredValue => {
   const payload = payloadFor(field, value);
   if (!payload) return { kind: "no_value" };
@@ -103,7 +104,12 @@ export const resolveStoredValueForField = (
   // The user's stored text remains the memory value; the DOM write uses the
   // option code/label the page actually exposes.
   if (payload.kind === "text" && field.options && field.options.length > 0) {
-    const optionMatch = resolveOption(payload.value, field.options, concept);
+    const optionMatch = resolveOption(
+      payload.value,
+      field.options,
+      concept,
+      locale,
+    );
 
     if (optionMatch.certainty === Certainty.AMBIGUOUS) {
       return {
@@ -177,12 +183,13 @@ export const planFill = async (
   policy: PolicyEngine,
   generateDecisionId: () => DecisionId = () => crypto.randomUUID(),
   now: () => string = () => new Date().toISOString(),
+  locale?: string,
 ): Promise<PlanFillResult> => {
   const proposals: FieldProposal[] = [];
   const decisions = new Map<DecisionId, PendingDecision>();
 
   for (const field of fields) {
-    const match = resolve(field, index);
+    const match = resolve(field, index, locale);
     const fieldLabel = fieldLabelOf(field);
 
     if (match.certainty === "unknown") {
@@ -239,6 +246,7 @@ export const planFill = async (
       item.value,
       concept,
       confidence,
+      locale,
     );
     if (resolvedValue.kind === "no_value") {
       proposals.push({

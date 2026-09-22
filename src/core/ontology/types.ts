@@ -96,13 +96,16 @@ export const conceptSchema = z.object({
   /**
    * Deterministic synonyms for this concept's *values*, not its label —
    * distinct from `aliases`, which maps field labels to this concept. Keyed
-   * by normalised synonym (see `normaliseLabel`), valued by the normalised
-   * canonical form a page's option is expected to carry, e.g.
-   * `{ "indian": "india" }` for `identity.nationality`. Only meaningful for
-   * closed-vocabulary concepts (`expects: "select"`); see
-   * `~/core/matching/resolve-option`.
+   * by locale, then by normalised synonym (see `normaliseLabel`), valued by
+   * the normalised canonical form a page's option is expected to carry, e.g.
+   * `{ "en": { "indian": "india" } }` for `identity.nationality`. Only
+   * meaningful for closed-vocabulary concepts (`expects: "select"`); see
+   * `~/core/matching/resolve-option`, which falls back to the `en` table
+   * when a declared page locale has no entry of its own.
    */
-  valueAliases: z.record(z.string(), z.string()).optional(),
+  valueAliases: z
+    .record(z.string(), z.record(z.string(), z.string()))
+    .optional(),
 });
 
 export type Concept = z.infer<typeof conceptSchema>;

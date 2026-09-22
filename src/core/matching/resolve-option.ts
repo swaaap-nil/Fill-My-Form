@@ -111,6 +111,7 @@ export const resolveOption = (
   rawValue: string,
   options: readonly FormOption[],
   concept?: Concept,
+  locale?: string,
 ): OptionMatchResult => {
   if (options.length === 0) return { certainty: Certainty.UNKNOWN };
 
@@ -123,7 +124,10 @@ export const resolveOption = (
   );
   if (exact) return exact;
 
-  const alias = concept?.valueAliases?.[normalisedValue];
+  const valueAliases = concept?.valueAliases;
+  const alias =
+    (locale && valueAliases?.[locale]?.[normalisedValue]) ??
+    valueAliases?.en?.[normalisedValue];
   if (alias) {
     const aliased = asKnown(
       exactMatches(normaliseLabel(alias), options),

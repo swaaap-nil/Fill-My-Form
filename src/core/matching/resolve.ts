@@ -105,9 +105,10 @@ const matchTypeNarrowing = (
 const matchAlias = (
   field: FormField,
   index: ConceptIndex,
+  locale?: string,
 ): MatchCandidate[] => {
   if (!field.label) return [];
-  const concept = index.byAlias(field.label);
+  const concept = index.byAlias(field.label, locale);
   return concept
     ? [{ conceptKey: concept.key, tier: MatchTier.ALIAS, score: 0.95 }]
     : [];
@@ -121,21 +122,36 @@ interface CoverageMatch {
 }
 
 /**
- * The longest alias (across all locales) each concept matches by full
- * token coverage in `textTokens`, for concepts whose best alias clears
- * {@link MIN_ALIAS_TOKENS_FOR_COVERAGE}.
+ * The longest alias each concept matches by full token coverage in
+ * `textTokens`, for concepts whose best alias clears `minAliasTokens`
+ * (default {@link MIN_ALIAS_TOKENS_FOR_COVERAGE}).
+ *
+ * When `locale` is given, a concept scopes to that locale's own alias list
+ * — but only when the concept actually has aliases for that locale;
+ * otherwise it falls back to scanning every locale. This keeps a declared
+ * page locale from silently disabling matching for concepts that have not
+ * yet had that locale's aliases added (most of them, for any locale beyond
+ * `en`/`hi`), while still narrowing — and so avoiding cross-locale
+ * collisions — for concepts that do have the locale populated.
  */
 const coverageMatches = (
   textTokens: ReadonlySet<string>,
   concepts: readonly Concept[],
+  locale?: string,
+  minAliasTokens: number = MIN_ALIAS_TOKENS_FOR_COVERAGE,
 ): CoverageMatch[] => {
   const bestByConcept = new Map<string, number>();
 
   for (const concept of concepts) {
-    for (const aliasList of Object.values(concept.aliases)) {
+    const localeAliases = locale ? concept.aliases[locale] : undefined;
+    const aliasLists = localeAliases
+      ? [localeAliases]
+      : Object.values(concept.aliases);
+
+    for (const aliasList of aliasLists) {
       for (const alias of aliasList) {
         const aliasTokens = tokenize(alias);
-        if (aliasTokens.length < MIN_ALIAS_TOKENS_FOR_COVERAGE) continue;
+        if (aliasTokens.length < minAliasTokens) continue;
         if (!aliasTokens.every((t) => textTokens.has(t))) continue;
 
         const best = bestByConcept.get(concept.key) ?? 0;
@@ -170,11 +186,12 @@ const topCoverageCandidates = (
 const matchPlaceholder = (
   field: FormField,
   concepts: readonly Concept[],
+  locale?: string,
 ): MatchCandidate[] => {
   if (!field.placeholder) return [];
   const textTokens = new Set(tokenize(field.placeholder));
   return topCoverageCandidates(
-    coverageMatches(textTokens, concepts),
+    coverageMatches(textTokens, concepts, locale),
     MatchTier.PLACEHOLDER,
   );
 };
@@ -182,6 +199,7 @@ const matchPlaceholder = (
 const matchNearbyText = (
   field: FormField,
   concepts: readonly Concept[],
+  locale?: string,
 ): MatchCandidate[] => {
   const parts = [field.label, ...(field.nearbyText ?? [])].filter(
     (s): s is string => !!s,
@@ -190,7 +208,7 @@ const matchNearbyText = (
 
   const textTokens = new Set(parts.flatMap(tokenize));
   return topCoverageCandidates(
-    coverageMatches(textTokens, concepts),
+    coverageMatches(textTokens, concepts, locale),
     MatchTier.NEARBY_TEXT,
   );
 };
@@ -201,19 +219,25 @@ const TIERS: ((
   field: FormField,
   concepts: readonly Concept[],
   index: ConceptIndex,
+  locale?: string,
 ) => MatchCandidate[])[] = [
   (field, concepts) => matchAutocomplete(field, concepts),
   (field, concepts) => matchTypeNarrowing(field, concepts),
-  (field, _concepts, index) => matchAlias(field, index),
-  (field, concepts) => matchPlaceholder(field, concepts),
-  (field, concepts) => matchNearbyText(field, concepts),
+  (field, _concepts, index, locale) => matchAlias(field, index, locale),
+  (field, concepts, _index, locale) =>
+    matchPlaceholder(field, concepts, locale),
+  (field, concepts, _index, locale) => matchNearbyText(field, concepts, locale),
 ];
 
-export const resolve = (field: FormField, index: ConceptIndex): MatchResult => {
+export const resolve = (
+  field: FormField,
+  index: ConceptIndex,
+  locale?: string,
+): MatchResult => {
   const concepts = index.all;
 
   for (const tier of TIERS) {
-    const candidates = tier(field, concepts, index);
+    const candidates = tier(field, concepts, index, locale);
     if (candidates.length === 0) continue;
 
     return {
@@ -224,4 +248,34 @@ export const resolve = (field: FormField, index: ConceptIndex): MatchResult => {
   }
 
   return { candidates: [], certainty: Certainty.UNKNOWN };
+};
+
+/**
+ * Best single concept key for free text, by longest alias-token coverage
+ * against a (typically small) concept subset — for callers that need
+ * alias-driven text classification without building a `FormField` and
+ * running the full tier cascade (e.g. `extract.ts`'s upload-kind
+ * classifier). Returns `undefined` on no match or a genuine tie — this
+ * never guesses, same discipline as `resolve()`.
+ *
+ * `minAliasTokens` defaults to {@link MIN_ALIAS_TOKENS_FOR_COVERAGE}, the
+ * same guard tiers 4/5 use. Callers classifying against only a handful of
+ * candidate concepts (rather than disambiguating among the whole ontology)
+ * may want to lower it — a single-word alias is a weak signal when many
+ * concepts compete for one field label, but a fine one when there are only
+ * two or three possible answers.
+ */
+export const classifyByAliasCoverage = (
+  text: string,
+  concepts: readonly Concept[],
+  locale?: string,
+  minAliasTokens?: number,
+): string | undefined => {
+  const textTokens = new Set(tokenize(text));
+  const matches = coverageMatches(textTokens, concepts, locale, minAliasTokens);
+  if (matches.length === 0) return undefined;
+
+  const maxLength = Math.max(...matches.map((m) => m.length));
+  const top = matches.filter((m) => m.length === maxLength);
+  return top.length === 1 ? top[0]?.conceptKey : undefined;
 };

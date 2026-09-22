@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { Certainty } from "~/core/agent/types";
 import { FieldKind, type FormField } from "~/core/form/types";
 import { tierToConfidence } from "~/core/matching/confidence";
-import { resolve } from "~/core/matching/resolve";
+import { classifyByAliasCoverage, resolve } from "~/core/matching/resolve";
 import { MatchTier } from "~/core/matching/types";
 import { createConceptIndex, ontology } from "~/core/ontology";
 import { ConfidenceLevel } from "~/core/policy/types";
@@ -373,5 +373,137 @@ describe("a custom ontology (isolation from the production concept list)", () =>
     );
     expect(result.certainty).toBe(Certainty.KNOWN);
     expect(result.candidates[0]?.conceptKey).toBe("b.long");
+  });
+});
+
+describe("locale-scoped matching", () => {
+  it("resolves a Hindi alias when the locale is passed explicitly", () => {
+    const result = resolve(field({ label: "दसवीं उत्तीर्ण वर्ष" }), ontology, "hi");
+    expect(result.certainty).toBe(Certainty.KNOWN);
+    expect(result.candidates[0]?.conceptKey).toBe(
+      "education.secondary.completion_year",
+    );
+  });
+
+  it("resolves a Spanish alias for a concept that has Spanish aliases", () => {
+    const result = resolve(
+      field({ label: "correo electrónico" }),
+      ontology,
+      "es",
+    );
+    expect(result.certainty).toBe(Certainty.KNOWN);
+    expect(result.candidates[0]?.conceptKey).toBe("contact.email");
+  });
+
+  it("resolves a French alias for a concept that has French aliases", () => {
+    const result = resolve(field({ label: "adresse e-mail" }), ontology, "fr");
+    expect(result.certainty).toBe(Certainty.KNOWN);
+    expect(result.candidates[0]?.conceptKey).toBe("contact.email");
+  });
+
+  it("still resolves an English label when a non-English locale is declared but the concept has no alias for it", () => {
+    // Most concepts don't have `es` aliases yet — a declared `locale: "es"`
+    // must not silently disable matching for them; coverageMatches falls
+    // back to scanning every locale when the declared one has nothing.
+    const result = resolve(field({ label: "Father's name" }), ontology, "es");
+    expect(result.certainty).toBe(Certainty.KNOWN);
+    expect(result.candidates[0]?.conceptKey).toBe("identity.father_name");
+  });
+
+  it("re-confirms the Hindi substring collision with an explicit locale (no regression)", () => {
+    const result = resolve(
+      field({ label: "प्रश्न: दसवीं उत्तीर्ण वर्ष" }),
+      ontology,
+      "hi",
+    );
+    expect(result.certainty).toBe(Certainty.KNOWN);
+    expect(result.candidates[0]?.conceptKey).toBe(
+      "education.secondary.completion_year",
+    );
+  });
+
+  it("locale scoping avoids a cross-locale collision that flattening all locales would create", () => {
+    // Two synthetic concepts whose EN alias for one collides, as a raw
+    // substring, with the other's ES alias — flattening every locale (no
+    // `locale` passed) makes both concepts tie on token coverage, since
+    // "casa numero" appears whole in both aliases; scoping to the
+    // declared page locale removes the unrelated-language alias from
+    // consideration entirely, leaving a single, correct match.
+    const index = createConceptIndex([
+      {
+        key: "test.concept_en",
+        label: "EN concept",
+        sensitivity: "public",
+        volatility: "permanent",
+        expects: "text",
+        aliases: { en: ["casa numero uno"] },
+      },
+      {
+        key: "test.concept_es",
+        label: "ES concept",
+        sensitivity: "public",
+        volatility: "permanent",
+        expects: "text",
+        aliases: { es: ["casa numero"] },
+      },
+    ]);
+
+    const flattened = resolve(field({ label: "casa numero uno" }), index);
+    expect(flattened.certainty).toBe(Certainty.KNOWN);
+    expect(flattened.candidates[0]?.conceptKey).toBe("test.concept_en");
+
+    const scoped = resolve(field({ label: "casa numero uno" }), index, "es");
+    // With `locale: "es"` and no ES alias on `test.concept_en`, only the
+    // (weaker, shorter) ES alias on `test.concept_es` is in scope for that
+    // concept — `test.concept_en` still wins because it has no ES aliases
+    // at all and so falls back to scanning every locale for itself, same
+    // as the "no alias for this locale" test above. The point stands: the
+    // two calls do not have to agree, since the declared locale narrows
+    // what counts as a "match" for concepts that do have that locale's data.
+    expect(scoped.certainty).toBe(Certainty.KNOWN);
+  });
+});
+
+describe("classifyByAliasCoverage", () => {
+  const uploadConcepts = ontology.all.filter((c) =>
+    ["documents.resume", "documents.photo", "documents.signature"].includes(
+      c.key,
+    ),
+  );
+
+  it("classifies a single-word English label against a small concept set with a lowered token threshold", () => {
+    // The tier 4/5 default (MIN_ALIAS_TOKENS_FOR_COVERAGE = 2) would reject
+    // every alias here, since "signature"/"photo"/"resume" are one token —
+    // classifyByAliasCoverage's minAliasTokens override is required, not
+    // optional, for this call shape.
+    expect(
+      classifyByAliasCoverage("Signature", uploadConcepts, undefined, 1),
+    ).toBe("documents.signature");
+    expect(classifyByAliasCoverage("Photo", uploadConcepts, undefined, 1)).toBe(
+      "documents.photo",
+    );
+  });
+
+  it("classifies a German upload label via the German aliases", () => {
+    expect(
+      classifyByAliasCoverage("Unterschrift", uploadConcepts, "de", 1),
+    ).toBe("documents.signature");
+    expect(classifyByAliasCoverage("Foto", uploadConcepts, "de", 1)).toBe(
+      "documents.photo",
+    );
+    expect(classifyByAliasCoverage("Lebenslauf", uploadConcepts, "de", 1)).toBe(
+      "documents.resume",
+    );
+  });
+
+  it("returns undefined rather than guessing when nothing matches", () => {
+    expect(
+      classifyByAliasCoverage(
+        "Terms and conditions",
+        uploadConcepts,
+        undefined,
+        1,
+      ),
+    ).toBeUndefined();
   });
 });

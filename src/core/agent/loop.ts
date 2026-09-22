@@ -106,6 +106,8 @@ export interface RunSnapshot {
   readonly run: AgentRun;
   readonly tabId: number;
   readonly fields: readonly FormField[];
+  /** Primary language subtag of the observed page, from `Form.documentLocale`. */
+  readonly documentLocale?: string;
   readonly matches: Readonly<Record<FieldId, MatchResult>>;
   readonly values: Readonly<Record<FieldId, RetrievedValue | undefined>>;
   /** Fields that will never get another PLAN turn: filled, skipped, or given up on. */
@@ -270,10 +272,14 @@ const observeStep = async (
     );
   }
 
-  const fields = (result.value as InspectFormResult).forms.flatMap(
-    (form) => form.fields,
+  const forms = (result.value as InspectFormResult).forms;
+  const fields = forms.flatMap((form) => form.fields);
+  const documentLocale = forms[0]?.documentLocale;
+  return applyEvent(
+    { ...snapshot, fields, documentLocale },
+    { type: "observed" },
+    ports,
   );
-  return applyEvent({ ...snapshot, fields }, { type: "observed" }, ports);
 };
 
 // --- UNDERSTAND ----------------------------------------------------------------
@@ -284,7 +290,11 @@ const understandStep = async (
 ): Promise<RunSnapshot> => {
   const matches: Record<FieldId, MatchResult> = {};
   for (const field of snapshot.fields) {
-    const deterministic = resolve(field, ports.ontology);
+    const deterministic = resolve(
+      field,
+      ports.ontology,
+      snapshot.documentLocale,
+    );
     if (!ports.llm || deterministic.certainty === Certainty.KNOWN) {
       matches[field.id] = deterministic;
       continue;
@@ -887,9 +897,15 @@ const verifyStep = async (
     {},
     contextFor(snapshot, ports),
   );
-  const freshFields = fresh.ok
-    ? (fresh.value as InspectFormResult).forms.flatMap((form) => form.fields)
+  const freshForms = fresh.ok
+    ? (fresh.value as InspectFormResult).forms
+    : undefined;
+  const freshFields = freshForms
+    ? freshForms.flatMap((form) => form.fields)
     : snapshot.fields;
+  const documentLocale = freshForms
+    ? freshForms[0]?.documentLocale
+    : snapshot.documentLocale;
 
   const knownIds = new Set(snapshot.fields.map((field) => field.id));
   const newFields = freshFields.filter((field) => !knownIds.has(field.id));
@@ -907,7 +923,7 @@ const verifyStep = async (
 
     const newMatches: Record<FieldId, MatchResult> = {};
     for (const field of newFields) {
-      const deterministic = resolve(field, ports.ontology);
+      const deterministic = resolve(field, ports.ontology, documentLocale);
       newMatches[field.id] =
         ports.llm && deterministic.certainty !== Certainty.KNOWN
           ? await mapFieldWithModel(
@@ -939,6 +955,7 @@ const verifyStep = async (
   const nextSnapshot: RunSnapshot = {
     ...snapshot,
     fields: freshFields,
+    documentLocale,
     matches,
     values,
     handled: fieldOk ? [...snapshot.handled, write.fieldId] : snapshot.handled,
