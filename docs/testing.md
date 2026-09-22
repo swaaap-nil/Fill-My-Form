@@ -20,6 +20,13 @@ fixture server. Pass `--workers=1` to debug. A test that only fails in
 parallel is telling you about a real race — the first one found this way was
 `useMemoryAutosave` letting a slow snapshot overwrite freshly typed values.
 
+3 workers means up to 3 full Chromium instances launching at once, which is
+a real cost on a loaded machine — distinct from "Timeouts waiting on a
+button" below. A `Test timeout of Nms exceeded while setting up "context"`
+failure is the browser itself failing to launch in time, not a race in the
+extension: check `uptime` before anything else, and rerun with `--workers=1`
+(or just that file) if the host was busy.
+
 `bun:test` is the runner — it is what the repo and CI already use, so there is no
 Vitest here.
 

@@ -1,5 +1,8 @@
 import { expect, test } from "./fill-fixtures";
 import {
+  agentAnswerButton,
+  agentConfirmButton,
+  agentStartButton,
   driveAgentToCompletion,
   grantAccess,
   openPanel,
@@ -27,6 +30,15 @@ import {
  * that plainly exists in the component tree — see "Known flakiness" in
  * docs/testing.md before assuming a regression here. Check `uptime`/free
  * memory and retry in isolation first.
+ *
+ * The two tests above seed every known field, so the panel's answers card
+ * (`confirmFill`, no agent loop) is the entry point `driveAgentToCompletion`
+ * takes — see its own comment. That leaves the actual `AgentRunPanel` loop
+ * (`startRun`/`answerRunQuestion`/`confirmRunReview`) without an e2e path
+ * that also exercises dynamic re-observation, once the summary-card redesign
+ * stopped forcing every fill through it. The third test below leaves `email`
+ * unseeded so PLAN pauses on `ask_user` for it — the loop's own path, not
+ * the shortcut — while the fixture's dynamic injection still fires mid-run.
  */
 
 test("dynamic.html: a field injected mid-run does not get missed or get the run stuck", async ({
@@ -91,4 +103,45 @@ test("dynamic.html: fields revealed by a step transition are reachable by re-run
   );
   await expect(formPage.getByLabel("Year of graduation")).toHaveValue("2015");
   await expect(formPage.getByLabel("Current CTC")).toHaveValue("1800000");
+});
+
+test("dynamic.html: the agent loop itself (not the answers-card shortcut) survives a field injected mid-run", async ({
+  context,
+  extensionId,
+}) => {
+  const formPage = await context.newPage();
+  await formPage.goto("/dynamic.html");
+
+  // Nothing seeded: no stored answer means the answers card never appears,
+  // so "Answer now and never again" is the panel's only entry point and
+  // `email` -> `contact.email` is PLAN's very first ask_user pause (the
+  // only field visible when the run starts, per the first test above).
+  const panelPage = await openPanel(context, extensionId);
+  await grantAccess(formPage, panelPage);
+
+  await formPage.bringToFront();
+  await formPage.locator("#referral").waitFor({ state: "attached" });
+
+  await agentStartButton(panelPage).click();
+  await panelPage.getByPlaceholder("Your answer").fill("ananya@example.com");
+  await agentAnswerButton(panelPage).click();
+
+  const done = panelPage.getByText("Run complete.");
+  for (let i = 0; i < 10 && !(await done.isVisible()); i++) {
+    await agentConfirmButton(panelPage)
+      .first()
+      .click({ timeout: 3000 })
+      .catch(() => {});
+    await Promise.any([
+      done.waitFor({ state: "visible", timeout: 5000 }),
+      agentConfirmButton(panelPage)
+        .first()
+        .waitFor({ state: "visible", timeout: 5000 }),
+    ]).catch(() => {});
+  }
+  await expect(done).toBeVisible();
+
+  await expect(formPage.getByLabel("Email address")).toHaveValue(
+    "ananya@example.com",
+  );
 });
