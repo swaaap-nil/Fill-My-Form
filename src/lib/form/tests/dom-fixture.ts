@@ -16,12 +16,15 @@ import { Window } from "happy-dom";
  * frameworks, computed geometry) stays end-to-end in
  * `e2e/extraction.spec.ts`, which drives a real browser.
  *
- * `extract.ts` also does `instanceof HTMLInputElement` and friends against
- * the *global* constructors, as it may in a real page. Bun has no DOM
- * globals of its own, so each call registers this window's constructors
- * globally — safe here because every test's `docFromHtml` + `extract*` pair
- * runs synchronously, with no `await` in between that could let another
- * test's window win the race.
+ * `extract.ts`, `fill.ts` and `verify.ts` also do `instanceof
+ * HTMLInputElement` and friends against the *global* constructors, as they
+ * may in a real page. Bun has no DOM globals of its own — and where it does
+ * have a same-named web-standard global (`Event`, `File`, `Blob`), it is a
+ * different realm's class than this window's `HTMLInputElement` expects —
+ * so each call registers this window's constructors globally. Safe here
+ * because every test's `docFromHtml` + extractor/fill/verify call runs
+ * synchronously, with no `await` in between that could let another test's
+ * window win the race.
  */
 const GLOBAL_DOM_CONSTRUCTORS = [
   "Element",
@@ -33,6 +36,11 @@ const GLOBAL_DOM_CONSTRUCTORS = [
   "HTMLFormElement",
   "Document",
   "Node",
+  "Event",
+  "CustomEvent",
+  "File",
+  "Blob",
+  "DataTransfer",
 ] as const;
 
 export const docFromHtml = (html: string): Document => {
