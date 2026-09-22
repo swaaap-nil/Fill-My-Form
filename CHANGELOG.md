@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.8.0](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.7.0...v1.8.0) (2026-09-22)
+
+### Features
+
+* autosave recognized uploads into memory from the fill panel ([515bf11](https://github.com/swaaap-nil/Fill-My-Form/commit/515bf11c925c1a7ef1b661c66aa02bb475b353d5))
+
+### Bug Fixes
+
+* **e2e:** wait for the auto-scan result, not just the idle scan button ([171b9b5](https://github.com/swaaap-nil/Fill-My-Form/commit/171b9b5412ab607d9096de9b63c8c77e78acf324))
+* **memory:** keep typed values when a slow snapshot returns ([354729c](https://github.com/swaaap-nil/Fill-My-Form/commit/354729cbede7e18c1a909ab7b2b9940cfdfe654e))
+* broken tests ([ecc7cd1](https://github.com/swaaap-nil/Fill-My-Form/commit/ecc7cd1443feb415c59d9f5085db7dc8d64749b0))
+
 ## [1.7.0](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.6.0...v1.7.0) (2026-09-21)
 
 ### Features
