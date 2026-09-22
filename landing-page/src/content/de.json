@@ -1,4 +1,5 @@
 {
+  "brandName": "Fülle Mein Formular",
   "tagline": "Mit ❤️ gemacht von",
   "taglineAuthor": "Swapnil",
   "navHow": "So funktioniert’s",
@@ -8,7 +9,7 @@
   "install": "Für Chrome installieren",
   "hero1": "Das Leben ist zu kurz",
   "hero2": "um dieselben Fragen immer wieder zu beantworten.",
-  "description": "Deine Angaben. Gut gemerkt. Fill My Form bringt deine gespeicherten Antworten in neue Formulare. Damit du Zeit für das Wesentliche hast.",
+  "description": "Deine Angaben. Gut gemerkt. Fülle Mein Formular bringt deine gespeicherten Antworten in neue Formulare. Damit du Zeit für das Wesentliche hast.",
   "secondary": "So funktioniert es",
   "trustLine": "Auf deinem Gerät gespeichert. Nur von dir abgeschickt.",
   "previewLabel": "Ein bisschen weniger Déjà-vu.",
@@ -66,7 +67,7 @@
   "faqs": [
     [
       "Was ist anders als beim Browser-Autofill?",
-      "Fill My Form arbeitet mit wiederverwendbaren persönlichen Antworten, auch über Name und Adresse hinaus. Ergebnisse hängen vom Formular ab. Prüfe sie vor dem Absenden."
+      "Fülle Mein Formular arbeitet mit wiederverwendbaren persönlichen Antworten, auch über Name und Adresse hinaus. Ergebnisse hängen vom Formular ab. Prüfe sie vor dem Absenden."
     ],
     [
       "Schickt die Erweiterung Formulare für mich ab?",
@@ -90,7 +91,7 @@
   "reject": "Analyse ablehnen",
   "close": "Schließen",
   "helpTitle": "Dein neuer Formularbegleiter.",
-  "helpIntro": "Hol dir Fill My Form für Chrome auf dem Computer und halte deine gespeicherten Antworten bereit.",
+  "helpIntro": "Hol dir Fülle Mein Formular für Chrome auf dem Computer und halte deine gespeicherten Antworten bereit.",
   "unavailable": "Der veröffentlichte Chrome-Eintrag ist noch nicht verbunden. Sobald er bereit ist, kannst du hier installieren.",
   "mobile": "Die Erweiterung benötigt Chrome auf dem Computer. Öffne diese Seite dort, um sie zu installieren.",
   "helpSteps": [

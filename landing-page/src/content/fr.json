@@ -1,4 +1,5 @@
 {
+  "brandName": "Remplis Mon Formulaire",
   "tagline": "Créé avec ❤️ par",
   "taglineAuthor": "Swapnil",
   "navHow": "Comment ça marche",
@@ -8,7 +9,7 @@
   "install": "Installer sur Chrome",
   "hero1": "La vie est trop courte",
   "hero2": "pour répondre encore et encore aux mêmes questions.",
-  "description": "Vos informations, mémorisées. Fill My Form retrouve vos réponses enregistrées pour les formulaires du quotidien. Gardez du temps pour l’essentiel.",
+  "description": "Vos informations, mémorisées. Remplis Mon Formulaire retrouve vos réponses enregistrées pour les formulaires du quotidien. Gardez du temps pour l’essentiel.",
   "secondary": "Découvrir le fonctionnement",
   "trustLine": "Enregistré sur votre appareil. Envoyé par vous seul.",
   "previewLabel": "Un peu moins de déjà-vu.",
@@ -66,7 +67,7 @@
   "faqs": [
     [
       "Quelle différence avec le remplissage du navigateur ?",
-      "Fill My Form repose sur des réponses personnelles réutilisables, au-delà des champs classiques de nom et d’adresse. Les résultats dépendent du formulaire : vérifiez-les avant l’envoi."
+      "Remplis Mon Formulaire repose sur des réponses personnelles réutilisables, au-delà des champs classiques de nom et d’adresse. Les résultats dépendent du formulaire : vérifiez-les avant l’envoi."
     ],
     [
       "L’extension envoie-t-elle les formulaires à ma place ?",
@@ -90,7 +91,7 @@
   "reject": "Refuser les statistiques",
   "close": "Fermer",
   "helpTitle": "Votre nouvel allié des formulaires.",
-  "helpIntro": "Installez Fill My Form pour Chrome sur ordinateur et gardez vos réponses à portée de main.",
+  "helpIntro": "Installez Remplis Mon Formulaire pour Chrome sur ordinateur et gardez vos réponses à portée de main.",
   "unavailable": "La fiche Chrome publiée n’est pas encore connectée. L’installation sera disponible ici dès qu’elle sera prête.",
   "mobile": "L’extension nécessite Chrome sur ordinateur. Ouvrez cette page sur votre ordinateur pour l’installer.",
   "helpSteps": [

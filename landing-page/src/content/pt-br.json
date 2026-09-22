@@ -1,4 +1,5 @@
 {
+  "brandName": "Preencha Meu Formulário",
   "tagline": "Feito com ❤️ por",
   "taglineAuthor": "Swapnil",
   "navHow": "Como funciona",
@@ -8,7 +9,7 @@
   "install": "Instalar no Chrome",
   "hero1": "A vida é curta demais",
   "hero2": "para responder às mesmas perguntas repetidamente.",
-  "description": "Seus dados, lembrados. O Fill My Form leva suas respostas salvas aos formulários que você encontra, para sobrar tempo para o que importa.",
+  "description": "Seus dados, lembrados. O Preencha Meu Formulário leva suas respostas salvas aos formulários que você encontra, para sobrar tempo para o que importa.",
   "secondary": "Veja como funciona",
   "trustLine": "Salvo no seu dispositivo. Enviado só por você.",
   "previewLabel": "Um pouco menos de déjà vu.",
@@ -66,7 +67,7 @@
   "faqs": [
     [
       "Qual é a diferença para o preenchimento do navegador?",
-      "O Fill My Form usa respostas pessoais reutilizáveis, além dos campos comuns de nome e endereço. Os resultados dependem do formulário; confira antes de enviar."
+      "O Preencha Meu Formulário usa respostas pessoais reutilizáveis, além dos campos comuns de nome e endereço. Os resultados dependem do formulário; confira antes de enviar."
     ],
     [
       "Ele envia formulários por mim?",
@@ -90,7 +91,7 @@
   "reject": "Recusar análise",
   "close": "Fechar",
   "helpTitle": "Seu novo parceiro de formulários.",
-  "helpIntro": "Instale o Fill My Form no Chrome para computador e tenha suas respostas salvas por perto.",
+  "helpIntro": "Instale o Preencha Meu Formulário no Chrome para computador e tenha suas respostas salvas por perto.",
   "unavailable": "A página publicada na loja do Chrome ainda não está conectada. A instalação estará disponível aqui quando estiver pronta.",
   "mobile": "A extensão precisa do Chrome para computador. Abra esta página no computador para instalar.",
   "helpSteps": [

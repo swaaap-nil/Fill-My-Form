@@ -19,8 +19,8 @@ interface Props {
 const { locale, page = '', title, noindex = false } = Astro.props;
 const t = content[locale];
 const metaTitle = title
-  ? `${title} | Fill My Form`
-  : `Fill My Form — ${t.tagline} ${t.taglineAuthor}`;
+  ? `${title} | ${t.brandName}`
+  : `${t.brandName} — ${t.tagline} ${t.taglineAuthor}`;
 const canonical = new URL(localizedPath(locale, page), siteConfig.site).href;
 ---
 
@@ -89,8 +89,8 @@ const canonical = new URL(localizedPath(locale, page), siteConfig.site).href;
   <body data-locale={locale} data-page={page} data-ga={siteConfig.ga}>
     <a class="skip-link" href="#main">{t.skip}</a>
     <header class="site-header shell">
-      <a class="brand" href={localizedPath(locale)} aria-label="Fill My Form"
-        ><Mark /><span>Fill My Form<span class="brand-period">😡</span></span
+      <a class="brand" href={localizedPath(locale)} aria-label={t.brandName}
+        ><Mark /><span>{t.brandName}<span class="brand-period">😡</span></span
         ></a
       >
       <nav aria-label={t.navHow} class="desktop-nav">
@@ -140,7 +140,7 @@ const canonical = new URL(localizedPath(locale, page), siteConfig.site).href;
     <footer class="site-footer shell">
       <div>
         <a class="brand" href={localizedPath(locale)}
-          ><Mark /><span>Fill My Form.</span></a
+          ><Mark /><span>{t.brandName}.</span></a
         ><p>{t.footerTag}</p>
       </div>
       <div class="footer-links">
@@ -150,7 +150,7 @@ const canonical = new URL(localizedPath(locale, page), siteConfig.site).href;
           >{t.navSupport}</a
         ><button type="button" data-cookie-settings>{t.settings}</button>
       </div>
-      <small>© {new Date().getFullYear()} Fill My Form</small>
+      <small>© {new Date().getFullYear()} {t.brandName}</small>
     </footer>
     <dialog
       id="consent"

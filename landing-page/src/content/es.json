@@ -1,4 +1,5 @@
 {
+  "brandName": "Llena Mi Formulario",
   "tagline": "Hecho con ❤️ por",
   "taglineAuthor": "Swapnil",
   "navHow": "Cómo funciona",
@@ -8,7 +9,7 @@
   "install": "Instalar en Chrome",
   "hero1": "La vida es demasiado corta",
   "hero2": "para responder las mismas preguntas una y otra vez.",
-  "description": "Tus datos, recordados. Fill My Form lleva tus respuestas guardadas a los formularios que encuentras para que puedas dedicarte a lo que importa.",
+  "description": "Tus datos, recordados. Llena Mi Formulario lleva tus respuestas guardadas a los formularios que encuentras para que puedas dedicarte a lo que importa.",
   "secondary": "Descubre cómo funciona",
   "trustLine": "Guardado en tu dispositivo. Solo tú lo envías.",
   "previewLabel": "Un poco menos de déjà vu.",
@@ -66,7 +67,7 @@
   "faqs": [
     [
       "¿En qué se diferencia del autocompletado del navegador?",
-      "Fill My Form se basa en respuestas personales reutilizables, más allá del nombre y la dirección habituales. Los resultados dependen del formulario; revísalos antes de enviarlo."
+      "Llena Mi Formulario se basa en respuestas personales reutilizables, más allá del nombre y la dirección habituales. Los resultados dependen del formulario; revísalos antes de enviarlo."
     ],
     [
       "¿Enviará formularios por mí?",
@@ -90,7 +91,7 @@
   "reject": "Rechazar analítica",
   "close": "Cerrar",
   "helpTitle": "Tu nuevo compañero de formularios.",
-  "helpIntro": "Consigue Fill My Form para Chrome de escritorio y ten tus respuestas guardadas a mano.",
+  "helpIntro": "Consigue Llena Mi Formulario para Chrome de escritorio y ten tus respuestas guardadas a mano.",
   "unavailable": "La ficha publicada de Chrome aún no está conectada. La instalación estará disponible aquí cuando esté lista.",
   "mobile": "La extensión necesita Chrome de escritorio. Abre esta página en tu ordenador para instalarla.",
   "helpSteps": [
