@@ -1,21 +1,30 @@
-MIT License
+Proprietary License — All Rights Reserved
 
-Copyright (c) 2024 Bartosz Zagrodzki
+Copyright (c) 2024-2026 Swapnil Suman. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This software and associated documentation files (the "Software") are the
+proprietary and confidential property of the copyright holder. No license or
+right is granted to you except as expressly stated in a separate written
+agreement with the copyright holder.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Without prior written permission from the copyright holder, you may not:
+
+  1. copy, modify, merge, publish, or create derivative works of the Software;
+  2. distribute, sublicense, sell, lease, or otherwise make the Software
+     available to any third party;
+  3. reverse engineer, decompile, or disassemble the Software, except to the
+     extent applicable law expressly permits despite this limitation;
+  4. remove or alter any copyright or proprietary notices.
+
+Portions of the Software are derived from third-party software licensed under
+their own terms; see THIRD_PARTY_NOTICES.md.
+
+Use of the compiled extension as distributed through official stores is
+governed by the terms presented there and by the applicable end-user terms.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
