@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.10.1](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.10.0...v1.10.1) (2026-09-23)
+
+### Features
+
+* **release:** pin required permissions to a shipped baseline ([07b3006](https://github.com/swaaap-nil/Fill-My-Form/commit/07b30069b0e17d45031de1e59e693947782d96ca))
+* **panel:** show empty state for unrecognized-only scans with feedback cards ([5ca96df](https://github.com/swaaap-nil/Fill-My-Form/commit/5ca96df4aa74e81985ddfeedad52104b2a53b02b))
+
+### Bug Fixes
+
+* **nudge:** open fill UI within the user gesture and hint when it can't ([28aeb75](https://github.com/swaaap-nil/Fill-My-Form/commit/28aeb758587b336043120122ca4cafd4cd88efca))
+* **header:** stack action buttons vertically on narrow panels ([f781a7c](https://github.com/swaaap-nil/Fill-My-Form/commit/f781a7c8dc4896d04697bc3458544406992e968b))
+* **panel:** keep access line when a granted page cannot be read ([6204918](https://github.com/swaaap-nil/Fill-My-Form/commit/6204918fb392f6f6fadd7a9a253011b378cb0d56))
+
 ## [1.10.0](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.9.0...v1.10.0) (2026-09-22)
 
 ### Features
