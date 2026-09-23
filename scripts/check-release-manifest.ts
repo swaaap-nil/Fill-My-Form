@@ -1,5 +1,8 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
+import defaultPermissionBaseline from "./release-permissions-baseline.json" with {
+  type: "json",
+};
 
 /**
  * Fails the build if the de-starter is ever partially reverted. Each rule
@@ -140,11 +143,54 @@ const requirePermissions = (
       : [`permissions is missing ${permission}.`],
   );
 
+export type PermissionBaseline = Record<
+  TargetBrowser,
+  { readonly permissions: readonly string[] }
+>;
+
+/**
+ * A store update that adds a required permission (or any `host_permissions`)
+ * makes Chrome and Firefox disable the extension for existing users until they
+ * re-approve, and many never do. Required permissions are therefore pinned to
+ * the set already shipped; growing it must be a deliberate edit to the
+ * baseline file. Permissions the extension no longer asks for are fine and are
+ * not reported here.
+ */
+export const evaluatePermissionBaseline = (
+  target: TargetBrowser,
+  manifest: ManifestLike,
+  baseline: PermissionBaseline,
+): string[] => {
+  const allowed = new Set(baseline[target].permissions);
+  const consequence =
+    "Existing users are disabled until they re-approve. Prefer optional_host_permissions or an optional permission; if it is truly required, add it to scripts/release-permissions-baseline.json in the same change and call it out in the changelog.";
+
+  const findings = (manifest.permissions ?? [])
+    .filter(
+      (permission): permission is string =>
+        typeof permission === "string" && !allowed.has(permission),
+    )
+    .map(
+      (permission) =>
+        `permissions adds ${permission}, which is not in the shipped baseline. ${consequence}`,
+    );
+
+  if (manifest.host_permissions !== undefined) {
+    findings.push(`host_permissions is required at install. ${consequence}`);
+  }
+
+  return findings;
+};
+
 export const evaluateTargetManifest = (
   target: TargetBrowser,
   manifest: ManifestLike,
+  baseline: PermissionBaseline = defaultPermissionBaseline,
 ): string[] => {
-  const findings = evaluateManifest(manifest);
+  const findings = [
+    ...evaluateManifest(manifest),
+    ...evaluatePermissionBaseline(target, manifest, baseline),
+  ];
 
   if (target === "firefox") {
     findings.push(

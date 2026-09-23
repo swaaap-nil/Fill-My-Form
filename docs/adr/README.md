@@ -16,6 +16,7 @@ ones we do not like.
 | [008](./008-image-metadata-writing.md) | Image density headers are read and written by hand, in-repo — container metadata, not document content |
 | [009](./009-proactive-form-detection.md) | Optional all-sites grant on first panel open; passive detection and notifications; no auto-fill |
 | [010](./010-product-analytics.md) | Anonymous product analytics via OpenPanel, on by default, closed schema, kept separate from the ADR-007 contribution channel |
+| [011](./011-required-permissions-pinned-to-baseline.md) | Required permissions are pinned to a shipped baseline; a release that adds one fails the build |
 
 Records for typed tools, progressive context disclosure and verification will be
 written when those modules are built. The intended designs live in

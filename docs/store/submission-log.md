@@ -5,10 +5,34 @@ pending review is not a failure of this phase; an unrecorded one is.
 
 ## Status
 
+Last updated 2026-09-24. Both stores are live (confirmed by the owner).
+
 | Store | Status | Date | Notes |
 |---|---|---|---|
-| Mozilla AMO (Firefox) | **Submitted, pending review** | 2026-09-05 | Unlisted, `0.1.0`, id `ff@swapnilsuman.me`. Manual first upload via AMO's web UI (see below for why). Source code uploaded and disclosure question answered. Fully lodged — awaiting reviewer outcome. |
-| Chrome Web Store | **Not yet submitted** | — | Blocked on creating the developer account ($5 one-time fee) — the user's own account/payment, not something this session can do. |
+| Mozilla AMO (Firefox) | **Live; releases go through `release.yml`** | 2026-09-05 | The manual first upload (see below) created the add-on at `ff@swapnilsuman.me`, so the JWT API can now upload new versions. `scripts/submit-firefox.ts` defaults to the **listed** channel (`FIREFOX_CHANNEL=unlisted` overrides). Confirmed live by the owner on 2026-09-24. |
+| Chrome Web Store | **Live** | — | The 2026-09-05 note that this was blocked on the developer account is out of date: `release.yml` now has a `submit-chrome` job (`wxt submit`, full publish after review, no staged rollout configured). Confirmed live by the owner on 2026-09-24. |
+
+## Release and auto-update (2026-09-24)
+
+- Current version in `package.json` is `1.10.0` (tag `v1.10.0`). The trial
+  `0.1.0` below is historical.
+- `release.yml` (manual `workflow_dispatch`, from `main`) bumps the version,
+  tags, builds, then submits Chrome and Firefox as separate jobs.
+- **Users are auto-updated by the browsers once each store approves the
+  version.** Chrome polls every few hours, Firefox about daily. Approval is
+  per store, so users can be on different versions across browsers for a
+  while. Nothing is instant.
+- **Permission changes break silent updates.** If a release adds a required
+  `permissions` entry or any `host_permissions`, both browsers disable the
+  extension until the user re-approves. `check-release-manifest.ts` already
+  fails the build on `host_permissions`, and on any required permission not
+  in `scripts/release-permissions-baseline.json` (see `docs/privacy.md`). Broad site access stays in
+  `optional_host_permissions`, requested at runtime (see `docs/privacy.md`).
+- **Firefox `data_collection_permissions`:** currently `required: ["none"]`.
+  Analytics (ADR 010, OpenPanel) is not set up or live, so `["none"]` is
+  accurate for now. Revisit before the release that turns analytics on:
+  declare the right AMO category, update the AMO listing disclosure, and
+  expect the change to be reviewed. See `docs/analytics-rollout-status.md`.
 
 ## What was exercised (deliverable 1)
 

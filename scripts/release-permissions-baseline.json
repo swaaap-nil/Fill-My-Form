@@ -1,0 +1,21 @@
+{
+  "chrome": {
+    "permissions": [
+      "storage",
+      "sidePanel",
+      "activeTab",
+      "tabs",
+      "scripting",
+      "notifications"
+    ]
+  },
+  "firefox": {
+    "permissions": [
+      "storage",
+      "activeTab",
+      "tabs",
+      "scripting",
+      "notifications"
+    ]
+  }
+}

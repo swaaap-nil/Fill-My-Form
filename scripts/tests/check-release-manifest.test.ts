@@ -4,8 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   evaluateManifest,
+  evaluatePermissionBaseline,
   evaluateTargetManifest,
   type ManifestLike,
+  type PermissionBaseline,
   scanBuildDirectory,
 } from "../check-release-manifest";
 
@@ -263,5 +265,69 @@ describe("scanBuildDirectory", () => {
     await writeFile(join(dir, "icon.png"), new Uint8Array(32).fill(7));
 
     expect(await scanBuildDirectory(dir)).toEqual([]);
+  });
+});
+
+describe("evaluatePermissionBaseline", () => {
+  const BASELINE: PermissionBaseline = {
+    chrome: { permissions: ["storage", "tabs"] },
+    firefox: { permissions: ["storage"] },
+  };
+
+  it("passes when required permissions match the baseline", () => {
+    expect(
+      evaluatePermissionBaseline(
+        "chrome",
+        { permissions: ["storage", "tabs"] },
+        BASELINE,
+      ),
+    ).toEqual([]);
+  });
+
+  it("fails when a required permission is not in the baseline", () => {
+    const findings = evaluatePermissionBaseline(
+      "chrome",
+      { permissions: ["storage", "tabs", "somethingNew"] },
+      BASELINE,
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toContain("somethingNew");
+    expect(findings[0]).toContain("re-approve");
+  });
+
+  it("allows permissions to be removed", () => {
+    expect(
+      evaluatePermissionBaseline(
+        "chrome",
+        { permissions: ["storage"] },
+        BASELINE,
+      ),
+    ).toEqual([]);
+  });
+
+  it("fails on any host_permissions", () => {
+    const findings = evaluatePermissionBaseline(
+      "chrome",
+      { permissions: ["storage"], host_permissions: [] },
+      BASELINE,
+    );
+    expect(findings.some((f) => f.includes("host_permissions"))).toBe(true);
+  });
+
+  it("keeps each target's baseline independent", () => {
+    const findings = evaluatePermissionBaseline(
+      "firefox",
+      { permissions: ["storage", "tabs"] },
+      BASELINE,
+    );
+    expect(findings.some((f) => f.includes("tabs"))).toBe(true);
+  });
+
+  it("is applied by evaluateTargetManifest", () => {
+    const findings = evaluateTargetManifest("chrome", {
+      ...CLEAN_CHROME_MANIFEST,
+      permissions: [...(CLEAN_CHROME_MANIFEST.permissions ?? []), "history"],
+    });
+    expect(findings.some((f) => f.includes("history"))).toBe(true);
   });
 });

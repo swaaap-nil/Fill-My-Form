@@ -105,6 +105,18 @@ python3 -c "import json;print(json.load(open('build/chrome-mv3/manifest.json')).
 # expected: None
 ```
 
+### Changing permissions
+
+Both stores auto-update users, but an update that adds a **required**
+permission (a new `permissions` entry or any `host_permissions`) disables the
+extension for existing users until they re-approve. Required permissions are
+therefore pinned in `scripts/release-permissions-baseline.json`, and
+`scripts/check-release-manifest.ts` fails the release build if the manifest
+grows beyond it. Prefer `optional_host_permissions` or an optional permission
+requested at runtime. If a new required permission is truly needed, update the
+baseline in the same change and note it in the changelog. See
+[ADR 011](./adr/011-required-permissions-pinned-to-baseline.md).
+
 ### Model output is never executed or rendered as HTML
 
 The CSP for extension pages is `script-src 'self'; object-src 'self'` — no
