@@ -52,6 +52,26 @@
     "description": "Supporting explanation when a scan is blocked on an internal browser page.",
     "message": "Internal browser pages aren't readable. Open an http or https page, then scan again."
   },
+  "scanNeedsAccess": {
+    "description": "Headline when the active site has not been granted access yet, or the access request did not complete.",
+    "message": "This site needs access."
+  },
+  "scanNeedsAccessHint": {
+    "description": "Default explanation when the active site has not been granted access yet.",
+    "message": "Use \"Scan this page\" and approve the browser prompt to continue."
+  },
+  "scanRefreshTip": {
+    "description": "Subtle tip shown under access problems, suggesting a page refresh.",
+    "message": "Still stuck? Click to refresh the page."
+  },
+  "scanUnreadablePage": {
+    "description": "Headline when access is granted but the browser does not let the extension read the active page.",
+    "message": "This page can't be read."
+  },
+  "scanUnreadablePageHint": {
+    "description": "Supporting explanation when access is granted but the browser blocks extensions on this page (stores, PDF viewers, error pages).",
+    "message": "Your access is on, but the browser doesn't allow extensions to read this page. Open a different page, then scan again."
+  },
   "localDataExport": {
     "message": "Export"
   },

@@ -152,6 +152,14 @@ const requestOriginsFromGesture = (
   return browser.permissions.request({ origins });
 };
 
+/**
+ * `injected` is `false` when no tab was given, access is not held, or the
+ * browser refused injection (browser stores, PDF viewers, error pages).
+ */
+export interface SyncScriptsResult {
+  readonly injected: boolean;
+}
+
 export interface SiteAccess {
   hasAllSiteAccess(): Promise<boolean>;
   hasSiteAccess(url: string): Promise<boolean>;
@@ -185,7 +193,10 @@ export interface SiteAccess {
    * Re-registers and injects content scripts when permission is already
    * granted but runtime registration was lost (no permission prompt).
    */
-  syncScriptsForGrantedAccess(url: string, activeTabId?: number): Promise<void>;
+  syncScriptsForGrantedAccess(
+    url: string,
+    activeTabId?: number,
+  ): Promise<SyncScriptsResult>;
   /** Every origin-pattern the user has granted. Powers the panel's "revoke" list. */
   listGrantedOrigins(): Promise<readonly string[]>;
   /** Browser UI or another context granted origins — register without prompting. */
@@ -284,14 +295,17 @@ export const createSiteAccess = (browser: SiteAccessBrowser): SiteAccess => {
    * even after a successful permission grant — registration still covers future
    * navigations, so a failure here must not reject the grant.
    */
-  const injectContentScript = async (activeTabId: number): Promise<void> => {
+  const injectContentScript = async (activeTabId: number): Promise<boolean> => {
     try {
       await browser.scripting.executeScript({
         target: { tabId: activeTabId },
         files: CONTENT_SCRIPT_JS,
       });
+      return true;
     } catch {
-      // Non-fatal — see comment above.
+      // Non-fatal — see comment above. Reported so callers can tell a
+      // granted-but-unscriptable page from a missing grant.
+      return false;
     }
   };
 
@@ -368,12 +382,12 @@ export const createSiteAccess = (browser: SiteAccessBrowser): SiteAccess => {
     },
 
     async syncScriptsForGrantedAccess(url, activeTabId) {
-      if (!isPermissibleUrl(url)) return;
+      if (!isPermissibleUrl(url)) return { injected: false };
       const origin = toOriginPattern(url);
       const hasOrigin = await browser.permissions.contains({
         origins: [origin],
       });
-      if (!hasOrigin) return;
+      if (!hasOrigin) return { injected: false };
 
       const protocol = new URL(url).protocol;
       const hasHttpsAll = await browser.permissions.contains({
@@ -391,9 +405,11 @@ export const createSiteAccess = (browser: SiteAccessBrowser): SiteAccess => {
         await registerForOrigin(origin);
       }
 
-      if (activeTabId !== undefined) {
-        await injectContentScript(activeTabId);
-      }
+      const injected =
+        activeTabId !== undefined
+          ? await injectContentScript(activeTabId)
+          : false;
+      return { injected };
     },
 
     async restoreGrantedSites() {

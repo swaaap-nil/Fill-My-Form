@@ -9,7 +9,9 @@ import {
   FileUp,
   HelpCircle,
   LoaderCircle,
+  Lock,
   PenLine,
+  RefreshCw,
   SearchX,
   ShieldOff,
 } from "lucide-react";
@@ -47,6 +49,7 @@ import {
   consumePendingFillTabId,
   peekPendingFillTabId,
 } from "~/lib/pending-fill-tab";
+import { classifyScanReadFailure } from "~/lib/scan-read-outcome";
 import {
   runAllSitesAccessRequest,
   runScanSiteAccess,
@@ -55,6 +58,7 @@ import {
 import { useSound } from "~/lib/sfx/react";
 import {
   isAllSiteOriginPattern,
+  isPermissibleUrl,
   siteAccess,
   toOriginPattern,
 } from "~/lib/site-access";
@@ -130,6 +134,7 @@ type ScanUiState =
 
 type ScanAccessHint =
   | { readonly kind: "internal_page" }
+  | { readonly kind: "unreadable_page" }
   | { readonly kind: "message"; readonly text: string };
 
 /**
@@ -223,11 +228,16 @@ const ScanNotice = ({
   icon: Icon,
   title,
   hint,
+  tip,
+  onTipClick,
 }: {
   readonly testId: string;
   readonly icon: LucideIcon;
   readonly title: string;
   readonly hint: string;
+  /** Optional low-emphasis suggestion shown as a pill under the hint. */
+  readonly tip?: string;
+  readonly onTipClick?: () => void;
 }) => (
   <div
     className="flex min-h-48 flex-1 flex-col items-center justify-center gap-3 px-3 py-8 text-center motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-reduce:animate-none"
@@ -247,6 +257,17 @@ const ScanNotice = ({
       <p className="text-pretty text-base text-muted-foreground leading-relaxed">
         {hint}
       </p>
+      {tip && (
+        <button
+          type="button"
+          className="mx-auto flex cursor-pointer items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-primary text-xs transition-colors hover:bg-primary/20 focus-visible:outline-2 focus-visible:outline-primary"
+          data-testid={`${testId}-tip`}
+          onClick={onTipClick}
+        >
+          <RefreshCw className="size-3 shrink-0" aria-hidden="true" />
+          {tip}
+        </button>
+      )}
     </div>
   </div>
 );
@@ -266,6 +287,33 @@ const ScanInternalPageState = () => (
     icon={ShieldOff}
     title={browser.i18n.getMessage("scanInternalPage")}
     hint={browser.i18n.getMessage("scanInternalPageHint")}
+  />
+);
+
+/** `hint` overrides the default copy for access-request failures. */
+const ScanNeedsAccessState = ({
+  hint,
+  onRefresh,
+}: {
+  readonly hint?: string;
+  readonly onRefresh: () => void;
+}) => (
+  <ScanNotice
+    testId="scan-needs-access"
+    icon={Lock}
+    title={browser.i18n.getMessage("scanNeedsAccess")}
+    hint={hint ?? browser.i18n.getMessage("scanNeedsAccessHint")}
+    tip={browser.i18n.getMessage("scanRefreshTip")}
+    onTipClick={onRefresh}
+  />
+);
+
+const ScanUnreadablePageState = () => (
+  <ScanNotice
+    testId="scan-unreadable-page"
+    icon={ShieldOff}
+    title={browser.i18n.getMessage("scanUnreadablePage")}
+    hint={browser.i18n.getMessage("scanUnreadablePageHint")}
   />
 );
 
@@ -856,6 +904,9 @@ export const FillPanel = () => {
   // page" only ever means the active tab, so scan asks for that specific
   // origin when needed rather than assuming any granted origin is enough.
   const [activeTabGranted, setActiveTabGranted] = useState(false);
+  // False until the first permission check resolves, so the "needs access"
+  // notice never flashes before we know whether access is held.
+  const [activeTabAccessChecked, setActiveTabAccessChecked] = useState(false);
   const [hasAllSiteAccess, setHasAllSiteAccess] = useState(false);
   const [allSitesUpgradeState, setAllSitesUpgradeState] =
     useState<AllSitesUpgradeState>({
@@ -876,6 +927,7 @@ export const FillPanel = () => {
       setActiveTabGranted(
         tab?.url ? await siteAccess.hasSiteAccess(tab.url) : false,
       );
+      setActiveTabAccessChecked(true);
     },
     [],
   );
@@ -1011,13 +1063,22 @@ export const FillPanel = () => {
     setFillStatus({ kind: "ready" });
     sound.startLoop("scan-page", "scanStarted");
 
+    let injectionRefused = false;
     try {
-      await siteAccess.syncScriptsForGrantedAccess(activeTabUrl, activeTabId);
+      const synced = await siteAccess.syncScriptsForGrantedAccess(
+        activeTabUrl,
+        activeTabId,
+      );
+      injectionRefused = !synced.injected;
       await refreshAccessState();
 
       let fillResult = await sendMessage("runFill", { tabId: activeTabId });
       if (!fillResult.granted) {
-        await siteAccess.syncScriptsForGrantedAccess(activeTabUrl, activeTabId);
+        const resynced = await siteAccess.syncScriptsForGrantedAccess(
+          activeTabUrl,
+          activeTabId,
+        );
+        injectionRefused = !resynced.injected;
         fillResult = await sendMessage("runFill", { tabId: activeTabId });
         if (!fillResult.granted) {
           setActiveTabGranted(false);
@@ -1064,8 +1125,21 @@ export const FillPanel = () => {
       sound.stopLoop("scan-page");
       sound.play("scanSucceeded");
     } catch {
-      // No content script reachable in this tab. Leave Scan available.
-      setActiveTabGranted(false);
+      // No content script reachable in this tab. A held permission on a page
+      // the browser will not let us read is not revoked access — keep it.
+      const permissionHeld = await siteAccess
+        .hasSiteAccess(activeTabUrl)
+        .catch(() => false);
+      const outcome = classifyScanReadFailure({
+        permissionHeld,
+        injectionRefused,
+      });
+      setActiveTabGranted(outcome.activeTabGranted);
+      setScanAccessHint(
+        outcome.hint === "unreadable_page"
+          ? { kind: "unreadable_page" }
+          : undefined,
+      );
       setScanState({ kind: "not_granted" });
       setScanUiState("failed");
       sound.stopLoop("scan-page");
@@ -1137,6 +1211,11 @@ export const FillPanel = () => {
   };
 
   scanGrantedRef.current = scanGrantedTab;
+
+  const refreshActiveTab = () => {
+    if (activeTabId === undefined) return;
+    void browser.tabs.reload(activeTabId).catch(() => {});
+  };
 
   const revoke = async (origin: string) => {
     try {
@@ -1391,14 +1470,25 @@ export const FillPanel = () => {
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
       <div className="flex min-h-0 flex-1 flex-col gap-4">
+        {scanState.kind === "idle" &&
+          scanUiState === "idle" &&
+          activeTabAccessChecked &&
+          !activeTabGranted &&
+          activeTabUrl !== undefined &&
+          isPermissibleUrl(activeTabUrl) && (
+            <ScanNeedsAccessState onRefresh={refreshActiveTab} />
+          )}
+
         {scanState.kind === "not_granted" &&
           (scanAccessHint?.kind === "internal_page" ? (
             <ScanInternalPageState />
+          ) : scanAccessHint?.kind === "unreadable_page" ? (
+            <ScanUnreadablePageState />
           ) : (
-            <p className="text-muted-foreground text-sm">
-              {scanAccessHint?.text ??
-                'This site needs access before it can be scanned. Use "Scan this page" and approve the browser prompt to continue.'}
-            </p>
+            <ScanNeedsAccessState
+              hint={scanAccessHint?.text}
+              onRefresh={refreshActiveTab}
+            />
           ))}
 
         {scanState.kind === "proposals" && showProposalDetails ? (
