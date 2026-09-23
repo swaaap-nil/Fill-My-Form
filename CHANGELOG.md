@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.10.0](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.9.0...v1.10.0) (2026-09-22)
+
+### Features
+
+* **landing:** localize the brand name across all 10 languages ([9808528](https://github.com/swaaap-nil/Fill-My-Form/commit/98085282ad99117abc56a562bcaab79caef5198f))
+* **matching:** make page-content matching language-agnostic ([685fa1f](https://github.com/swaaap-nil/Fill-My-Form/commit/685fa1fde0fe54bc64e799894d7858f15fc16207))
+* **analytics:** add anonymous product analytics infra, paused pending backend proxy ([919a79b](https://github.com/swaaap-nil/Fill-My-Form/commit/919a79b3f62375d38440c328ef64988590cc53ea))
+* **landing:** show the Chrome Web Store install button ([df62761](https://github.com/swaaap-nil/Fill-My-Form/commit/df62761323951a43161021f0f84a83a795129d3a))
+
+### Bug Fixes
+
+* **e2e:** stop relying on Playwright's fake clock for the referral-field test ([ae53ba5](https://github.com/swaaap-nil/Fill-My-Form/commit/ae53ba5eca84b8e732a72287fa8cac4f6e5ded52))
+
 ## [1.9.0](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.8.1...v1.9.0) (2026-09-22)
 
 * See the Git history for this tag.
