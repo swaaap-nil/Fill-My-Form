@@ -23,6 +23,8 @@ export const SFX_EVENT_CUES = {
   agentAnswerSent: "send",
   agentReviewConfirmed: "success",
   agentReviewSkipped: "cancel",
+  unrecognizedFieldConfirmed: "reward",
+  unrecognizedFieldDismissed: "reaction",
   memoryTyping: "typing",
   memorySaveSucceeded: "success",
   memorySaveFailed: "error",

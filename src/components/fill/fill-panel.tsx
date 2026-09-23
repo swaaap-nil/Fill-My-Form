@@ -49,6 +49,7 @@ import {
   consumePendingFillTabId,
   peekPendingFillTabId,
 } from "~/lib/pending-fill-tab";
+import { deriveScanNotice } from "~/lib/scan-notice";
 import { classifyScanReadFailure } from "~/lib/scan-read-outcome";
 import {
   runAllSitesAccessRequest,
@@ -58,7 +59,6 @@ import {
 import { useSound } from "~/lib/sfx/react";
 import {
   isAllSiteOriginPattern,
-  isPermissibleUrl,
   siteAccess,
   toOriginPattern,
 } from "~/lib/site-access";
@@ -228,16 +228,11 @@ const ScanNotice = ({
   icon: Icon,
   title,
   hint,
-  tip,
-  onTipClick,
 }: {
   readonly testId: string;
   readonly icon: LucideIcon;
   readonly title: string;
   readonly hint: string;
-  /** Optional low-emphasis suggestion shown as a pill under the hint. */
-  readonly tip?: string;
-  readonly onTipClick?: () => void;
 }) => (
   <div
     className="flex min-h-48 flex-1 flex-col items-center justify-center gap-3 px-3 py-8 text-center motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-reduce:animate-none"
@@ -257,28 +252,184 @@ const ScanNotice = ({
       <p className="text-pretty text-base text-muted-foreground leading-relaxed">
         {hint}
       </p>
-      {tip && (
-        <button
-          type="button"
-          className="mx-auto flex cursor-pointer items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-primary text-xs transition-colors hover:bg-primary/20 focus-visible:outline-2 focus-visible:outline-primary"
-          data-testid={`${testId}-tip`}
-          onClick={onTipClick}
-        >
-          <RefreshCw className="size-3 shrink-0" aria-hidden="true" />
-          {tip}
-        </button>
-      )}
     </div>
   </div>
 );
 
-const ScanEmptyState = () => (
-  <ScanNotice
-    testId="scan-no-fields-found"
-    icon={SearchX}
-    title={browser.i18n.getMessage("scanNoFieldsFound")}
-    hint={browser.i18n.getMessage("scanNoFieldsFoundHint")}
-  />
+/**
+ * One unrecognized field. Either answer plays a short thank-you beat (with
+ * its own sound), then the card collapses away. Nothing is persisted yet.
+ */
+const UnrecognizedFieldCard = ({
+  label,
+  onConfirm,
+  onGone,
+}: {
+  readonly label: string;
+  readonly onConfirm: () => void;
+  readonly onGone: () => void;
+}) => {
+  const sound = useSound();
+  const [answer, setAnswer] = useState<boolean | undefined>();
+  const [phase, setPhase] = useState<"idle" | "thanks" | "leaving">("idle");
+  const timers = useRef<number[]>([]);
+
+  useEffect(
+    () => () => {
+      for (const t of timers.current) window.clearTimeout(t);
+    },
+    [],
+  );
+
+  const submitAnswer = (value: boolean) => {
+    if (phase !== "idle") return;
+    setAnswer(value);
+    setPhase("thanks");
+    sound.play(
+      value ? "unrecognizedFieldConfirmed" : "unrecognizedFieldDismissed",
+    );
+    onConfirm();
+    timers.current.push(
+      window.setTimeout(() => setPhase("leaving"), 800),
+      window.setTimeout(onGone, 1150),
+    );
+  };
+
+  return (
+    <li
+      className={cn(
+        "grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none",
+        phase === "leaving"
+          ? "grid-rows-[0fr] opacity-0"
+          : "grid-rows-[1fr] opacity-100",
+      )}
+      data-testid="unrecognized-field-card"
+    >
+      <div className="min-h-0 overflow-hidden">
+        {phase === "idle" ? (
+          <div className="flex flex-col gap-1.5 rounded-md border px-3 py-2">
+            <span className="truncate font-medium text-sm">{label}</span>
+            <span className="flex items-center justify-between gap-2 text-muted-foreground text-xs">
+              {browser.i18n.getMessage("unrecognizedFieldsQuestion")}
+              <span className="flex gap-1">
+                {([true, false] as const).map((value) => (
+                  <Button
+                    key={String(value)}
+                    type="button"
+                    size="sm"
+                    variant={answer === value ? "default" : "outline"}
+                    aria-pressed={answer === value}
+                    onClick={() => submitAnswer(value)}
+                  >
+                    {browser.i18n.getMessage(
+                      value ? "unrecognizedFieldsYes" : "unrecognizedFieldsNo",
+                    )}
+                  </Button>
+                ))}
+              </span>
+            </span>
+          </div>
+        ) : (
+          <div
+            className="flex items-center justify-center gap-2 rounded-md border border-primary/40 bg-primary/10 px-3 py-4 font-medium text-sm motion-safe:animate-in motion-safe:zoom-in-95 motion-safe:fade-in-0"
+            role="status"
+            data-testid="unrecognized-field-thanks"
+          >
+            <CheckCircle2
+              className="size-5 text-primary motion-safe:animate-in motion-safe:zoom-in-50 motion-safe:duration-500"
+              aria-hidden="true"
+            />
+            {browser.i18n.getMessage(
+              answer
+                ? "unrecognizedFieldsThanks"
+                : "unrecognizedFieldsThanksNo",
+            )}
+          </div>
+        )}
+      </div>
+    </li>
+  );
+};
+
+/**
+ * Fields the scan found but could not match to anything. Feedback is
+ * collected here later; for now the answers are local UI state only.
+ */
+const UnrecognizedFieldsNote = ({
+  labels,
+}: {
+  readonly labels: readonly string[];
+}) => {
+  const [open, setOpen] = useState(false);
+  const [confirmed, setConfirmed] = useState<ReadonlySet<number>>(new Set());
+  const [gone, setGone] = useState<ReadonlySet<number>>(new Set());
+  const listId = useId();
+  // The count drops the moment a card is confirmed; the card itself lingers
+  // just long enough to play its success beat and collapse.
+  const remaining = labels.length - confirmed.size;
+  if (gone.size >= labels.length) return null;
+
+  return (
+    <div
+      className="flex flex-col items-center gap-2 pb-4 text-center"
+      data-testid="unrecognized-fields"
+    >
+      {remaining > 0 && (
+        <button
+          type="button"
+          className="text-muted-foreground text-xs underline-offset-4 hover:underline"
+          aria-expanded={open}
+          aria-controls={listId}
+          onClick={() => setOpen((v) => !v)}
+          data-testid="unrecognized-fields-toggle"
+        >
+          {browser.i18n.getMessage(
+            remaining === 1
+              ? "unrecognizedFieldsOne"
+              : "unrecognizedFieldsMany",
+            [String(remaining)],
+          )}
+        </button>
+      )}
+      {open && (
+        <ul
+          id={listId}
+          className="flex w-full flex-col gap-2 text-left"
+          data-testid="unrecognized-fields-list"
+        >
+          {labels.map((label, index) =>
+            gone.has(index) ? null : (
+              <UnrecognizedFieldCard
+                // biome-ignore lint/suspicious/noArrayIndexKey: labels may repeat
+                key={index}
+                label={label}
+                onConfirm={() =>
+                  setConfirmed((prev) => new Set(prev).add(index))
+                }
+                onGone={() => setGone((prev) => new Set(prev).add(index))}
+              />
+            ),
+          )}
+        </ul>
+      )}
+    </div>
+  );
+};
+
+const ScanEmptyState = ({
+  unrecognizedLabels = [],
+}: {
+  readonly unrecognizedLabels?: readonly string[];
+}) => (
+  <>
+    <ScanNotice
+      testId="scan-no-fields-found"
+      icon={SearchX}
+      title={browser.i18n.getMessage("scanNoFieldsFound")}
+      hint={browser.i18n.getMessage("scanNoFieldsFoundHint")}
+    />
+    <UnrecognizedFieldsNote labels={unrecognizedLabels} />
+  </>
 );
 
 const ScanInternalPageState = () => (
@@ -291,20 +442,12 @@ const ScanInternalPageState = () => (
 );
 
 /** `hint` overrides the default copy for access-request failures. */
-const ScanNeedsAccessState = ({
-  hint,
-  onRefresh,
-}: {
-  readonly hint?: string;
-  readonly onRefresh: () => void;
-}) => (
+const ScanNeedsAccessState = ({ hint }: { readonly hint?: string }) => (
   <ScanNotice
     testId="scan-needs-access"
     icon={Lock}
     title={browser.i18n.getMessage("scanNeedsAccess")}
     hint={hint ?? browser.i18n.getMessage("scanNeedsAccessHint")}
-    tip={browser.i18n.getMessage("scanRefreshTip")}
-    onTipClick={onRefresh}
   />
 );
 
@@ -416,6 +559,8 @@ const ScanToolbar = ({
   onEnableAllSites,
   onSnoozeAllSitesUpgrade,
   perSiteAccessOnly,
+  showRefreshTip,
+  onRefreshTip,
 }: {
   readonly state: ScanUiState;
   readonly grantedOrigin: string | undefined;
@@ -427,6 +572,8 @@ const ScanToolbar = ({
   readonly onEnableAllSites: () => void;
   readonly onSnoozeAllSitesUpgrade: () => void;
   readonly perSiteAccessOnly: boolean;
+  readonly showRefreshTip: boolean;
+  readonly onRefreshTip: () => void;
 }) => {
   const scanning = state === "scanning";
   const hasScanResult = state === "results" || state === "filled";
@@ -478,6 +625,17 @@ const ScanToolbar = ({
             {scanLabel}
           </span>
         </Button>
+      )}
+      {showRefreshTip && (
+        <button
+          type="button"
+          className="mx-auto flex cursor-pointer items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-primary text-xs transition-colors hover:bg-primary/20 focus-visible:outline-2 focus-visible:outline-primary motion-safe:animate-in motion-safe:fade-in-0"
+          data-testid="scan-refresh-tip"
+          onClick={onRefreshTip}
+        >
+          <RefreshCw className="size-3 shrink-0" aria-hidden="true" />
+          {browser.i18n.getMessage("scanRefreshTip")}
+        </button>
       )}
       {showAllSitesUpgradeStrip && (
         <div
@@ -1381,13 +1539,32 @@ export const FillPanel = () => {
       proposalView === "uploads");
   const showAnswersSummary =
     answerDetailProposals.length > 0 || fillStatus.kind !== "ready";
+  const unrecognizedLabels =
+    scanState.kind === "proposals"
+      ? scanState.proposals.flatMap((p) =>
+          p.state === "unknown" && p.fieldLabel?.trim()
+            ? [p.fieldLabel.trim()]
+            : [],
+        )
+      : [];
+  // Nothing to fill or ask about: no fields at all, or only ones we could not
+  // recognize. The agent has nothing to work on in either case.
   const scanLiterallyEmpty =
     scanState.kind === "proposals" &&
-    scanState.proposals.length === 0 &&
-    scanState.uploadIntents.length === 0;
+    scanState.uploadIntents.length === 0 &&
+    scanState.proposals.every((p) => p.state === "unknown");
   const activeGrantedOrigin = activeTabGranted
     ? findGrantedOriginForUrl(activeTabUrl, grantedOrigins)
     : undefined;
+
+  const scanNotice = deriveScanNotice({
+    scanState: scanState.kind,
+    scanUiState,
+    hintKind: scanAccessHint?.kind,
+    accessChecked: activeTabAccessChecked,
+    activeTabGranted,
+    activeTabUrl,
+  });
 
   const hasSuccessfulScan =
     scanUiState === "results" || scanUiState === "filled";
@@ -1470,26 +1647,17 @@ export const FillPanel = () => {
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
       <div className="flex min-h-0 flex-1 flex-col gap-4">
-        {scanState.kind === "idle" &&
-          scanUiState === "idle" &&
-          activeTabAccessChecked &&
-          !activeTabGranted &&
-          activeTabUrl !== undefined &&
-          isPermissibleUrl(activeTabUrl) && (
-            <ScanNeedsAccessState onRefresh={refreshActiveTab} />
-          )}
-
-        {scanState.kind === "not_granted" &&
-          (scanAccessHint?.kind === "internal_page" ? (
-            <ScanInternalPageState />
-          ) : scanAccessHint?.kind === "unreadable_page" ? (
-            <ScanUnreadablePageState />
-          ) : (
-            <ScanNeedsAccessState
-              hint={scanAccessHint?.text}
-              onRefresh={refreshActiveTab}
-            />
-          ))}
+        {scanNotice.kind === "internal_page" && <ScanInternalPageState />}
+        {scanNotice.kind === "unreadable_page" && <ScanUnreadablePageState />}
+        {scanNotice.kind === "needs_access" && (
+          <ScanNeedsAccessState
+            hint={
+              scanAccessHint?.kind === "message"
+                ? scanAccessHint.text
+                : undefined
+            }
+          />
+        )}
 
         {scanState.kind === "proposals" && showProposalDetails ? (
           <div
@@ -1581,7 +1749,10 @@ export const FillPanel = () => {
                 knownNoAnswerProposals.length === 0 &&
                 recognizedUploads.length === 0 &&
                 (scanLiterallyEmpty ? (
-                  <ScanEmptyState />
+                  <ScanEmptyState
+                    key={scanVersion}
+                    unrecognizedLabels={unrecognizedLabels}
+                  />
                 ) : (
                   <AgentRunPanel key={scanVersion} tabId={activeTabId} />
                 ))}
@@ -1621,6 +1792,8 @@ export const FillPanel = () => {
           onEnableAllSites={() => void enableAllSitesAccess()}
           onSnoozeAllSitesUpgrade={() => void snoozeAllSitesUpgradePrompt()}
           perSiteAccessOnly={perSiteAccessOnly}
+          showRefreshTip={scanNotice.showRefreshTip}
+          onRefreshTip={refreshActiveTab}
         />
       </div>
     </div>

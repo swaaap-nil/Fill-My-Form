@@ -10,6 +10,7 @@ import { cn } from "~/lib/utils";
  * appears on every surface.
  */
 export const Footer = ({ className }: { readonly className?: string }) => {
+  const version = browser.runtime.getManifest().version;
   return (
     <footer className={cn("flex w-full justify-center", className)}>
       <p className="flex items-center justify-center gap-1 text-center text-muted-foreground text-xs">
@@ -27,6 +28,13 @@ export const Footer = ({ className }: { readonly className?: string }) => {
         >
           <Lock className="size-3" />
         </a>
+        <span
+          className="opacity-50"
+          title={`Version ${version}`}
+          data-testid="footer-version"
+        >
+          · v{version}
+        </span>
       </p>
     </footer>
   );

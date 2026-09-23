@@ -192,6 +192,44 @@ test("empty scan: shows localized message instead of Answer now and never again"
   await expect(agentStartButton(panelPage)).toBeHidden();
 });
 
+test("unrecognized fields: shows the empty state, counts them, and resets on rescan", async ({
+  context,
+  extensionId,
+}) => {
+  const formPage = await context.newPage();
+  await formPage.goto("/unrecognized-fields.html");
+
+  const panelPage = await openPanel(context, extensionId);
+  await grantAccess(formPage, panelPage);
+
+  await formPage.bringToFront();
+  await clickScan(panelPage);
+
+  // Only fields we cannot recognize: nothing for the agent to work on.
+  await expect(panelPage.getByTestId("scan-no-fields-found")).toBeVisible();
+  await expect(agentStartButton(panelPage)).toBeHidden();
+
+  const toggle = panelPage.getByTestId("unrecognized-fields-toggle");
+  await expect(toggle).toHaveText("3 fields we don't recognize");
+  await toggle.click();
+  const cards = panelPage.getByTestId("unrecognized-field-card");
+  await expect(cards).toHaveCount(3);
+
+  // Answering drops the count at once and the card then leaves the list.
+  await cards.first().getByRole("button", { name: "Yes" }).click();
+  await expect(toggle).toHaveText("2 fields we don't recognize");
+  await expect(cards).toHaveCount(2);
+
+  await cards.first().getByRole("button", { name: "No" }).click();
+  await expect(toggle).toHaveText("1 field we don't recognize");
+  await expect(cards).toHaveCount(1);
+
+  // A rescan is a fresh state: every field is back.
+  await formPage.bringToFront();
+  await clickScan(panelPage);
+  await expect(toggle).toHaveText("3 fields we don't recognize");
+});
+
 test("summary cards: hides answers summary when no answers are detected", async ({
   context,
   extensionId,

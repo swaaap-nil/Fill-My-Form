@@ -182,5 +182,43 @@
   "accessOnFor": {
     "description": "Prefix before granted scope in the scan toolbar footer.",
     "message": "Access is on for"
+  },
+  "unrecognizedFieldsOne": {
+    "description": "Subtle line under the empty scan state; $1 = 1 unrecognized field. Expands to a list.",
+    "message": "$1 field we don't recognize",
+    "placeholders": {
+      "1": {
+        "content": "$1"
+      }
+    }
+  },
+  "unrecognizedFieldsMany": {
+    "description": "Subtle line under the empty scan state; $1 = number of unrecognized fields. Expands to a list.",
+    "message": "$1 fields we don't recognize",
+    "placeholders": {
+      "1": {
+        "content": "$1"
+      }
+    }
+  },
+  "unrecognizedFieldsQuestion": {
+    "description": "Per-field question asking whether the extension should have recognized it.",
+    "message": "Should we have recognized this?"
+  },
+  "unrecognizedFieldsYes": {
+    "description": "Yes answer to the recognition question.",
+    "message": "Yes"
+  },
+  "unrecognizedFieldsNo": {
+    "description": "No answer to the recognition question.",
+    "message": "No"
+  },
+  "unrecognizedFieldsThanks": {
+    "description": "Brief confirmation after the user says a field should have been recognized.",
+    "message": "Thanks, noted!"
+  },
+  "unrecognizedFieldsThanksNo": {
+    "description": "Brief confirmation after the user says an unrecognized field was correctly left unrecognized.",
+    "message": "Thanks, that helps!"
   }
 }
