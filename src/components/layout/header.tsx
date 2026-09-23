@@ -35,7 +35,9 @@ export const Header = ({ action }: { readonly action?: React.ReactNode }) => {
         </div>
         <SoundControl />
       </div>
-      <div className="ml-auto flex shrink-0 items-center gap-2">{action}</div>
+      <div className="ml-auto flex shrink-0 flex-col items-stretch gap-2 min-[440px]:flex-row min-[440px]:items-center">
+        {action}
+      </div>
     </header>
   );
 };
