@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { createShadowRootUi, defineContentScript } from "#imports";
+import { DetectionNudgeBanner } from "~/components/fill/detection-nudge-banner";
 import {
-  DETECTION_NUDGE_AUTO_HIDE_MS,
-  DetectionNudgeBanner,
-} from "~/components/fill/detection-nudge-banner";
+  type DetectionNudgeDetail,
+  detectionNudgeEvent,
+  useDetectionNudge,
+} from "~/components/fill/use-detection-nudge";
 import { failed, VerificationIssueCode } from "~/core/verification/types";
 import type { FieldElements } from "~/lib/form/extract";
 import { extractFullWithElements } from "~/lib/form/extract";
@@ -58,15 +60,9 @@ const ensurePassiveDetectionStarted = (): void => {
  */
 const shouldSkipUiMount = (): boolean =>
   document.querySelector("form-agent-ui") !== null;
-const detectionNudgeEvent = "form-agent-detection-nudge";
 
 interface FillFeedbackDetail {
   readonly filledCount: number;
-}
-
-interface DetectionNudgeDetail {
-  readonly knownFieldCount: number;
-  readonly answerCount: number;
 }
 
 const announceFillFeedback = (filledCount: number) => {
@@ -227,26 +223,12 @@ const ContentScriptUI = () => {
   const [fillFeedback, setFillFeedback] = useState<FillFeedbackDetail | null>(
     null,
   );
-  const [detectionNudge, setDetectionNudge] =
-    useState<DetectionNudgeDetail | null>(null);
-
-  useEffect(() => {
-    let hideTimer: number | undefined;
-    const handleDetectionNudge = (event: Event) => {
-      const detail = (event as CustomEvent<DetectionNudgeDetail>).detail;
-      if (hideTimer !== undefined) window.clearTimeout(hideTimer);
-      setDetectionNudge(detail);
-      hideTimer = window.setTimeout(() => {
-        setDetectionNudge(null);
-      }, DETECTION_NUDGE_AUTO_HIDE_MS);
-    };
-
-    window.addEventListener(detectionNudgeEvent, handleDetectionNudge);
-    return () => {
-      if (hideTimer !== undefined) window.clearTimeout(hideTimer);
-      window.removeEventListener(detectionNudgeEvent, handleDetectionNudge);
-    };
-  }, []);
+  const {
+    nudge: detectionNudge,
+    hint: detectionHint,
+    dismiss: dismissDetectionNudge,
+    showOpenHint,
+  } = useDetectionNudge();
 
   useEffect(() => {
     let hideTimer: number | undefined;
@@ -272,11 +254,14 @@ const ContentScriptUI = () => {
         <DetectionNudgeBanner
           knownFieldCount={detectionNudge.knownFieldCount}
           answerCount={detectionNudge.answerCount}
+          hint={detectionHint}
           onReview={() => {
-            void sendMessage("openFillUiFromTab");
-            setDetectionNudge(null);
+            void sendMessage("openFillUiFromTab").then(({ opened }) => {
+              if (opened) dismissDetectionNudge();
+              else showOpenHint();
+            }, showOpenHint);
           }}
-          onDismiss={() => setDetectionNudge(null)}
+          onDismiss={dismissDetectionNudge}
         />
       )}
       {fillFeedback && (
@@ -353,6 +338,15 @@ export default defineContentScript({
         root?.unmount();
       },
     });
+
+    // `main` can run twice on one page (register + inject) and both runs can
+    // pass the check above before either mounts, since `createShadowRootUi` is
+    // async. Re-check synchronously right before mounting so only one UI, and
+    // so one banner, ever exists.
+    if (shouldSkipUiMount()) {
+      ui.remove();
+      return;
+    }
 
     shadowUi = ui;
     ui.mount();

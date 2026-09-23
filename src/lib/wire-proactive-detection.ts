@@ -149,16 +149,15 @@ export const wireProactiveDetection = (deps: {
     const tabId = Number.parseInt(notificationId.slice(prefix.length), 10);
     if (Number.isNaN(tabId)) return;
 
+    // No `tabs.get` first: the side panel must open inside the click's user
+    // gesture, and `sidePanel.open` only needs the tab id.
     void (async () => {
-      const tab = await browser.tabs.get(tabId);
-      if (tab.windowId === undefined) return;
       await focusTabAndOpenFillUi(
         browser as Parameters<typeof focusTabAndOpenFillUi>[0],
         tabId,
-        tab.windowId,
       );
       await clearDetectionBadge(browser, tabId);
-    })();
+    })().catch(() => undefined);
   });
 
   onMessage("openFillUiFromTab", async ({ sender }) => {

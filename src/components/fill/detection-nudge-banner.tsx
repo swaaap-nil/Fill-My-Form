@@ -7,11 +7,14 @@ export const DETECTION_NUDGE_AUTO_HIDE_MS = 14_000;
 export const DetectionNudgeBanner = ({
   knownFieldCount,
   answerCount,
+  hint = false,
   onReview,
   onDismiss,
 }: {
   readonly knownFieldCount: number;
   readonly answerCount: number;
+  /** Show the "click the toolbar icon" message instead of the Review action. */
+  readonly hint?: boolean;
   readonly onReview: () => void;
   readonly onDismiss: () => void;
 }) => {
@@ -22,6 +25,9 @@ export const DetectionNudgeBanner = ({
       String(answerCount),
     ]) ||
     `${knownFieldCount} known fields, ${answerCount} answers ready to review`;
+  const hintBody =
+    browser.i18n.getMessage("detectionNudgeBannerOpenHint") ||
+    "Click the Fill My Form icon in your browser toolbar to review.";
   const reviewLabel = browser.i18n.getMessage("detectionNudgeBannerAction");
   const dismissLabel = browser.i18n.getMessage("detectionNudgeBannerDismiss");
 
@@ -34,6 +40,7 @@ export const DetectionNudgeBanner = ({
       <div className="relative min-w-64 max-w-[min(28rem,calc(100vw-2rem))] overflow-hidden rounded-lg border border-primary/35 bg-background/95 px-4 py-3 text-foreground shadow-2xl shadow-black/25 ring-1 ring-border backdrop-blur">
         <div className="absolute inset-x-0 top-0 h-1 bg-primary/15">
           <div
+            key={hint ? "hint" : "nudge"}
             className="h-full w-full origin-left bg-primary/70 motion-safe:animate-[fill-feedback-progress_14s_linear_forwards] motion-reduce:animate-none"
             style={
               {
@@ -48,13 +55,20 @@ export const DetectionNudgeBanner = ({
               {title || "Forms ready to review"}
             </p>
             <p className="text-muted-foreground text-xs leading-relaxed">
-              {body}
+              {hint ? hintBody : body}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button type="button" size="sm" className="h-8" onClick={onReview}>
-              {reviewLabel || "Review answers"}
-            </Button>
+            {!hint && (
+              <Button
+                type="button"
+                size="sm"
+                className="h-8"
+                onClick={onReview}
+              >
+                {reviewLabel || "Review"}
+              </Button>
+            )}
             <Button
               type="button"
               variant="link"
