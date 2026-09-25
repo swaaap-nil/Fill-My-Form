@@ -82,7 +82,6 @@ const GLOBAL_SCRIPT_IDS = [
   GLOBAL_HTTP_SCRIPT_ID,
 ] as const;
 const CONTENT_SCRIPT_JS = ["content-scripts/content.js"];
-const CONTENT_SCRIPT_CSS = ["content-scripts/content.css"];
 
 /** Runtime grant for passive detection on arbitrary http(s) pages. */
 export const ALL_SITE_ORIGINS = ["https://*/*", "http://*/*"] as const;
@@ -221,7 +220,6 @@ export const createSiteAccess = (browser: SiteAccessBrowser): SiteAccess => {
           id,
           matches,
           js: CONTENT_SCRIPT_JS,
-          css: CONTENT_SCRIPT_CSS,
           runAt: "document_idle",
         },
       ]);

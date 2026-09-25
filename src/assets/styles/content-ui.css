@@ -1,0 +1,221 @@
+.fmf-banner-root {
+  position: fixed;
+  inset-inline: 1rem;
+  top: 1.5rem;
+  z-index: 2147483647;
+  display: flex;
+  justify-content: center;
+  font-family:
+    "Geist", "Helvetica Neue", Arial, "Noto Sans", system-ui, sans-serif;
+}
+
+.fmf-banner-root--interactive {
+  pointer-events: auto;
+}
+
+.fmf-banner-root--passive {
+  pointer-events: none;
+}
+
+.fmf-banner-card {
+  position: relative;
+  min-width: 16rem;
+  max-width: min(28rem, calc(100vw - 2rem));
+  overflow: hidden;
+  border: 1px solid rgb(197 177 255 / 35%);
+  border-radius: 0.5rem;
+  background: rgb(250 249 246 / 95%);
+  padding: 0.75rem 1rem;
+  color: #24232d;
+  box-shadow:
+    0 0 0 1px #ded8e7,
+    0 25px 50px -12px rgb(0 0 0 / 25%);
+  backdrop-filter: blur(8px);
+}
+
+.fmf-progress-track {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 0.25rem;
+  background: rgb(197 177 255 / 15%);
+}
+
+.fmf-progress-track--success {
+  background: rgb(16 185 129 / 20%);
+}
+
+.fmf-progress-fill {
+  width: 100%;
+  height: 100%;
+  transform-origin: left;
+  background: rgb(147 114 255 / 70%);
+}
+
+.fmf-progress-fill--success {
+  background: #34d399;
+}
+
+.fmf-banner-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.fmf-banner-copy {
+  min-width: 0;
+  padding-right: 1.5rem;
+}
+
+.fmf-banner-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+}
+
+.fmf-banner-message {
+  margin: 0;
+  color: #625b6b;
+  font-size: 0.75rem;
+  line-height: 1.625;
+}
+
+.fmf-banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.fmf-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0.375rem;
+  background: #c5b1ff;
+  color: #171920;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.fmf-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #9372ff;
+}
+
+.fmf-button--primary {
+  height: 2rem;
+  padding: 0 0.75rem;
+}
+
+.fmf-button--primary:hover {
+  background: #b69fff;
+}
+
+.fmf-button--link {
+  height: auto;
+  padding: 0;
+  background: transparent;
+  color: #625b6b;
+  font-size: 0.75rem;
+  text-decoration-thickness: from-font;
+  text-underline-offset: 4px;
+}
+
+.fmf-button--link:hover {
+  color: #332743;
+  text-decoration-line: underline;
+}
+
+.fmf-button--icon {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  place-items: center;
+  padding: 0;
+  background: transparent;
+  color: #625b6b;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.fmf-button--icon:hover {
+  background: #f0ebf8;
+  color: #332743;
+}
+
+.fmf-success-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.fmf-success-icon {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 9999px;
+  background: #10b981;
+  color: white;
+  box-shadow: 0 4px 10px rgb(16 185 129 / 30%);
+}
+
+.fmf-success-icon svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.fmf-success-copy {
+  min-width: 0;
+}
+
+.fmf-success-message {
+  margin: 0;
+  color: #625b6b;
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+@keyframes fill-feedback-progress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes fmf-banner-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-1rem) scale(0.95);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .fmf-banner-root {
+    animation: fmf-banner-enter 0.3s ease;
+  }
+
+  .fmf-progress-fill {
+    animation: fill-feedback-progress 14s linear forwards;
+  }
+
+  .fmf-progress-fill--success {
+    animation-duration: 1.8s;
+  }
+}
