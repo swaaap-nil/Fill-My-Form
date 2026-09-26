@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.11.0](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.10.1...v1.11.0) (2026-09-26)
+
+### Bug Fixes
+
+* isolate content script styles in Firefox ([15326a5](https://github.com/swaaap-nil/Fill-My-Form/commit/15326a56ac527fba56f4b812d2b14851e33251a2))
+
 ## [1.10.1](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.10.0...v1.10.1) (2026-09-23)
 
 ### Features
