@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { createShadowRootUi, defineContentScript } from "#imports";
+import contentUiCss from "~/assets/styles/content-ui.css?inline";
 import { DetectionNudgeBanner } from "~/components/fill/detection-nudge-banner";
 import {
   type DetectionNudgeDetail,
@@ -21,7 +22,7 @@ import {
 } from "~/lib/messaging";
 import { createPageAccessSession } from "~/lib/page-access-session";
 
-import "~/assets/styles/globals.css";
+import "~/assets/styles/content-ui.css";
 
 /**
  * Populated by the most recent `extractFullForm` message, consumed by
@@ -266,21 +267,17 @@ const ContentScriptUI = () => {
       )}
       {fillFeedback && (
         <div
-          className="pointer-events-none fixed inset-x-4 top-6 z-[2147483647] flex justify-center motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-4 motion-safe:zoom-in-95 motion-safe:duration-300 motion-reduce:animate-none"
+          className="fmf-banner-root fmf-banner-root--passive"
           aria-live="polite"
           data-testid="fill-feedback-banner"
         >
-          <div className="relative min-w-64 max-w-[min(28rem,calc(100vw-2rem))] overflow-hidden rounded-lg border border-emerald-400/40 bg-background/95 px-4 py-3 text-foreground shadow-2xl shadow-black/25 ring-1 ring-border backdrop-blur">
-            <div className="absolute inset-x-0 top-0 h-1 bg-emerald-500/20">
-              <div className="h-full w-full origin-left bg-emerald-400 motion-safe:animate-[fill-feedback-progress_1.8s_linear_forwards] motion-reduce:animate-none" />
+          <div className="fmf-banner-card">
+            <div className="fmf-progress-track fmf-progress-track--success">
+              <div className="fmf-progress-fill fmf-progress-fill--success" />
             </div>
-            <div className="flex items-center gap-3">
-              <span
-                className="grid size-8 shrink-0 place-items-center rounded-full bg-emerald-500 text-white shadow-sm shadow-emerald-500/30 motion-safe:animate-in motion-safe:zoom-in-50 motion-safe:duration-300"
-                aria-hidden="true"
-              >
+            <div className="fmf-success-content">
+              <span className="fmf-success-icon" aria-hidden="true">
                 <svg
-                  className="size-4"
                   aria-hidden="true"
                   viewBox="0 0 24 24"
                   fill="none"
@@ -292,13 +289,13 @@ const ContentScriptUI = () => {
                   <path d="M20 6 9 17l-5-5" />
                 </svg>
               </span>
-              <div className="min-w-0">
-                <p className="font-semibold text-sm">
+              <div className="fmf-success-copy">
+                <p className="fmf-banner-title">
                   {fillFeedback.filledCount === 1
                     ? "1 field updated"
                     : `${fillFeedback.filledCount} fields updated`}
                 </p>
-                <p className="text-muted-foreground text-xs">
+                <p className="fmf-success-message">
                   Review the form before submitting.
                 </p>
               </div>
@@ -326,6 +323,7 @@ export default defineContentScript({
       name: "form-agent-ui",
       position: "overlay",
       anchor: "body",
+      css: contentUiCss,
       onMount: (container) => {
         const app = document.createElement("div");
         container.append(app);

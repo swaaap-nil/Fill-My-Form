@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import { copyFile, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -263,6 +263,38 @@ describe("scanBuildDirectory", () => {
   it("passes when the bundled icon differs from the vendored Extro icon", async () => {
     dir = await mkdtemp(join(tmpdir(), "release-manifest-icon-ok-"));
     await writeFile(join(dir, "icon.png"), new Uint8Array(32).fill(7));
+
+    expect(await scanBuildDirectory(dir)).toEqual([]);
+  });
+
+  it("fails when Firefox content CSS contains host-page selectors", async () => {
+    dir = await mkdtemp(join(tmpdir(), "release-manifest-firefox-css-"));
+    const cssDir = join(dir, "firefox-mv3", "content-scripts");
+    await mkdir(cssDir, { recursive: true });
+    await writeFile(
+      join(cssDir, "content.css"),
+      "@layer base{body{background:red}button,input,select,optgroup,textarea{font:inherit}}",
+    );
+
+    const findings = await scanBuildDirectory(dir);
+    expect(findings.some((f) => f.includes('global selector "body"'))).toBe(
+      true,
+    );
+    expect(
+      findings.some((f) =>
+        f.includes('global selector "button/input/textarea"'),
+      ),
+    ).toBe(true);
+  });
+
+  it("passes when Firefox content CSS is scoped to the extension UI", async () => {
+    dir = await mkdtemp(join(tmpdir(), "release-manifest-firefox-css-ok-"));
+    const cssDir = join(dir, "firefox-mv3", "content-scripts");
+    await mkdir(cssDir, { recursive: true });
+    await writeFile(
+      join(cssDir, "content.css"),
+      "form-agent-ui{all:initial}.fill-my-form-banner{position:fixed}",
+    );
 
     expect(await scanBuildDirectory(dir)).toEqual([]);
   });

@@ -1,0 +1,86 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Style isolation fixture</title>
+<style>
+  body {
+    margin: 24px;
+    background: rgb(251, 252, 245);
+    color: rgb(23, 32, 42);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 17px;
+    line-height: 1.45;
+  }
+
+  main {
+    width: 640px;
+    padding: 18px;
+    border: 5px solid rgb(57, 94, 152);
+    border-radius: 14px;
+    background: rgb(255, 255, 255);
+  }
+
+  nav {
+    display: flex;
+    gap: 22px;
+    align-items: center;
+    padding: 9px 13px;
+    border: 3px solid rgb(106, 65, 139);
+    border-radius: 11px;
+    background: rgb(240, 248, 255);
+  }
+
+  a {
+    color: rgb(22, 84, 163);
+    text-decoration: underline;
+  }
+
+  button,
+  input,
+  textarea {
+    box-sizing: border-box;
+    border: 4px solid rgb(178, 74, 38);
+    border-radius: 9px;
+    background: rgb(255, 250, 230);
+    color: rgb(72, 48, 26);
+    font: 16px/1.3 "Courier New", monospace;
+  }
+
+  button {
+    display: inline-flex;
+    padding: 7px 15px;
+  }
+
+  input {
+    width: 280px;
+    height: 42px;
+    padding: 8px 10px;
+  }
+
+  textarea {
+    width: 360px;
+    height: 120px;
+    padding: 11px 12px;
+  }
+</style>
+<main data-style-sentinel="container">
+  <nav data-style-sentinel="nav">
+    <a href="#profile">Profile</a>
+    <a href="#settings">Settings</a>
+    <button type="button" data-style-sentinel="button">Save draft</button>
+  </nav>
+
+  <form aria-label="Style isolation form">
+    <p>
+      <label>
+        Name
+        <input data-style-sentinel="input" autocomplete="name" />
+      </label>
+    </p>
+    <p>
+      <label>
+        Notes
+        <textarea data-style-sentinel="textarea"></textarea>
+      </label>
+    </p>
+  </form>
+</main>

@@ -74,6 +74,22 @@ for (const [browserName, createBrowser] of GESTURE_BROWSERS) {
       ).toBe(true);
     });
 
+    it("registers runtime content scripts without host-page CSS", async () => {
+      const fake = createBrowser();
+      const siteAccess = createSiteAccess(fake);
+
+      await siteAccess.requestSiteAccess("https://example.com/apply");
+
+      expect(fake.registeredScripts).toEqual([
+        {
+          id: contentScriptIdFor("https://example.com/*"),
+          matches: ["https://example.com/*"],
+          js: ["content-scripts/content.js"],
+          runAt: "document_idle",
+        },
+      ]);
+    });
+
     it("degrades without retrying when the user declines: a normal outcome", async () => {
       const fake = createBrowser({ grantResult: false });
       const siteAccess = createSiteAccess(fake);

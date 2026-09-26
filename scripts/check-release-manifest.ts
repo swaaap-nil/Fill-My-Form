@@ -27,6 +27,16 @@ export const VENDORED_EXTRO_ICON_SHA256 =
   "0b779261339b1fbf648df46422626705d8d3b67490d6f86a87b088620582ec38";
 
 const BANNED_STRINGS = ["turbostarter", "extro", "Hello from"] as const;
+const FIREFOX_CONTENT_CSS_GLOBAL_SELECTORS = [
+  { snippet: ":root{", selector: ":root" },
+  { snippet: "body{", selector: "body" },
+  { snippet: "html,:host{", selector: "html" },
+  { snippet: "*,:after,:before,::backdrop{", selector: "*" },
+  {
+    snippet: "button,input,select,optgroup,textarea{",
+    selector: "button/input/textarea",
+  },
+] as const;
 
 const TEXT_EXTENSIONS = [
   ".js",
@@ -319,6 +329,24 @@ export const scanBuildDirectory = async (
     for (const banned of BANNED_STRINGS) {
       if (contents.includes(banned)) {
         findings.push(`${path}: contains banned string "${banned}"`);
+      }
+    }
+
+    if (
+      path
+        .split("\\")
+        .join("/")
+        .endsWith("firefox-mv3/content-scripts/content.css")
+    ) {
+      for (const {
+        snippet,
+        selector,
+      } of FIREFOX_CONTENT_CSS_GLOBAL_SELECTORS) {
+        if (contents.includes(snippet)) {
+          findings.push(
+            `${path}: Firefox content stylesheet contains global selector "${selector}" that can style host pages. Content-script CSS must be scoped to the extension UI.`,
+          );
+        }
       }
     }
   }

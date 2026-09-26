@@ -1,6 +1,5 @@
 import type { CSSProperties } from "react";
 import { browser } from "wxt/browser";
-import { Button } from "~/components/ui/button";
 
 export const DETECTION_NUDGE_AUTO_HIDE_MS = 14_000;
 
@@ -33,15 +32,15 @@ export const DetectionNudgeBanner = ({
 
   return (
     <section
-      className="pointer-events-auto fixed inset-x-4 top-6 z-[2147483647] flex justify-center motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-4 motion-safe:zoom-in-95 motion-safe:duration-300 motion-reduce:animate-none"
+      className="fmf-banner-root fmf-banner-root--interactive"
       aria-label={title || "Fill My Form"}
       data-testid="form-detection-nudge-banner"
     >
-      <div className="relative min-w-64 max-w-[min(28rem,calc(100vw-2rem))] overflow-hidden rounded-lg border border-primary/35 bg-background/95 px-4 py-3 text-foreground shadow-2xl shadow-black/25 ring-1 ring-border backdrop-blur">
-        <div className="absolute inset-x-0 top-0 h-1 bg-primary/15">
+      <div className="fmf-banner-card">
+        <div className="fmf-progress-track">
           <div
             key={hint ? "hint" : "nudge"}
-            className="h-full w-full origin-left bg-primary/70 motion-safe:animate-[fill-feedback-progress_14s_linear_forwards] motion-reduce:animate-none"
+            className="fmf-progress-fill"
             style={
               {
                 animationDuration: `${DETECTION_NUDGE_AUTO_HIDE_MS}ms`,
@@ -49,47 +48,40 @@ export const DetectionNudgeBanner = ({
             }
           />
         </div>
-        <div className="flex flex-col gap-3">
-          <div className="min-w-0 pr-6">
-            <p className="font-semibold text-sm">
+        <div className="fmf-banner-stack">
+          <div className="fmf-banner-copy">
+            <p className="fmf-banner-title">
               {title || "Forms ready to review"}
             </p>
-            <p className="text-muted-foreground text-xs leading-relaxed">
-              {hint ? hintBody : body}
-            </p>
+            <p className="fmf-banner-message">{hint ? hintBody : body}</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="fmf-banner-actions">
             {!hint && (
-              <Button
+              <button
                 type="button"
-                size="sm"
-                className="h-8"
+                className="fmf-button fmf-button--primary"
                 onClick={onReview}
               >
                 {reviewLabel || "Review"}
-              </Button>
+              </button>
             )}
-            <Button
+            <button
               type="button"
-              variant="link"
-              size="xs"
-              className="h-auto px-0 text-muted-foreground text-xs"
+              className="fmf-button fmf-button--link"
               onClick={onDismiss}
             >
               {dismissLabel || "Dismiss"}
-            </Button>
+            </button>
           </div>
         </div>
-        <Button
+        <button
           type="button"
-          variant="ghost"
-          size="icon-xs"
-          className="absolute top-2 right-2 text-muted-foreground"
+          className="fmf-button fmf-button--icon"
           aria-label={dismissLabel || "Dismiss"}
           onClick={onDismiss}
         >
           ×
-        </Button>
+        </button>
       </div>
     </section>
   );

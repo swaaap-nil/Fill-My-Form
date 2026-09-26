@@ -35,6 +35,13 @@ export const originCoveredByGrant = (
 
 export interface FakeSiteAccessBrowser extends SiteAccessBrowser {
   readonly registered: Set<string>;
+  readonly registeredScripts: Array<{
+    id: string;
+    matches: string[];
+    js: string[];
+    css?: string[];
+    runAt?: "document_start" | "document_end" | "document_idle";
+  }>;
   readonly grantedOrigins: Set<string>;
   readonly executedScripts: { tabId: number; files: string[] }[];
   readonly requestCalls: string[][];
@@ -49,6 +56,7 @@ export const createFakeBrowser = (
   overrides: Partial<{
     grantResult: boolean;
     registered: Set<string>;
+    registeredScripts: FakeSiteAccessBrowser["registeredScripts"];
     grantedOrigins: Set<string>;
     executedScripts: { tabId: number; files: string[] }[];
     gesturePolicy: GesturePolicy;
@@ -57,6 +65,7 @@ export const createFakeBrowser = (
   }> = {},
 ): FakeSiteAccessBrowser => {
   const registered = overrides.registered ?? new Set<string>();
+  const registeredScripts = overrides.registeredScripts ?? [];
   const grantedOrigins = overrides.grantedOrigins ?? new Set<string>();
   const executedScripts = overrides.executedScripts ?? [];
   const grantResult = overrides.grantResult ?? true;
@@ -90,6 +99,7 @@ export const createFakeBrowser = (
 
   const fake: FakeSiteAccessBrowser = {
     registered,
+    registeredScripts,
     grantedOrigins,
     executedScripts,
     requestCalls,
@@ -171,6 +181,13 @@ export const createFakeBrowser = (
             throw new Error(`Duplicate script ID '${script.id}'`);
           }
           registered.add(script.id);
+          registeredScripts.push({
+            id: script.id,
+            matches: [...script.matches],
+            js: [...script.js],
+            ...(script.css ? { css: [...script.css] } : {}),
+            ...(script.runAt ? { runAt: script.runAt } : {}),
+          });
         }
       },
       async unregisterContentScripts({ ids }) {
