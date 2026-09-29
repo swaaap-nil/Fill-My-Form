@@ -21,6 +21,10 @@ import {
   sendMessage,
 } from "~/lib/messaging";
 import { createPageAccessSession } from "~/lib/page-access-session";
+import {
+  proactiveSuppressionConfig,
+  shouldSuppressProactiveDetection,
+} from "~/lib/proactive-suppression";
 
 import "~/assets/styles/content-ui.css";
 
@@ -182,6 +186,9 @@ const runPassiveDetection = async () => {
 
   const heuristic = evaluateFormPageHeuristic(document);
   if (!heuristic.likelyFormPage) return;
+  if (shouldSuppressProactiveDetection(document, proactiveSuppressionConfig)) {
+    return;
+  }
 
   const { ack } = await sendMessage("formPageDetected", {
     url,
