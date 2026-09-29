@@ -1,6 +1,6 @@
 {
   "name": "fill-my-form",
-  "version": "1.11.0",
+  "version": "1.12.0",
   "private": true,
   "description": "Privacy-first, local-first browser extension that understands web forms and helps you complete them from a persistent personal memory.",
   "license": "UNLICENSED",

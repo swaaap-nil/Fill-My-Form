@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.12.0](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.11.0...v1.12.0) (2026-09-29)
+
+### Bug Fixes
+
+* suppress proactive detection on credential pages ([7b0b422](https://github.com/swaaap-nil/Fill-My-Form/commit/7b0b422adcd58b812b4aca10a4d84c5da770af38))
+
 ## [1.11.0](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.10.1...v1.11.0) (2026-09-26)
 
 ### Bug Fixes
