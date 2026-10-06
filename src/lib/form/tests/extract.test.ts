@@ -265,6 +265,23 @@ describe("ARIA custom widgets", () => {
     expect(fields[0]?.label).toBe("Country");
     expect(fields[0]?.options?.map((o) => o.value)).toEqual(["IN", "US"]);
   });
+
+  it("does not extract an internal search textbox as a second field for the same combobox", () => {
+    const fields = fieldsOf(`
+      <form>
+        <label id="city-label">City</label>
+        <div role="combobox" aria-labelledby="city-label">
+          <span>Bangalore</span>
+          <input name="search_terms" role="textbox" placeholder="Search and Select">
+        </div>
+        <button type="submit">Apply</button>
+      </form>
+    `);
+
+    expect(fields).toHaveLength(1);
+    expect(fields[0]?.label).toBe("City");
+    expect(fields[0]?.kind).toBe(Kind.UNKNOWN);
+  });
 });
 
 describe("skip list: never candidates", () => {
@@ -336,22 +353,74 @@ describe("skip list: never candidates", () => {
 });
 
 describe("structures not currently reached at all", () => {
-  it("KNOWN GAP: a field inside an open shadow root is invisible to extraction", () => {
-    // querySelectorAll never pierces a shadow boundary, and extract.ts does
-    // not walk shadow roots explicitly. A web-component-built form (common
-    // on modern ATS/career sites) contributes zero fields today.
+  it("extracts a labelled control inside an open shadow root", () => {
     const doc = docFromHtml(`
-      <form><div id="host"></div><button type="submit">Apply</button></form>
+      <form>
+        <label>Legal first name</label>
+        <custom-text id="first-name"></custom-text>
+        <button type="submit">Apply</button>
+      </form>
     `);
-    const host = doc.getElementById("host") as HTMLElement & {
+    const host = doc.getElementById("first-name") as HTMLElement & {
       attachShadow: (init: { mode: "open" }) => {
         innerHTML: string;
       };
     };
     host.attachShadow({ mode: "open" }).innerHTML =
-      '<label>Email<input name="email"></label>';
+      '<input name="internal_generated" placeholder="Enter Here">';
 
-    expect(extractFull(doc)[0]?.fields ?? []).toHaveLength(0);
+    const [field] = extractFull(doc)[0]?.fields ?? [];
+
+    expect(field?.label).toBe("Legal first name");
+    expect(field?.name).toBe("internal_generated");
+    expect(field?.placeholder).toBe("Enter Here");
+  });
+
+  it("uses the custom-element host label for declarative shadow-root template controls", () => {
+    const [field] = fieldsOf(`
+      <form>
+        <label>Preferred location</label>
+        <custom-select id="location">
+          <template shadowrootmode="open">
+            <div>
+              <input name="search_terms" placeholder="Search and Select">
+            </div>
+          </template>
+        </custom-select>
+        <button type="submit">Apply</button>
+      </form>
+    `);
+
+    expect(field?.label).toBe("Preferred location");
+    expect(field?.name).toBe("search_terms");
+  });
+
+  it("extracts a shadow-root combobox and keeps options from the same component root", () => {
+    const doc = docFromHtml(`
+      <form>
+        <label>Preferred city</label>
+        <custom-select id="city"></custom-select>
+        <button type="submit">Apply</button>
+      </form>
+    `);
+    const host = doc.getElementById("city") as HTMLElement & {
+      attachShadow: (init: { mode: "open" }) => {
+        innerHTML: string;
+      };
+    };
+    host.attachShadow({ mode: "open" }).innerHTML = `
+      <div role="combobox" aria-controls="city-list">Bangalore</div>
+      <div id="city-list" role="listbox">
+        <div role="option" data-value="BLR">Bangalore</div>
+        <div role="option" data-value="DEL">Delhi</div>
+      </div>
+    `;
+
+    const [field] = extractFull(doc)[0]?.fields ?? [];
+
+    expect(field?.kind).toBe(Kind.UNKNOWN);
+    expect(field?.label).toBe("Preferred city");
+    expect(field?.options?.map((o) => o.value)).toEqual(["BLR", "DEL"]);
   });
 
   it("KNOWN GAP: a contenteditable region is never a candidate field", () => {

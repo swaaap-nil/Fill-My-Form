@@ -95,13 +95,83 @@ export const MAX_FIELDS_PER_PAGE = 300;
 
 type Candidate = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 
+const FORM_CONTROL_SELECTOR = "input, select, textarea";
+const FIELD_SELECTOR = `${FORM_CONTROL_SELECTOR}, [role="combobox"]`;
+const UPLOAD_CONTROL_SELECTOR = 'button, [role="button"], label';
+const declarativeShadowHosts = new WeakMap<DocumentFragment, Element>();
+
 const isFormControl = (el: Element): el is Candidate =>
   el instanceof HTMLInputElement ||
   el instanceof HTMLSelectElement ||
   el instanceof HTMLTextAreaElement;
 
 const containsFormControl = (el: Element): boolean =>
-  isFormControl(el) || !!el.querySelector("input, select, textarea");
+  isFormControl(el) || queryComposedAll(el, FORM_CONTROL_SELECTOR).length > 0;
+
+const childElementsOf = (root: ParentNode): Element[] =>
+  Array.from(root.childNodes).filter(
+    (node): node is Element => node.nodeType === Node.ELEMENT_NODE,
+  );
+
+/**
+ * `querySelectorAll` deliberately stops at shadow boundaries. Form controls
+ * inside open web-component roots still participate in the rendered form, so
+ * extraction walks the composed tree instead. Declarative shadow-root
+ * templates are included for static copied fixtures and browsers/parsers that
+ * have not materialised them into `element.shadowRoot`.
+ */
+const queryComposedAll = <T extends Element>(
+  root: ParentNode,
+  selector: string,
+): T[] => {
+  const matches: T[] = [];
+  const visit = (node: ParentNode): void => {
+    for (const child of childElementsOf(node)) {
+      if (child.matches(selector)) matches.push(child as T);
+
+      const shadowRoot =
+        child instanceof HTMLElement ? child.shadowRoot : undefined;
+      if (shadowRoot) {
+        visit(shadowRoot);
+      } else if (
+        child instanceof HTMLTemplateElement &&
+        child.getAttribute("shadowrootmode")
+      ) {
+        if (child.parentElement) {
+          declarativeShadowHosts.set(child.content, child.parentElement);
+        }
+        visit(child.content);
+      }
+
+      visit(child);
+    }
+  };
+
+  visit(root);
+  return matches;
+};
+
+const shadowHostOf = (el: Element): Element | undefined => {
+  const root = el.getRootNode();
+  if (root instanceof ShadowRoot) return root.host;
+  if (root instanceof DocumentFragment) return declarativeShadowHosts.get(root);
+  return undefined;
+};
+
+const getElementByIdInScope = (
+  doc: Document,
+  el: Element,
+  id: string,
+): HTMLElement | null => {
+  const root = el.getRootNode();
+  const scoped =
+    root instanceof Document || root instanceof ShadowRoot
+      ? root.getElementById(id)
+      : root instanceof DocumentFragment
+        ? root.querySelector<HTMLElement>(`#${cssEscape(id)}`)
+        : null;
+  return scoped ?? doc.getElementById(id);
+};
 
 /** Elements with zero layout box, or under a `hidden` ancestor. */
 const isInvisible = (el: HTMLElement): boolean => {
@@ -163,6 +233,11 @@ const documentLocaleOf = (doc: Document): string | undefined => {
 const isAriaWidget = (el: Element): el is HTMLElement =>
   el.getAttribute("role") === "combobox";
 
+const isInternalWidgetControl = (el: Element): boolean => {
+  if (isAriaWidget(el)) return false;
+  return !!el.closest('[role="combobox"]');
+};
+
 const isGenericFilePickerText = (el: Element, text: string): boolean => {
   if (!isFileInput(el)) return false;
   return isExactLexiconPhrase(
@@ -186,7 +261,7 @@ const labelledByText = (doc: Document, el: Element): string | undefined => {
 
   const text = labelledBy
     .split(/\s+/)
-    .map((id) => doc.getElementById(id))
+    .map((id) => getElementByIdInScope(doc, el, id))
     .filter(
       (labelled): labelled is HTMLElement => !!labelled && labelled !== el,
     )
@@ -215,6 +290,27 @@ const fieldsetOf = (el: Element): HTMLFieldSetElement | null =>
  * recorded above.
  */
 const resolveLabel = (doc: Document, el: Element): string | undefined => {
+  const host = shadowHostOf(el);
+  const direct = resolveDirectLabel(doc, el, {
+    includeContextText: !host,
+    includePlaceholder: false,
+  });
+  if (direct) return direct;
+
+  const hostLabel = host ? resolveDirectLabel(doc, host) : undefined;
+  if (hostLabel) return hostLabel;
+
+  return resolveDirectLabel(doc, el, {
+    includeContextText: true,
+    includePlaceholder: true,
+  });
+};
+
+const resolveDirectLabel = (
+  doc: Document,
+  el: Element,
+  options: { includeContextText?: boolean; includePlaceholder?: boolean } = {},
+): string | undefined => {
   if (el.id) {
     const forLabel = doc.querySelector(`label[for="${cssEscape(el.id)}"]`);
     const text = meaningfulLabelText(el, textOf(forLabel));
@@ -228,15 +324,16 @@ const resolveLabel = (doc: Document, el: Element): string | undefined => {
   const ariaLabel = ariaLabelText(doc, el);
   if (ariaLabel) return ariaLabel;
 
-  const precedingText = meaningfulLabelText(el, precedingSiblingText(el));
-  if (precedingText) return precedingText;
+  if (options.includeContextText ?? true) {
+    const precedingText = meaningfulLabelText(el, precedingSiblingText(el));
+    if (precedingText) return precedingText;
 
-  const ancestorText = precedingAncestorText(el);
-  if (ancestorText) return ancestorText;
+    const ancestorText = precedingAncestorText(el);
+    if (ancestorText) return ancestorText;
+  }
 
-  return (
-    meaningfulLabelText(el, el.getAttribute("placeholder")?.trim()) || undefined
-  );
+  if (!options.includePlaceholder) return undefined;
+  return meaningfulLabelText(el, el.getAttribute("placeholder")?.trim());
 };
 
 /**
@@ -511,7 +608,7 @@ const descriptionOf = (doc: Document, el: Element): string | undefined => {
   return (
     describedBy
       .split(/\s+/)
-      .map((id) => textOf(doc.getElementById(id)))
+      .map((id) => textOf(getElementByIdInScope(doc, el, id)))
       .filter((t): t is string => !!t)
       .join(" ") || undefined
   );
@@ -608,7 +705,9 @@ const widgetOptionsOf = (
   el: HTMLElement,
 ): readonly FormOption[] | undefined => {
   const controlsId = el.getAttribute("aria-controls");
-  const listbox = controlsId ? doc.getElementById(controlsId) : null;
+  const listbox = controlsId
+    ? getElementByIdInScope(doc, el, controlsId)
+    : null;
   if (!listbox) return undefined;
 
   const optionEls = Array.from(listbox.querySelectorAll('[role="option"]'));
@@ -623,11 +722,13 @@ const widgetOptionsOf = (
 
 const submitLabelOf = (container: Element): string | undefined => {
   const locale = documentLocaleOf(container.ownerDocument);
-  const explicitSubmit = container.querySelector<HTMLElement>(
+  const explicitSubmit = queryComposedAll<HTMLElement>(
+    container,
     'button[type="submit"], input[type="submit"]',
-  );
-  const implicitButtons = Array.from(
-    container.querySelectorAll<HTMLElement>("button:not([type])"),
+  )[0];
+  const implicitButtons = queryComposedAll<HTMLElement>(
+    container,
+    "button:not([type])",
   ).filter((button) => {
     if (button.getAttribute("aria-pressed") !== null) return false;
     const text = textOf(button);
@@ -792,7 +893,7 @@ const extractUploadIntents = (
 ): UploadIntent[] => {
   const locale = documentLocaleOf(form.ownerDocument);
   const controls = Array.from(
-    form.querySelectorAll<Element>('button, [role="button"], label'),
+    queryComposedAll<Element>(form, UPLOAD_CONTROL_SELECTOR),
   ).filter(
     (el) =>
       !(el instanceof HTMLElement) || (!isInvisible(el) && isUploadControl(el)),
@@ -832,13 +933,11 @@ const extractForm = (
   elementsById?: Map<string, FieldElements>,
 ): Form => {
   const allElements = Array.from(
-    form.querySelectorAll<Element>(
-      'input, select, textarea, [role="combobox"]',
-    ),
+    queryComposedAll<Element>(form, FIELD_SELECTOR),
   ).filter((el) =>
     isAriaWidget(el)
       ? !isWidgetSkipped(el)
-      : isFormControl(el) && !isSkipped(el),
+      : isFormControl(el) && !isInternalWidgetControl(el) && !isSkipped(el),
   );
 
   const groups = groupControls(allElements);
@@ -960,7 +1059,8 @@ const fallbackFormContainers = (doc: Document): Element[] => {
     Array.from(doc.querySelectorAll<HTMLElement>('[role="form"]')),
   );
   const submitActions = Array.from(
-    doc.querySelectorAll<HTMLElement>(
+    queryComposedAll<HTMLElement>(
+      doc,
       'button, input[type="submit"], input[type="button"]',
     ),
   ).filter((el) => !isInvisible(el) && !!textOf(el));
@@ -978,13 +1078,14 @@ const fallbackFormContainers = (doc: Document): Element[] => {
   }
 
   const controlCount = (el: Element): number =>
-    Array.from(el.querySelectorAll<Element>("input, select, textarea")).filter(
+    queryComposedAll<Element>(el, FORM_CONTROL_SELECTOR).filter(
       (control) => isFormControl(control) && !isSkipped(control),
     ).length;
 
   const viable = Array.from(candidates).filter((el) => {
-    const controls = Array.from(
-      el.querySelectorAll<Element>("input, select, textarea"),
+    const controls = queryComposedAll<Element>(
+      el,
+      FORM_CONTROL_SELECTOR,
     ).filter((control) => isFormControl(control) && !isSkipped(control));
     return controls.length > 0 && !!submitLabelOf(el);
   });
