@@ -114,4 +114,28 @@ describe("resolveOption", () => {
   it("is unknown when the field has no options at all", () => {
     expect(resolveOption("OBC", []).certainty).toBe(Certainty.UNKNOWN);
   });
+
+  it("normalizes compact degree spellings such as BTech to dotted options", () => {
+    const result = resolveOption("B.tech", [
+      { value: "bt", label: "BTech" },
+      { value: "be", label: "B.E." },
+    ]);
+    expect(result.certainty).toBe(Certainty.KNOWN);
+    if (result.certainty !== Certainty.KNOWN) throw new Error("unreachable");
+    expect(result.option.label).toBe("BTech");
+  });
+
+  it("resolves gender shorthand through value aliases", () => {
+    const result = resolveOption(
+      "M",
+      [
+        { value: "male", label: "Male" },
+        { value: "female", label: "Female" },
+      ],
+      concept({ en: { m: "male", f: "female" } }),
+    );
+    expect(result.certainty).toBe(Certainty.KNOWN);
+    if (result.certainty !== Certainty.KNOWN) throw new Error("unreachable");
+    expect(result.option.label).toBe("Male");
+  });
 });

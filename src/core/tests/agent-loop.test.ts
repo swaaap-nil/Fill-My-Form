@@ -237,6 +237,35 @@ describe("loop: a known field policy allows automatically", () => {
     expect(snapshot.run.state.status).toBe(AgentStatus.COMPLETED);
     expect(page.values.nationality).toBe("IN");
   });
+
+  it("uses the same social profile memory for username and URL fields", async () => {
+    const page: FakePage = {
+      fields: [
+        makeField({ id: "gh-user", label: "GitHub username" }),
+        makeField({
+          id: "gh-url",
+          kind: "url",
+          label: "GitHub profile URL",
+        }),
+      ],
+      values: {},
+    };
+    const ports = buildPorts(page, alwaysAllow);
+    await recordAnswer(ports.userMemory, {
+      profileId: DEFAULT_PROFILE_ID,
+      key: "contact.github_url",
+      value: "https://github.com/octocat",
+      source: MemorySource.USER_PROVIDED,
+      now: ports.clock(),
+    });
+
+    let snapshot = createRun(ports, "https://example.com", 1);
+    snapshot = await drive(snapshot, ports);
+
+    expect(snapshot.run.state.status).toBe(AgentStatus.COMPLETED);
+    expect(page.values["gh-user"]).toBe("octocat");
+    expect(page.values["gh-url"]).toBe("https://github.com/octocat");
+  });
 });
 
 describe("loop: file references use the generic compliance/upload adapters", () => {

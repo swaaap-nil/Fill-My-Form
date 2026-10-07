@@ -68,4 +68,19 @@ describe("recordAnswer: the user-answer path to stored memory", () => {
     expect(item?.provenance.evidence).toBe("onboarding-form");
     expect(item?.provenance.freshnessRule).toBe("permanent");
   });
+
+  it("canonicalizes known social profile usernames at the write boundary", async () => {
+    const store = createInMemoryMemoryStore();
+
+    await recordAnswer(store, {
+      profileId: DEFAULT_PROFILE_ID,
+      key: "contact.github_url",
+      value: "octocat",
+      source: MemorySource.USER_PROVIDED,
+      now: "2026-01-01T00:00:00.000Z",
+    });
+
+    const item = await store.get(DEFAULT_PROFILE_ID, "contact.github_url");
+    expect(item?.value).toBe("https://github.com/octocat");
+  });
 });

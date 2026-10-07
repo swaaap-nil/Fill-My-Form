@@ -27,13 +27,19 @@ const MEMORY_SOURCE_VALUES = [
 ] as const;
 
 const memoryValueSchema: z.ZodType<
-  string | number | boolean | readonly string[] | Record<string, unknown>
+  | string
+  | number
+  | boolean
+  | null
+  | readonly unknown[]
+  | Record<string, unknown>
 > = z.lazy(() =>
   z.union([
     z.string(),
     z.number(),
     z.boolean(),
-    z.array(z.string()),
+    z.null(),
+    z.array(memoryValueSchema),
     z.record(z.string(), memoryValueSchema),
   ]),
 );

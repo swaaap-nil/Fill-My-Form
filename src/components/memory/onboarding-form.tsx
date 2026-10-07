@@ -1,13 +1,20 @@
-import { FileUp, Lock } from "lucide-react";
+import { FileUp, Lock, Plus, Trash2 } from "lucide-react";
 import { useMemo } from "react";
+import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import { Textarea } from "~/components/ui/textarea";
+import {
+  isProfessionalExperienceList,
+  type ProfessionalExperienceEntry,
+} from "~/core/fill/value-adapters";
+import type { MemoryValue } from "~/core/memory/types";
 import { concepts } from "~/core/ontology";
 import { Sensitivity } from "~/core/ontology/types";
 import { AnalyticsPreferenceControl } from "./analytics-preference-control";
 import { AutosaveStatusIcon, AutosaveTextField } from "./autosave-text-field";
 import { LocalDataControls } from "./local-data-controls";
-import { useMemoryAutosave } from "./use-memory-autosave";
+import { type FieldStatus, useMemoryAutosave } from "./use-memory-autosave";
 
 /**
  * An ontology-driven "tell us about yourself" form.
@@ -36,8 +43,18 @@ const groupLabel = (key: string): string => {
   return prefix.charAt(0).toUpperCase() + prefix.slice(1);
 };
 
+const DERIVED_CONCEPT_KEYS = new Set(["identity.age"]);
+const STRUCTURED_CONCEPT_KEYS = new Set(["experience.professional.roles"]);
 const fileConcepts = concepts.filter((c) => c.expects === "file");
-const fillableConcepts = concepts.filter((c) => c.expects !== "file");
+const fillableConcepts = concepts.filter(
+  (c) =>
+    c.expects !== "file" &&
+    !DERIVED_CONCEPT_KEYS.has(c.key) &&
+    !STRUCTURED_CONCEPT_KEYS.has(c.key),
+);
+const structuredConcepts = concepts.filter((c) =>
+  STRUCTURED_CONCEPT_KEYS.has(c.key),
+);
 const standardConcepts = fillableConcepts.filter(
   (c) => c.sensitivity !== Sensitivity.RESTRICTED,
 );
@@ -58,13 +75,159 @@ const groupByPrefix = <T extends { key: string }>(
   return Array.from(groups.entries());
 };
 
+const emptyExperience = (): ProfessionalExperienceEntry => ({
+  id: `experience-${Date.now()}-${Math.random()}`,
+  organization: "",
+  role: "",
+  description: "",
+  startDate: "",
+  endDate: null,
+  isCurrent: false,
+});
+
+const normalizeExperience = (
+  value: MemoryValue | undefined,
+): ProfessionalExperienceEntry[] =>
+  isProfessionalExperienceList(value) && value.length > 0
+    ? value.map((entry) => ({ ...emptyExperience(), ...entry }))
+    : [emptyExperience()];
+
+const ProfessionalExperienceEditor = ({
+  value,
+  status,
+  onChange,
+}: {
+  readonly value: MemoryValue | undefined;
+  readonly status: FieldStatus;
+  readonly onChange: (value: MemoryValue) => void;
+}) => {
+  const entries = normalizeExperience(value);
+  const updateEntry = (
+    index: number,
+    patch: Partial<ProfessionalExperienceEntry>,
+  ) => {
+    onChange(
+      entries.map((entry, entryIndex) =>
+        entryIndex === index ? { ...entry, ...patch } : entry,
+      ),
+    );
+  };
+  const removeEntry = (index: number) => {
+    const next = entries.filter((_, entryIndex) => entryIndex !== index);
+    onChange(next.length > 0 ? next : [emptyExperience()]);
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      {entries.map((entry, index) => (
+        <div
+          className="grid gap-2 rounded-md border border-border p-2"
+          key={String(
+            entry.id ??
+              `${entry.organization}-${entry.role}-${entry.startDate}`,
+          )}
+        >
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Input
+              aria-label={`Experience ${index + 1} organization`}
+              placeholder="Organization"
+              value={entry.organization ?? ""}
+              onChange={(event) =>
+                updateEntry(index, { organization: event.target.value })
+              }
+            />
+            <Input
+              aria-label={`Experience ${index + 1} role`}
+              placeholder="Role"
+              value={entry.role ?? ""}
+              onChange={(event) =>
+                updateEntry(index, { role: event.target.value })
+              }
+            />
+          </div>
+          <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+            <Input
+              aria-label={`Experience ${index + 1} start date`}
+              type="date"
+              value={entry.startDate ?? ""}
+              onChange={(event) =>
+                updateEntry(index, { startDate: event.target.value })
+              }
+            />
+            <Input
+              aria-label={`Experience ${index + 1} end date`}
+              type="date"
+              value={entry.endDate ?? ""}
+              onChange={(event) =>
+                updateEntry(index, {
+                  endDate: event.target.value || null,
+                  isCurrent: !event.target.value ? entry.isCurrent : false,
+                })
+              }
+            />
+            <label className="flex items-center gap-2 whitespace-nowrap text-sm">
+              <input
+                checked={entry.isCurrent ?? false}
+                type="checkbox"
+                onChange={(event) =>
+                  updateEntry(index, {
+                    isCurrent: event.target.checked,
+                    endDate: event.target.checked ? null : entry.endDate,
+                  })
+                }
+              />
+              Current
+            </label>
+          </div>
+          <Textarea
+            aria-label={`Experience ${index + 1} description`}
+            placeholder="Description"
+            value={entry.description ?? ""}
+            onChange={(event) =>
+              updateEntry(index, { description: event.target.value })
+            }
+          />
+          <div className="flex items-center justify-between">
+            <div className="relative h-5 w-5">
+              <AutosaveStatusIcon
+                fieldKey={`experience-${index}`}
+                status={status}
+              />
+            </div>
+            <Button
+              aria-label={`Remove experience ${index + 1}`}
+              size="icon"
+              type="button"
+              variant="ghost"
+              onClick={() => removeEntry(index)}
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          </div>
+        </div>
+      ))}
+      <Button
+        className="self-start gap-2"
+        type="button"
+        variant="outline"
+        onClick={() => onChange([...entries, emptyExperience()])}
+      >
+        <Plus className="size-4" />
+        Add experience
+      </Button>
+    </div>
+  );
+};
+
 export const OnboardingForm = () => {
   const {
     fileRefs,
     getStatus,
     reload,
     savedCount,
+    structuredValues,
     updateFileField,
+    updateStructuredField,
     updateTextField,
     values,
   } = useMemoryAutosave();
@@ -102,6 +265,24 @@ export const OnboardingForm = () => {
             {group}
           </legend>
           {items.map(renderTextField)}
+        </fieldset>
+      ))}
+
+      {structuredConcepts.map((concept) => (
+        <fieldset
+          key={concept.key}
+          className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 shadow-sm shadow-black/5 dark:shadow-black/20"
+        >
+          <legend className="px-1 font-semibold text-sm text-foreground">
+            {concept.label}
+          </legend>
+          <ProfessionalExperienceEditor
+            status={getStatus(concept.key)}
+            value={structuredValues[concept.key]}
+            onChange={(value) =>
+              updateStructuredField(concept.key, value, concept.label)
+            }
+          />
         </fieldset>
       ))}
 

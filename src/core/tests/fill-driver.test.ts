@@ -325,6 +325,149 @@ describe("planFill — closed-vocabulary fields", () => {
   });
 });
 
+describe("planFill — adapted and derived values", () => {
+  it("fills a social username field from a canonical profile URL", async () => {
+    const store = await seedMemory(
+      "contact.github_url",
+      "https://github.com/octocat",
+    );
+    const result = await planFill(
+      [field({ label: "GitHub username", id: "0/gh/0" })],
+      ontology,
+      store,
+      DEFAULT_PROFILE_ID,
+      defaultPolicy,
+      fixedIds,
+    );
+
+    const proposal = result.proposals[0];
+    expect(proposal?.state).toBe("pending");
+    if (proposal?.state !== "pending" && proposal?.state !== "restricted") {
+      throw new Error("unreachable");
+    }
+    expect(proposal.value).toBe("octocat");
+    expect(proposal.payload).toEqual({ kind: "text", value: "octocat" });
+    const decision = result.decisions.get(proposal.decisionId);
+    expect(decision?.memoryWrite).toEqual({
+      key: "contact.github_url",
+      value: "https://github.com/octocat",
+    });
+  });
+
+  it("fills a social URL field with the canonical full link", async () => {
+    const store = await seedMemory("contact.github_url", "octocat");
+    const result = await planFill(
+      [field({ label: "GitHub profile URL", kind: FieldKind.URL, id: "gh" })],
+      ontology,
+      store,
+      DEFAULT_PROFILE_ID,
+      defaultPolicy,
+      fixedIds,
+    );
+
+    const proposal = result.proposals[0];
+    expect(proposal?.state).toBe("pending");
+    if (proposal?.state !== "pending" && proposal?.state !== "restricted") {
+      throw new Error("unreachable");
+    }
+    expect(proposal.payload).toEqual({
+      kind: "text",
+      value: "https://github.com/octocat",
+    });
+  });
+
+  it("derives age from date of birth without creating an age memory write", async () => {
+    const store = await seedMemory("identity.date_of_birth", "2000-10-08");
+    const result = await planFill(
+      [field({ label: "Age", kind: FieldKind.NUMBER, id: "age" })],
+      ontology,
+      store,
+      DEFAULT_PROFILE_ID,
+      defaultPolicy,
+      fixedIds,
+      () => "2026-10-07T00:00:00.000Z",
+    );
+
+    const proposal = result.proposals[0];
+    expect(proposal?.state).toBe("pending");
+    if (proposal?.state !== "pending" && proposal?.state !== "restricted") {
+      throw new Error("unreachable");
+    }
+    expect(proposal.value).toContain("25");
+    expect(proposal.payload).toEqual({ kind: "text", value: "25" });
+    expect(result.decisions.get(proposal.decisionId)?.memoryWrite).toBe(false);
+  });
+
+  it("uses resume as a CV fallback without creating CV memory", async () => {
+    const ref: FileReference = {
+      kind: "file_ref",
+      id: "resume-1",
+      name: "resume.pdf",
+      mimeType: "application/pdf",
+      sizeBytes: 2048,
+      createdAt: "2026-01-01T00:00:00.000Z",
+    };
+    const store = await seedMemory("documents.resume", ref);
+    const result = await planFill(
+      [field({ label: "Upload CV", kind: FieldKind.FILE, id: "cv" })],
+      ontology,
+      store,
+      DEFAULT_PROFILE_ID,
+      defaultPolicy,
+      fixedIds,
+    );
+
+    const proposal = result.proposals[0];
+    expect(proposal?.state).toBe("pending");
+    if (proposal?.state !== "pending" && proposal?.state !== "restricted") {
+      throw new Error("unreachable");
+    }
+    expect(proposal.value).toContain("Resume fallback for CV");
+    expect(proposal.payload).toEqual({ kind: "file", ref });
+    expect(result.decisions.get(proposal.decisionId)?.memoryWrite).toBe(false);
+  });
+
+  it("derives previous experience description from the professional experience list", async () => {
+    const store = await seedMemory("experience.professional.roles", [
+      {
+        organization: "Current Org",
+        role: "Engineer",
+        description: "Current work",
+        startDate: "2025-01-01",
+        endDate: null,
+        isCurrent: true,
+      },
+      {
+        organization: "Earlier Co",
+        role: "Intern",
+        description: "Built internal tools",
+        startDate: "2024-01-01",
+        endDate: "2024-06-01",
+        isCurrent: false,
+      },
+    ]);
+    const result = await planFill(
+      [field({ label: "Experience description", id: "exp-desc" })],
+      ontology,
+      store,
+      DEFAULT_PROFILE_ID,
+      defaultPolicy,
+      fixedIds,
+    );
+
+    const proposal = result.proposals[0];
+    expect(proposal?.state).toBe("pending");
+    if (proposal?.state !== "pending" && proposal?.state !== "restricted") {
+      throw new Error("unreachable");
+    }
+    expect(proposal.payload).toEqual({
+      kind: "text",
+      value: "Built internal tools",
+    });
+    expect(result.decisions.get(proposal.decisionId)?.memoryWrite).toBe(false);
+  });
+});
+
 describe("confirmDecision", () => {
   it("allows a normal pending decision once confirmed", async () => {
     const store = await seedMemory("contact.email", "ananya@example.com");

@@ -19,6 +19,7 @@
  * is to see, by inspection, that nothing else in the codebase can write.
  */
 
+import { canonicalizeMemoryValue } from "../fill/value-adapters";
 import type { MemoryStore } from "./store";
 import type {
   MemoryConfidence,
@@ -59,6 +60,7 @@ export const recordAnswer = async (
   input: RecordAnswerInput,
 ): Promise<void> => {
   const existing = await store.get(input.profileId, input.key);
+  const value = canonicalizeMemoryValue(input.key, input.value);
 
   const provenance: MemoryProvenance = {
     source: input.source,
@@ -74,7 +76,7 @@ export const recordAnswer = async (
   await store.set({
     profileId: input.profileId,
     key: input.key,
-    value: input.value,
+    value,
     label: input.label,
     schemaVersion: CURRENT_MEMORY_SCHEMA_VERSION,
     provenance,

@@ -96,6 +96,7 @@ const isMemorySource = (source: unknown): source is MemorySource =>
 
 const isMemoryValue = (value: unknown): value is MemoryValue => {
   if (
+    value === null ||
     typeof value === "string" ||
     typeof value === "number" ||
     typeof value === "boolean"
@@ -103,7 +104,7 @@ const isMemoryValue = (value: unknown): value is MemoryValue => {
     return true;
   }
   if (isFileReference(value)) return true;
-  if (Array.isArray(value)) return value.every((v) => typeof v === "string");
+  if (Array.isArray(value)) return value.every(isMemoryValue);
   if (!value || typeof value !== "object") return false;
   return Object.values(value).every(isMemoryValue);
 };

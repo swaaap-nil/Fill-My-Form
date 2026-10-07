@@ -6,7 +6,7 @@
  */
 
 import type { FieldConstraint, FieldId } from "../form/types";
-import type { FileReference, MemorySource } from "../memory/types";
+import type { FileReference, MemorySource, MemoryValue } from "../memory/types";
 import type { Sensitivity } from "../ontology/types";
 import type { ActionRisk, ConfidenceLevel } from "../policy/types";
 
@@ -85,6 +85,15 @@ export interface PendingDecision {
    * non-option field.
    */
   readonly memoryValue?: string;
+  /**
+   * Controls persistence after a successful fill. `false` means the payload
+   * was derived or fallback-only and should not create/overwrite memory
+   * (e.g. DOB-derived age, resume used for a CV field). When omitted, the
+   * normal concept/payload memory write is used.
+   */
+  readonly memoryWrite?:
+    | false
+    | { readonly key: string; readonly value: MemoryValue };
 }
 
 export interface PlanFillResult {
@@ -97,4 +106,7 @@ export interface ConfirmDecisionResult {
   readonly fieldId: FieldId;
   readonly payload: FillPayload;
   readonly memoryValue?: string;
+  readonly memoryWrite?:
+    | false
+    | { readonly key: string; readonly value: MemoryValue };
 }

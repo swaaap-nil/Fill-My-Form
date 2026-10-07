@@ -48,6 +48,12 @@ import type {
   PendingDecision,
   PlanFillResult,
 } from "./types";
+import {
+  adaptSocialProfileForField,
+  calculateAge,
+  isSocialProfileConcept,
+  valueFromProfessionalExperience,
+} from "./value-adapters";
 
 /**
  * The risk of writing one resolved value into one page field: reversible
@@ -66,6 +72,9 @@ export type ResolvedStoredValue =
       readonly displayValue: string;
       readonly confidence: ConfidenceLevel;
       readonly memoryValue?: string;
+      readonly memoryWrite?:
+        | false
+        | { readonly key: string; readonly value: MemoryValue };
       readonly constraints?: FormField["constraints"];
     }
   | {
@@ -99,6 +108,22 @@ export const resolveStoredValueForField = (
 ): ResolvedStoredValue => {
   const payload = payloadFor(field, value);
   if (!payload) return { kind: "no_value" };
+
+  if (payload.kind === "text" && isSocialProfileConcept(concept.key)) {
+    const adapted = adaptSocialProfileForField(
+      concept.key,
+      payload.value,
+      field,
+    );
+    return {
+      kind: "fillable",
+      payload: { kind: "text", value: adapted.value },
+      displayValue: adapted.value,
+      confidence,
+      memoryValue: adapted.canonicalValue,
+      memoryWrite: { key: concept.key, value: adapted.canonicalValue },
+    };
+  }
 
   // Closed-vocabulary fields must receive one of the page's own option values.
   // The user's stored text remains the memory value; the DOM write uses the
@@ -175,6 +200,71 @@ const registerOptionChoices = (
     return { decisionId, label: option.label };
   });
 
+export const resolveMemoryItemForConcept = async (
+  concept: Concept,
+  memory: Pick<MemoryStore, "get">,
+  profileId: ProfileId,
+  nowIso: string,
+): Promise<
+  | {
+      readonly value: MemoryValue;
+      readonly sourceItem: Awaited<ReturnType<MemoryStore["get"]>>;
+      readonly displayPrefix?: string;
+      readonly memoryWrite?:
+        | false
+        | { readonly key: string; readonly value: MemoryValue };
+    }
+  | undefined
+> => {
+  const direct = await memory.get(profileId, concept.key);
+  if (direct) return { value: direct.value, sourceItem: direct };
+
+  if (concept.key === "identity.age") {
+    const dob = await memory.get(profileId, "identity.date_of_birth");
+    if (typeof dob?.value !== "string") return undefined;
+    const age = calculateAge(dob.value, nowIso);
+    return age
+      ? {
+          value: age,
+          sourceItem: dob,
+          displayPrefix: "Derived from date of birth",
+          memoryWrite: false,
+        }
+      : undefined;
+  }
+
+  if (concept.key === "documents.cv") {
+    const resume = await memory.get(profileId, "documents.resume");
+    if (!resume) return undefined;
+    return {
+      value: resume.value,
+      sourceItem: resume,
+      displayPrefix: "Resume fallback for CV",
+      memoryWrite: false,
+    };
+  }
+
+  const experience = await memory.get(
+    profileId,
+    "experience.professional.roles",
+  );
+  if (experience) {
+    const derived = valueFromProfessionalExperience(
+      concept.key,
+      experience.value,
+    );
+    if (derived) {
+      return {
+        value: derived,
+        sourceItem: experience,
+        memoryWrite: false,
+      };
+    }
+  }
+
+  return undefined;
+};
+
 export const planFill = async (
   fields: readonly FormField[],
   index: ConceptIndex,
@@ -217,8 +307,14 @@ export const planFill = async (
       continue;
     }
 
-    const item = await memory.get(profileId, concept.key);
-    if (!item) {
+    const nowIso = now();
+    const resolvedItem = await resolveMemoryItemForConcept(
+      concept,
+      memory,
+      profileId,
+      nowIso,
+    );
+    if (!resolvedItem?.sourceItem) {
       proposals.push({
         fieldId: field.id,
         fieldLabel,
@@ -227,8 +323,9 @@ export const planFill = async (
       });
       continue;
     }
+    const item = resolvedItem.sourceItem;
 
-    const itemFreshness = freshness(item, now());
+    const itemFreshness = freshness(item, nowIso);
     const confidence =
       itemFreshness === FreshnessStatus.DUE
         ? ConfidenceLevel.LOW
@@ -243,7 +340,7 @@ export const planFill = async (
 
     const resolvedValue = resolveStoredValueForField(
       field,
-      item.value,
+      resolvedItem.value,
       concept,
       confidence,
       locale,
@@ -299,7 +396,12 @@ export const planFill = async (
       confidence: resolvedValue.confidence,
       stale: itemFreshness === FreshnessStatus.DUE,
       memoryValue: resolvedValue.memoryValue,
+      memoryWrite: resolvedValue.memoryWrite ?? resolvedItem.memoryWrite,
     });
+
+    const displayValue = resolvedItem.displayPrefix
+      ? `${resolvedItem.displayPrefix}: ${resolvedValue.displayValue}`
+      : resolvedValue.displayValue;
 
     proposals.push({
       fieldId: field.id,
@@ -307,7 +409,7 @@ export const planFill = async (
       state: isRestricted(concept.sensitivity) ? "restricted" : "pending",
       conceptKey: concept.key,
       decisionId,
-      value: resolvedValue.displayValue,
+      value: displayValue,
       payload: resolvedValue.payload,
       source: item.provenance.source,
       policyReason: resolvedDecision.reason,
@@ -344,5 +446,6 @@ export const confirmDecision = (
     fieldId: decision.fieldId,
     payload: decision.payload,
     memoryValue: decision.memoryValue,
+    memoryWrite: decision.memoryWrite,
   };
 };

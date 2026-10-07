@@ -152,27 +152,30 @@ export const confirmFillHandler = async (
         ok = result.ok;
       }
 
-      if (ok) {
-        const concept = ontology.byKey(decision.conceptKey);
-        const confirmedAt = now();
-        const textMemoryValue =
+      if (ok && outcome.memoryWrite !== false) {
+        const memoryKey = outcome.memoryWrite?.key ?? decision.conceptKey;
+        const memoryValue =
+          outcome.memoryWrite?.value ??
           outcome.memoryValue ??
           (outcome.payload.kind === "text" ? outcome.payload.value : "");
+        const concept = ontology.byKey(memoryKey);
+        const confirmedAt = now();
         const horizon = concept
           ? deriveFreshnessHorizon(
               concept,
-              textMemoryValue,
+              memoryValue,
               confirmedAt,
               bundledFreshnessDurationPolicy,
             )
           : undefined;
         await recordAnswer(memoryStore, {
           profileId: DEFAULT_PROFILE_ID,
-          key: decision.conceptKey,
+          key: memoryKey,
           value:
-            outcome.payload.kind === "text"
-              ? textMemoryValue
-              : outcome.payload.ref,
+            outcome.memoryWrite?.value ??
+            (outcome.payload.kind === "text"
+              ? memoryValue
+              : outcome.payload.ref),
           source: MemorySource.USER_CONFIRMED,
           now: confirmedAt,
           expiresAt: horizon?.expiresAt,

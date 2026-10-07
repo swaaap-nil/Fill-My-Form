@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { type FileReference, isFileReference } from "~/core/memory/types";
+import {
+  type FileReference,
+  isFileReference,
+  type MemoryValue,
+} from "~/core/memory/types";
 import { createIndexedDbFileReferenceStore } from "~/lib/files/adapters";
 import { sendMessage } from "~/lib/messaging";
 import { useSound } from "~/lib/sfx/react";
@@ -18,6 +22,9 @@ export type FieldStatus = "idle" | "pending" | "saving" | "saved" | "error";
 export const useMemoryAutosave = () => {
   const sound = useSound();
   const [values, setValues] = useState<Record<string, string>>({});
+  const [structuredValues, setStructuredValues] = useState<
+    Record<string, MemoryValue>
+  >({});
   const [fileRefs, setFileRefs] = useState<Record<string, FileReference>>({});
   const [savedKeys, setSavedKeys] = useState<Set<string>>(new Set());
   const [fieldStatuses, setFieldStatuses] = useState<
@@ -50,9 +57,17 @@ export const useMemoryAutosave = () => {
 
         const loaded: Record<string, string> = {};
         const loadedFiles: Record<string, FileReference> = {};
+        const loadedStructured: Record<string, MemoryValue> = {};
         for (const item of items) {
           if (typeof item.value === "string") loaded[item.key] = item.value;
           if (isFileReference(item.value)) loadedFiles[item.key] = item.value;
+          if (
+            typeof item.value === "object" &&
+            item.value !== null &&
+            !isFileReference(item.value)
+          ) {
+            loadedStructured[item.key] = item.value;
+          }
         }
         const loadedKeys = new Set(items.map((item) => item.key));
         const serials = keyEditSerial.current;
@@ -61,6 +76,14 @@ export const useMemoryAutosave = () => {
         );
         setFileRefs((current) =>
           overlayLocalRecords(loadedFiles, current, serials, serialAtStart),
+        );
+        setStructuredValues((current) =>
+          overlayLocalRecords(
+            loadedStructured,
+            current,
+            serials,
+            serialAtStart,
+          ),
         );
         setSavedKeys((current) =>
           overlaySavedKeys(loadedKeys, current, serials, serialAtStart),
@@ -99,7 +122,7 @@ export const useMemoryAutosave = () => {
   const recordField = useCallback(
     async (
       key: string,
-      value: string | FileReference,
+      value: MemoryValue,
       label: string,
       version: number,
       playOutcome = true,
@@ -229,6 +252,21 @@ export const useMemoryAutosave = () => {
     [noteLocalEdit, recordField, setFieldStatus, sound],
   );
 
+  const updateStructuredField = useCallback(
+    (key: string, value: MemoryValue, label: string) => {
+      noteLocalEdit(key);
+      setStructuredValues((prev) => ({ ...prev, [key]: value }));
+      const nextVersion = (saveVersions.current[key] ?? 0) + 1;
+      saveVersions.current[key] = nextVersion;
+      clearTimeout(saveTimers.current[key]);
+      setFieldStatus(key, "pending");
+      saveTimers.current[key] = setTimeout(() => {
+        void recordField(key, value, label, nextVersion);
+      }, AUTOSAVE_DELAY_MS);
+    },
+    [noteLocalEdit, recordField, setFieldStatus],
+  );
+
   const getStatus = useCallback(
     (key: string): FieldStatus => fieldStatuses[key] ?? "idle",
     [fieldStatuses],
@@ -239,7 +277,9 @@ export const useMemoryAutosave = () => {
     getStatus,
     reload: loadSnapshot,
     savedCount: savedKeys.size,
+    structuredValues,
     updateFileField,
+    updateStructuredField,
     updateTextField,
     values,
   };

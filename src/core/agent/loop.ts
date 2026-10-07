@@ -33,7 +33,10 @@
  */
 
 import type { FileComplianceAdapter } from "../files/types";
-import { resolveStoredValueForField } from "../fill/driver";
+import {
+  resolveMemoryItemForConcept,
+  resolveStoredValueForField,
+} from "../fill/driver";
 import type { FillPayload } from "../fill/types";
 import type { FieldConstraint, FieldId, Form, FormField } from "../form/types";
 import type { LLMProvider } from "../llm/provider";
@@ -93,6 +96,9 @@ export interface RetrievedValue {
   readonly conceptKey: string;
   readonly sensitivity: Sensitivity;
   readonly confidence: ConfidenceLevel;
+  readonly memoryWrite?:
+    | false
+    | { readonly key: string; readonly value: MemoryValue };
   readonly confirmedInRun?: boolean;
   readonly stale?: boolean;
 }
@@ -353,6 +359,7 @@ const retrieveValuesFor = async (
   fields: readonly FormField[],
   matches: Readonly<Record<FieldId, MatchResult>>,
   ports: LoopPorts,
+  documentLocale?: string,
 ): Promise<Record<FieldId, RetrievedValue | undefined>> => {
   const values: Record<FieldId, RetrievedValue | undefined> = {};
 
@@ -366,28 +373,41 @@ const retrieveValuesFor = async (
       : undefined;
     if (!candidate || !concept) continue;
 
-    const item = await ports.memory.get(ports.profileId, concept.key);
-    if (!item) continue;
+    const nowIso = ports.clock();
+    const resolvedItem = await resolveMemoryItemForConcept(
+      concept,
+      ports.memory,
+      ports.profileId,
+      nowIso,
+    );
+    const item = resolvedItem?.sourceItem;
+    if (!resolvedItem || !item) continue;
 
-    const isStale = freshness(item, ports.clock()) === FreshnessStatus.DUE;
+    const isStale = freshness(item, nowIso) === FreshnessStatus.DUE;
     const confidence = isStale
       ? ConfidenceLevel.LOW
       : tierToConfidence(candidate.tier);
     const resolved = resolveStoredValueForField(
       field,
-      item.value,
+      resolvedItem.value,
       concept,
       confidence,
+      documentLocale,
     );
     if (resolved.kind !== "fillable") continue;
 
+    const displayValue = resolvedItem.displayPrefix
+      ? `${resolvedItem.displayPrefix}: ${resolved.displayValue}`
+      : resolved.displayValue;
+
     values[field.id] = {
-      value: item.value,
+      value: resolvedItem.value,
       payload: resolved.payload,
-      displayValue: resolved.displayValue,
+      displayValue,
       conceptKey: concept.key,
       sensitivity: concept.sensitivity,
       confidence: resolved.confidence,
+      memoryWrite: resolved.memoryWrite ?? resolvedItem.memoryWrite,
       confirmedInRun: false,
       stale: isStale,
     };
@@ -404,6 +424,7 @@ const retrieveStep = async (
     snapshot.fields,
     snapshot.matches,
     ports,
+    snapshot.documentLocale,
   );
   return applyEvent(
     { ...snapshot, values: { ...snapshot.values, ...values } },
@@ -487,6 +508,11 @@ const pickNextAction = (
 
     const existing = snapshot.values[field.id];
     if (!existing) {
+      if (concept.key === "identity.age") {
+        skipped.push(field.id);
+        handledSet.add(field.id);
+        continue;
+      }
       return {
         decision: {
           action: {
@@ -791,21 +817,23 @@ const retryAct = async (
     }
 
     const fieldValue = snapshot.values[fieldId];
-    if (fieldValue) {
-      const concept = ports.ontology.byKey(fieldValue.conceptKey);
+    if (fieldValue && fieldValue.memoryWrite !== false) {
+      const memoryKey = fieldValue.memoryWrite?.key ?? fieldValue.conceptKey;
+      const memoryValue = fieldValue.memoryWrite?.value ?? fieldValue.value;
+      const concept = ports.ontology.byKey(memoryKey);
       const horizon =
-        concept && !isFileReference(fieldValue.value)
+        concept && !isFileReference(memoryValue)
           ? deriveFreshnessHorizon(
               concept,
-              String(fieldValue.value),
+              memoryValue,
               ports.clock(),
               bundledFreshnessDurationPolicy,
             )
           : undefined;
       await recordAnswer(ports.userMemory, {
         profileId: ports.profileId,
-        key: fieldValue.conceptKey,
-        value: fieldValue.value,
+        key: memoryKey,
+        value: memoryValue,
         source: MemorySource.USER_CONFIRMED,
         now: ports.clock(),
         expiresAt: horizon?.expiresAt,
@@ -939,7 +967,12 @@ const verifyStep = async (
     }
     matches = { ...matches, ...newMatches };
 
-    const newValues = await retrieveValuesFor(newFields, newMatches, ports);
+    const newValues = await retrieveValuesFor(
+      newFields,
+      newMatches,
+      ports,
+      documentLocale,
+    );
     values = { ...values, ...newValues };
   }
 
@@ -1079,6 +1112,7 @@ export const answerQuestion = async (
           value,
           concept,
           ConfidenceLevel.CERTAIN,
+          snapshot.documentLocale,
         );
         if (resolved.kind !== "fillable") return snapshot.values;
 
@@ -1089,6 +1123,7 @@ export const answerQuestion = async (
           conceptKey: concept.key,
           sensitivity: concept.sensitivity,
           confidence: resolved.confidence,
+          memoryWrite: resolved.memoryWrite,
           confirmedInRun: true,
           stale: false,
         });

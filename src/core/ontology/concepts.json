@@ -81,6 +81,17 @@
     }
   },
   {
+    "key": "identity.age",
+    "label": "Age",
+    "sensitivity": "sensitive",
+    "volatility": "volatile",
+    "expects": "number",
+    "aliases": {
+      "en": ["age", "current age", "age in years"],
+      "hi": ["आयु", "उम्र"]
+    }
+  },
+  {
     "key": "identity.gender",
     "label": "Gender",
     "sensitivity": "sensitive",
@@ -89,6 +100,23 @@
     "aliases": {
       "en": ["gender", "sex"],
       "hi": ["लिंग"]
+    },
+    "valueAliases": {
+      "en": {
+        "m": "male",
+        "man": "male",
+        "boy": "male",
+        "f": "female",
+        "woman": "female",
+        "girl": "female",
+        "non binary": "non-binary",
+        "nonbinary": "non-binary",
+        "nb": "non-binary",
+        "other": "other",
+        "prefer not to say": "prefer not to say",
+        "decline to answer": "prefer not to say",
+        "not disclosed": "prefer not to say"
+      }
     }
   },
   {
@@ -552,7 +580,16 @@
     "volatility": "slow",
     "expects": "url",
     "aliases": {
-      "en": ["portfolio", "portfolio url", "website", "personal website"],
+      "en": [
+        "portfolio",
+        "portfolio url",
+        "portfolio link",
+        "website",
+        "website url",
+        "personal website",
+        "personal site",
+        "portfolio website"
+      ],
       "hi": ["पोर्टफोलियो वेबसाइट"]
     }
   },
@@ -563,8 +600,116 @@
     "volatility": "slow",
     "expects": "url",
     "aliases": {
-      "en": ["github", "github url", "github profile"],
+      "en": [
+        "github",
+        "github url",
+        "github link",
+        "github profile",
+        "github username",
+        "github handle",
+        "github id"
+      ],
       "hi": ["गिटहब प्रोफाइल"]
+    }
+  },
+  {
+    "key": "contact.leetcode_url",
+    "label": "LeetCode profile",
+    "sensitivity": "personal",
+    "volatility": "slow",
+    "expects": "url",
+    "aliases": {
+      "en": [
+        "leetcode",
+        "leetcode url",
+        "leetcode link",
+        "leetcode profile",
+        "leetcode username",
+        "leetcode handle",
+        "leetcode id"
+      ],
+      "hi": ["लीटकोड प्रोफाइल"]
+    }
+  },
+  {
+    "key": "contact.geeksforgeeks_url",
+    "label": "GeeksforGeeks profile",
+    "sensitivity": "personal",
+    "volatility": "slow",
+    "expects": "url",
+    "aliases": {
+      "en": [
+        "geeksforgeeks",
+        "geeks for geeks",
+        "gfg",
+        "gfg url",
+        "gfg link",
+        "gfg profile",
+        "gfg username",
+        "geeksforgeeks profile",
+        "geeksforgeeks username"
+      ],
+      "hi": ["गीक्सफॉरगीक्स प्रोफाइल"]
+    }
+  },
+  {
+    "key": "contact.codeforces_url",
+    "label": "Codeforces profile",
+    "sensitivity": "personal",
+    "volatility": "slow",
+    "expects": "url",
+    "aliases": {
+      "en": [
+        "codeforces",
+        "codeforces url",
+        "codeforces link",
+        "codeforces profile",
+        "codeforces username",
+        "codeforces handle",
+        "codeforces id"
+      ],
+      "hi": ["कोडफोर्सेज प्रोफाइल"]
+    }
+  },
+  {
+    "key": "contact.codechef_url",
+    "label": "CodeChef profile",
+    "sensitivity": "personal",
+    "volatility": "slow",
+    "expects": "url",
+    "aliases": {
+      "en": [
+        "codechef",
+        "codechef url",
+        "codechef link",
+        "codechef profile",
+        "codechef username",
+        "codechef handle",
+        "codechef id"
+      ],
+      "hi": ["कोडशेफ प्रोफाइल"]
+    }
+  },
+  {
+    "key": "contact.stackoverflow_url",
+    "label": "Stack Overflow profile",
+    "sensitivity": "personal",
+    "volatility": "slow",
+    "expects": "url",
+    "aliases": {
+      "en": [
+        "stackoverflow",
+        "stack overflow",
+        "stackoverflow url",
+        "stack overflow url",
+        "stackoverflow link",
+        "stack overflow link",
+        "stackoverflow profile",
+        "stack overflow profile",
+        "stackoverflow username",
+        "stack overflow username"
+      ],
+      "hi": ["स्टैक ओवरफ्लो प्रोफाइल"]
     }
   },
   {
@@ -698,6 +843,28 @@
         "qualification"
       ],
       "hi": ["स्नातक डिग्री", "योग्यता"]
+    },
+    "valueAliases": {
+      "en": {
+        "btech": "b.tech",
+        "b tech": "b.tech",
+        "bachelor of technology": "b.tech",
+        "be": "b.e.",
+        "b e": "b.e.",
+        "bachelor of engineering": "b.e.",
+        "bsc": "b.sc",
+        "b sc": "b.sc",
+        "bachelor of science": "b.sc",
+        "ba": "b.a.",
+        "b a": "b.a.",
+        "bachelor of arts": "b.a.",
+        "bcom": "b.com",
+        "b com": "b.com",
+        "bachelor of commerce": "b.com",
+        "bca": "b.c.a.",
+        "b c a": "b.c.a.",
+        "bachelor of computer applications": "b.c.a."
+      }
     }
   },
   {
@@ -786,6 +953,28 @@
     "aliases": {
       "en": ["postgraduate degree", "master's degree", "pg degree", "masters"],
       "hi": ["स्नातकोत्तर डिग्री"]
+    },
+    "valueAliases": {
+      "en": {
+        "mtech": "m.tech",
+        "m tech": "m.tech",
+        "master of technology": "m.tech",
+        "me": "m.e.",
+        "m e": "m.e.",
+        "master of engineering": "m.e.",
+        "msc": "m.sc",
+        "m sc": "m.sc",
+        "master of science": "m.sc",
+        "ma": "m.a.",
+        "m a": "m.a.",
+        "master of arts": "m.a.",
+        "mcom": "m.com",
+        "m com": "m.com",
+        "master of commerce": "m.com",
+        "mca": "m.c.a.",
+        "m c a": "m.c.a.",
+        "master of computer applications": "m.c.a."
+      }
     }
   },
   {
@@ -952,6 +1141,9 @@
       "en": [
         "previous employer",
         "previous company",
+        "experience organization",
+        "experience company",
+        "organization name",
         "past employer",
         "former employer",
         "last company"
@@ -969,6 +1161,9 @@
       "en": [
         "previous job title",
         "previous designation",
+        "experience role",
+        "experience title",
+        "role in experience",
         "past role",
         "former position",
         "job profile"
@@ -985,6 +1180,8 @@
     "aliases": {
       "en": [
         "start date",
+        "experience from",
+        "experience start date",
         "employment start date",
         "job start date",
         "period from",
@@ -1002,6 +1199,8 @@
     "aliases": {
       "en": [
         "end date",
+        "experience to",
+        "experience end date",
         "employment end date",
         "job end date",
         "relieving date",
@@ -1020,11 +1219,47 @@
     "aliases": {
       "en": [
         "job description",
+        "experience description",
+        "work description",
         "roles and responsibilities",
         "brief description of work",
         "job summary"
       ],
       "hi": ["कार्य विवरण"]
+    }
+  },
+  {
+    "key": "experience.professional.roles",
+    "label": "Professional experience",
+    "sensitivity": "personal",
+    "volatility": "volatile",
+    "expects": "text",
+    "aliases": {
+      "en": [
+        "professional experience",
+        "work experience",
+        "experience",
+        "employment history",
+        "internship experience",
+        "freelance experience",
+        "volunteer experience",
+        "leadership experience"
+      ],
+      "hi": ["कार्य अनुभव", "पेशेवर अनुभव"]
+    }
+  },
+  {
+    "key": "documents.cv",
+    "label": "CV",
+    "sensitivity": "sensitive",
+    "volatility": "volatile",
+    "expects": "file",
+    "aliases": {
+      "en": ["cv", "curriculum vitae", "upload cv", "upload curriculum vitae"],
+      "hi": ["सीवी"],
+      "es": ["currículum", "curriculum vitae", "hoja de vida"],
+      "fr": ["cv", "curriculum vitae"],
+      "de": ["cv"]
     }
   },
   {
@@ -1034,18 +1269,10 @@
     "volatility": "volatile",
     "expects": "file",
     "aliases": {
-      "en": [
-        "resume",
-        "cv",
-        "curriculum vitae",
-        "upload resume",
-        "certificate",
-        "proof",
-        "document"
-      ],
+      "en": ["resume", "upload resume", "certificate", "proof", "document"],
       "hi": ["बायोडाटा", "रिज्यूमे"],
-      "es": ["currículum", "curriculum vitae", "hoja de vida", "certificado"],
-      "fr": ["cv", "curriculum vitae", "certificat"],
+      "es": ["certificado"],
+      "fr": ["certificat"],
       "de": ["lebenslauf", "zertifikat"]
     }
   },

@@ -59,9 +59,10 @@ export type MemoryValue =
   | string
   | number
   | boolean
-  | readonly string[]
+  | null
+  | readonly MemoryValue[]
   | FileReference
-  | { readonly [key: string]: MemoryValue };
+  | { readonly [key: string]: MemoryValue | undefined };
 
 export const isFileReference = (value: unknown): value is FileReference => {
   if (!value || typeof value !== "object") return false;

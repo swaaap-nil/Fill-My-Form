@@ -58,15 +58,25 @@ export type OptionMatchResult =
 const tokenize = (text: string): readonly string[] =>
   normaliseLabel(text).split(" ").filter(Boolean);
 
+const compact = (text: string): string =>
+  normaliseLabel(text).replaceAll(" ", "");
+
 const exactMatches = (
   normalisedValue: string,
   options: readonly FormOption[],
-): FormOption[] =>
-  options.filter(
-    (o) =>
-      normaliseLabel(o.value) === normalisedValue ||
-      normaliseLabel(o.label) === normalisedValue,
-  );
+): FormOption[] => {
+  const compactValue = compact(normalisedValue);
+  return options.filter((o) => {
+    const optionValue = normaliseLabel(o.value);
+    const optionLabel = normaliseLabel(o.label);
+    return (
+      optionValue === normalisedValue ||
+      optionLabel === normalisedValue ||
+      compact(optionValue) === compactValue ||
+      compact(optionLabel) === compactValue
+    );
+  });
+};
 
 const containmentMatches = (
   valueTokens: ReadonlySet<string>,
