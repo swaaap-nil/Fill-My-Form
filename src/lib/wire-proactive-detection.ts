@@ -9,6 +9,10 @@ import { deliverDetectionNudges } from "~/lib/deliver-detection-nudges";
 import { clearDetectionBadge, setDetectionBadge } from "~/lib/detection-nudge";
 import type { PersistentLocalDataStore } from "~/lib/indexeddb-local-data";
 import { onMessage, sendMessage } from "~/lib/messaging";
+import {
+  createNotificationReminderStore,
+  isNotificationReminderPaused,
+} from "~/lib/notification-reminders";
 import { focusTabAndOpenFillUi } from "~/lib/open-fill-ui";
 import {
   countActionableProposals,
@@ -22,6 +26,7 @@ import {
 } from "~/lib/tab-fill-snapshot";
 
 const detectionDedupeByTab = new Map<number, DetectionDedupeState>();
+const notificationIdPrefix = "form-detection-";
 
 const hasAnyMemory = async (
   memoryStore: PersistentLocalDataStore,
@@ -36,6 +41,11 @@ export const wireProactiveDetection = (deps: {
 }): void => {
   const browser = extensionBrowser;
   const { getLocalDataStore, iconUrl } = deps;
+  const notificationReminders = createNotificationReminderStore();
+  const getMessage = browser.i18n.getMessage as (
+    key: string,
+    substitutions?: string | string[],
+  ) => string;
 
   onMessage("getPageAccessForUrl", async ({ data }) => ({
     mayDetect: await siteAccess.hasSiteAccess(data.url),
@@ -98,6 +108,15 @@ export const wireProactiveDetection = (deps: {
       );
     }
 
+    const reminderPreferences = await notificationReminders.load();
+    const nowIso = new Date(nowMs).toISOString();
+    if (isNotificationReminderPaused(reminderPreferences, nowIso)) {
+      return { ack: true };
+    }
+    if (reminderPreferences.pausedUntilIso) {
+      await notificationReminders.clearPause();
+    }
+
     const previous = detectionDedupeByTab.get(tabId);
     if (
       !shouldNotifyForDetection(previous, { url: data.url, ...counts }, nowMs)
@@ -123,10 +142,12 @@ export const wireProactiveDetection = (deps: {
       {
         getTitle: () => browser.i18n.getMessage("proactiveDetectionTitle"),
         getBody: (knownFieldCount, answerCount) =>
-          browser.i18n.getMessage("proactiveDetectionBody", [
+          getMessage("proactiveDetectionBody", [
             String(knownFieldCount),
             String(answerCount),
           ]),
+        getReviewButtonTitle: () => getMessage("detectionNudgeBannerAction"),
+        getPauseButtonTitle: () => getMessage("pauseRemindersAction"),
         createNotification: async (notificationId, options) => {
           await browser.notifications.create(notificationId, options);
         },
@@ -143,11 +164,27 @@ export const wireProactiveDetection = (deps: {
     return { ack: true };
   });
 
+  const parseNotificationTabId = (notificationId: string): number | null => {
+    if (!notificationId.startsWith(notificationIdPrefix)) return null;
+    const tabId = Number.parseInt(
+      notificationId.slice(notificationIdPrefix.length),
+      10,
+    );
+    return Number.isNaN(tabId) ? null : tabId;
+  };
+
+  const openPauseReminderPicker = async (): Promise<void> => {
+    await browser.tabs.create({
+      url: (browser.runtime.getURL as (path: string) => string)(
+        "/pause-reminders.html",
+      ),
+      active: true,
+    });
+  };
+
   browser.notifications.onClicked.addListener((notificationId: string) => {
-    const prefix = "form-detection-";
-    if (!notificationId.startsWith(prefix)) return;
-    const tabId = Number.parseInt(notificationId.slice(prefix.length), 10);
-    if (Number.isNaN(tabId)) return;
+    const tabId = parseNotificationTabId(notificationId);
+    if (tabId === null) return;
 
     // No `tabs.get` first: the side panel must open inside the click's user
     // gesture, and `sidePanel.open` only needs the tab id.
@@ -159,6 +196,28 @@ export const wireProactiveDetection = (deps: {
       await clearDetectionBadge(browser, tabId);
     })().catch(() => undefined);
   });
+
+  browser.notifications.onButtonClicked.addListener(
+    (notificationId: string, buttonIndex: number) => {
+      const tabId = parseNotificationTabId(notificationId);
+      if (tabId === null) return;
+
+      void (async () => {
+        if (buttonIndex === 0) {
+          await focusTabAndOpenFillUi(
+            browser as Parameters<typeof focusTabAndOpenFillUi>[0],
+            tabId,
+          );
+          await clearDetectionBadge(browser, tabId);
+          return;
+        }
+
+        if (buttonIndex === 1) {
+          await openPauseReminderPicker();
+        }
+      })().catch(() => undefined);
+    },
+  );
 
   onMessage("openFillUiFromTab", async ({ sender }) => {
     const tabId = sender.tab?.id;

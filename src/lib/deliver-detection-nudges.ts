@@ -15,6 +15,8 @@ export interface DetectionNudgeDeliveryPorts {
     knownFieldCount: number,
     answerCount: number,
   ) => string | undefined;
+  readonly getReviewButtonTitle?: () => string | undefined;
+  readonly getPauseButtonTitle?: () => string | undefined;
   readonly createNotification: (
     notificationId: string,
     options: {
@@ -22,6 +24,7 @@ export interface DetectionNudgeDeliveryPorts {
       iconUrl: string;
       title: string;
       message: string;
+      buttons?: { title: string }[];
     },
   ) => Promise<void>;
   readonly setBadge: (tabId: number) => Promise<void>;
@@ -50,6 +53,10 @@ export const deliverDetectionNudges = async (
     title: title || "Fill My Form",
     message:
       message || `${knownFieldCount} known fields, ${answerCount} answers`,
+    buttons: [
+      { title: ports.getReviewButtonTitle?.() || "Review" },
+      { title: ports.getPauseButtonTitle?.() || "Pause reminders" },
+    ],
   });
 
   await ports.setBadge(tabId);

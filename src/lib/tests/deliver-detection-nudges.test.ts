@@ -28,6 +28,7 @@ describe("deliverDetectionNudges", () => {
             iconUrl: "chrome-extension://abc/icons/48.png",
             title: "Fill My Form",
             message: "2 known fields, 3 answers ready to review",
+            buttons: [{ title: "Review" }, { title: "Pause reminders" }],
           });
         },
         setBadge: async (tabId) => {

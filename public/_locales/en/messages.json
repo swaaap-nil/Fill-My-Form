@@ -163,6 +163,42 @@
     "description": "Dismiss control on the in-page detection banner.",
     "message": "Dismiss"
   },
+  "pauseRemindersAction": {
+    "description": "Notification action that opens the pause-reminders duration picker.",
+    "message": "Pause reminders"
+  },
+  "pauseRemindersTitle": {
+    "description": "Title on the extension page for choosing a reminder pause duration.",
+    "message": "Pause reminders"
+  },
+  "pauseRemindersDescription": {
+    "description": "Helper text on the extension page for choosing a reminder pause duration.",
+    "message": "Choose how long Fill My Form should hide form reminders."
+  },
+  "pauseRemindersFor2Hours": {
+    "description": "Action label for pausing form reminders for 2 hours.",
+    "message": "Pause for 2 hours"
+  },
+  "pauseRemindersFor6Hours": {
+    "description": "Action label for pausing form reminders for 6 hours.",
+    "message": "Pause for 6 hours"
+  },
+  "pauseRemindersFor8Hours": {
+    "description": "Action label for pausing form reminders for 8 hours.",
+    "message": "Pause for 8 hours"
+  },
+  "remindersPausedForHours": {
+    "description": "Confirmation after form reminders are paused; $1 = number of hours.",
+    "message": "Reminders paused for $1 hours"
+  },
+  "defaultPauseTimeLabel": {
+    "description": "Label for the setting that chooses the default reminder pause duration.",
+    "message": "Default pause time"
+  },
+  "defaultPauseTimeDescription": {
+    "description": "Helper text for the default reminder pause duration setting.",
+    "message": "Used when you pause reminders from a notification."
+  },
   "allSitesUpgradeBenefit": {
     "description": "Benefit line in the scan toolbar all-sites upgrade strip.",
     "message": "Get notified when we can fill a form on any site you visit."
