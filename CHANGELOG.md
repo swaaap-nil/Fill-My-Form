@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.13.0](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.12.0...v1.13.0) (2026-10-11)
+
+### Features
+
+* concepts and allow disabling notifications ([dbcf493](https://github.com/swaaap-nil/Fill-My-Form/commit/dbcf493d8d6bcf93c0aa809ee6c6f73569c7e46b))
+* add smart profile value adapters ([77f754f](https://github.com/swaaap-nil/Fill-My-Form/commit/77f754f2ab813bd7d43186c91238a46caa3f8b04))
+
+### Bug Fixes
+
+* handle shadow-root form controls ([bbb7319](https://github.com/swaaap-nil/Fill-My-Form/commit/bbb73193f740c2dcf0b910708c1df35226a8a5e1))
+
 ## [1.12.0](https://github.com/swaaap-nil/Fill-My-Form/compare/v1.11.0...v1.12.0) (2026-09-29)
 
 ### Bug Fixes
