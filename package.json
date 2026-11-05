@@ -3,7 +3,7 @@
   "version": "1.12.0",
   "private": true,
   "description": "Privacy-first, local-first browser extension that understands web forms and helps you complete them from a persistent personal memory.",
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "engines": {
     "node": ">=24"
   },
